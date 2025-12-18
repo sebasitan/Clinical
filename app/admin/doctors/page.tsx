@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
 import { getDoctorsAsync, addDoctor, updateDoctor, deleteDoctor, getAppointments } from "@/lib/storage"
 import type { Doctor } from "@/lib/types"
-import { Plus, Edit, Trash2, Users, Stethoscope, Phone, Mail, MoreHorizontal, UserPlus, Search, TrendingUp, ShieldCheck } from "lucide-react"
+import { Plus, Edit, Trash2, Users, Stethoscope, Phone, Mail, MoreHorizontal, UserPlus, Search, TrendingUp, ShieldCheck, Upload, Image as ImageIcon } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Switch } from "@/components/ui/switch"
 
@@ -30,8 +30,10 @@ export default function DoctorsPage() {
         email: "",
         isActive: true,
         isAvailable: true,
-        slotDuration: 30 as 15 | 20 | 30
+        slotDuration: 30 as 15 | 20 | 30,
+        photo: ""
     })
+    const [isUploading, setIsUploading] = useState(false)
     const { toast } = useToast()
 
     useEffect(() => {
@@ -54,7 +56,8 @@ export default function DoctorsPage() {
                 email: doctor.email,
                 isActive: doctor.isActive,
                 isAvailable: doctor.isAvailable,
-                slotDuration: doctor.slotDuration
+                slotDuration: doctor.slotDuration,
+                photo: doctor.photo || ""
             })
         } else {
             setEditingDoctor(null)
@@ -65,7 +68,8 @@ export default function DoctorsPage() {
                 email: "",
                 isActive: true,
                 isAvailable: true,
-                slotDuration: 30
+                slotDuration: 30,
+                photo: ""
             })
         }
         setIsDialogOpen(true)
@@ -74,6 +78,44 @@ export default function DoctorsPage() {
     const handleCloseDialog = () => {
         setIsDialogOpen(false)
         setEditingDoctor(null)
+    }
+
+    const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        setIsUploading(true)
+        try {
+            // Convert to base64
+            const reader = new FileReader()
+            reader.readAsDataURL(file)
+            reader.onload = async () => {
+                const base64 = reader.result as string
+
+                // Upload to Cloudinary
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: base64, folder: 'dental-clinic/doctors' })
+                })
+
+                const data = await response.json()
+                if (data.success) {
+                    setFormData({ ...formData, photo: data.url })
+                    toast({ title: "Photo uploaded successfully!" })
+                } else {
+                    throw new Error(data.error)
+                }
+            }
+        } catch (error: any) {
+            toast({
+                title: "Upload failed",
+                description: error.message,
+                variant: "destructive"
+            })
+        } finally {
+            setIsUploading(false)
+        }
     }
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -257,6 +299,55 @@ export default function DoctorsPage() {
                     </div>
 
                     <form onSubmit={handleSubmit} className="p-8 space-y-6 bg-white">
+                        {/* Photo Upload */}
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Doctor Photo</Label>
+                            <div className="flex items-center gap-4">
+                                {formData.photo ? (
+                                    <div className="relative">
+                                        <Avatar className="w-24 h-24 rounded-2xl border-2 border-slate-200">
+                                            <AvatarImage src={formData.photo} className="object-cover" />
+                                            <AvatarFallback><ImageIcon className="w-8 h-8 text-slate-400" /></AvatarFallback>
+                                        </Avatar>
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, photo: "" })}
+                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="w-24 h-24 rounded-2xl border-2 border-dashed border-slate-300 flex items-center justify-center bg-slate-50">
+                                        <ImageIcon className="w-8 h-8 text-slate-400" />
+                                    </div>
+                                )}
+                                <div className="flex-1">
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handlePhotoUpload}
+                                        disabled={isUploading}
+                                        className="hidden"
+                                        id="photo-upload"
+                                    />
+                                    <label htmlFor="photo-upload">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            disabled={isUploading}
+                                            className="h-10 rounded-xl cursor-pointer"
+                                            onClick={() => document.getElementById('photo-upload')?.click()}
+                                        >
+                                            <Upload className="w-4 h-4 mr-2" />
+                                            {isUploading ? "Uploading..." : "Upload Photo"}
+                                        </Button>
+                                    </label>
+                                    <p className="text-xs text-slate-500 mt-2">Recommended: Square image, at least 400x400px</p>
+                                </div>
+                            </div>
+                        </div>
+
                         <div className="space-y-2">
                             <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Practitioner Name</Label>
                             <Input

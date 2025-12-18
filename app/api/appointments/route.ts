@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
-import { AppointmentModel, SlotModel } from '@/lib/models';
+import { AppointmentModel, SlotModel, DoctorModel } from '@/lib/models';
+import { sendAppointmentConfirmation } from '@/lib/email';
+import { sendWhatsAppConfirmation } from '@/lib/whatsapp';
 
 // GET all appointments (with optional filters)
 export async function GET(request: Request) {

@@ -189,6 +189,12 @@ export const getSlots = (doctorId?: string, date?: string): Slot[] => {
     return filtered
 }
 
+export const isSlotAvailable = (date: string, timeSlot: string, doctorId: string): boolean => {
+    const slots = getSlots(doctorId, date)
+    const slot = slots.find(s => s.timeRange === timeSlot)
+    return slot ? slot.status === "available" : false
+}
+
 export const updateSlotStatus = (id: string, status: Slot["status"], appointmentId?: string, blockReason?: string) => {
     const slots = getSlots()
     const index = slots.findIndex(s => s.id === id)

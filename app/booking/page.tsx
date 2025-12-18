@@ -7,8 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
-import { getDoctors, addAppointment, isSlotAvailable, initializeDemoData } from "@/lib/storage"
-import type { Doctor, TimeSlot } from "@/lib/types"
+import { getDoctorsAsync, addAppointmentAsync, getSlotsAsync, seedDatabaseAsync } from "@/lib/storage"
+import type { Doctor, TimeSlot, Slot } from "@/lib/types"
 import { CheckCircle2, User, Clock, Phone, Mail, Check, Sparkles, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Shield, ArrowRight, MapPin, Stethoscope } from "lucide-react"
 import { Calendar } from "@/components/ui/calendar"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -32,6 +32,7 @@ export default function BookingPage() {
   const [step, setStep] = useState(1)
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [availableDates, setAvailableDates] = useState<string[]>([])
+  const [dailySlots, setDailySlots] = useState<Slot[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   // Form data
@@ -51,14 +52,27 @@ export default function BookingPage() {
   const { toast } = useToast()
 
   useEffect(() => {
-    console.log("[v0] Initializing booking page...")
-    initializeDemoData()
-    const loadedDoctors = getDoctors()
-    console.log("[v0] Loaded doctors:", loadedDoctors)
-    setDoctors(loadedDoctors)
-    generateAvailableDates() // Use the new function
-    setIsLoading(false)
+    const init = async () => {
+      console.log("[Cloud] Seeding/Connecting...")
+      await seedDatabaseAsync()
+      const loadedDoctors = await getDoctorsAsync()
+      console.log("[Cloud] Loaded doctors:", loadedDoctors)
+      setDoctors(loadedDoctors)
+      generateAvailableDates()
+      setIsLoading(false)
+    }
+    init()
   }, [])
+
+  useEffect(() => {
+    const fetchSlots = async () => {
+      if (selectedDoctorId && selectedDate) {
+        const slots = await getSlotsAsync(selectedDoctorId, selectedDate)
+        setDailySlots(slots)
+      }
+    }
+    fetchSlots()
+  }, [selectedDoctorId, selectedDate])
 
   const generateAvailableDates = () => {
     const dates: string[] = []
@@ -145,8 +159,9 @@ export default function BookingPage() {
   }
 
   const initiateBooking = () => {
-    // Check availability first
-    if (!isSlotAvailable(selectedDate, selectedTimeSlot, selectedDoctorId)) {
+    // Check local state availability
+    const slot = dailySlots.find(s => s.timeRange === selectedTimeSlot)
+    if (!slot || slot.status !== 'available') {
       toast({
         title: "Slot unavailable",
         description: "This time slot is no longer available. Please select another.",
@@ -175,11 +190,12 @@ export default function BookingPage() {
     finalizeBooking()
   }
 
-  const finalizeBooking = () => {
+  const finalizeBooking = async () => {
     setIsSubmitting(true)
 
-    // Re-check slot just in case
-    if (!isSlotAvailable(selectedDate, selectedTimeSlot, selectedDoctorId)) {
+    // Re-check slot just in case (Client side check)
+    const slot = dailySlots.find(s => s.timeRange === selectedTimeSlot)
+    if (!slot || slot.status !== 'available') {
       toast({
         title: "Slot unavailable",
         description: "This time slot is no longer available. Please select another.",
@@ -191,7 +207,8 @@ export default function BookingPage() {
     }
 
     try {
-      const appointment = addAppointment({
+      if (!slot) return; // Should be handled by check above
+      const appointment = await addAppointmentAsync({
         patientName,
         patientIC,
         patientType: patientType as "existing" | "new",
@@ -199,6 +216,7 @@ export default function BookingPage() {
         patientEmail: patientType === "new" ? patientEmail : undefined,
         appointmentDate: selectedDate,
         timeSlot: selectedTimeSlot as TimeSlot,
+        slotId: slot.id,
         doctorId: selectedDoctorId,
         status: "pending",
       })
@@ -571,7 +589,8 @@ export default function BookingPage() {
                       <div className="p-6 md:p-8 bg-white md:w-3/5">
                         <div className="grid grid-cols-1 gap-3">
                           {TIME_SLOTS.map(time => {
-                            const available = isSlotAvailable(selectedDate, time, selectedDoctorId);
+                            const slot = dailySlots.find(s => s.timeRange === time);
+                            const available = slot && slot.status === 'available';
                             return (
                               <button
                                 key={time}

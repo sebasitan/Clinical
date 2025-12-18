@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
-import { getDoctors, addDoctor, updateDoctor, deleteDoctor, getAppointments } from "@/lib/storage"
+import { getDoctorsAsync, addDoctor, updateDoctor, deleteDoctor, getAppointments } from "@/lib/storage"
 import type { Doctor } from "@/lib/types"
 import { Plus, Edit, Trash2, Users, Stethoscope, Phone, Mail, MoreHorizontal, UserPlus, Search, TrendingUp, ShieldCheck } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -39,8 +38,9 @@ export default function DoctorsPage() {
         loadData()
     }, [])
 
-    const loadData = () => {
-        setDoctors(getDoctors())
+    const loadData = async () => {
+        const docs = await getDoctorsAsync()
+        setDoctors(docs)
         setAppointments(getAppointments())
     }
 

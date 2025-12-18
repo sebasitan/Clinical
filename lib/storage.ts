@@ -23,6 +23,51 @@ const generateId = () => {
     return Math.random().toString(36).substring(2, 11) + Date.now().toString(36)
 }
 
+// --- API CLIENT (CLOUD MIGRATION) ---
+const API_BASE = '/api';
+
+export const seedDatabaseAsync = async () => {
+    try {
+        await fetch(`${API_BASE}/seed`);
+    } catch (e) {
+        console.error("Seeding failed", e);
+    }
+}
+
+export const getDoctorsAsync = async (): Promise<Doctor[]> => {
+    try {
+        const res = await fetch(`${API_BASE}/doctors`, { cache: 'no-store' });
+        if (!res.ok) return [];
+        return await res.json();
+    } catch (e) {
+        console.error("Failed to fetch doctors", e);
+        return [];
+    }
+}
+
+export const addAppointmentAsync = async (appointment: any) => {
+    const res = await fetch(`${API_BASE}/appointments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(appointment)
+    });
+    if (!res.ok) throw new Error('Booking failed');
+    return await res.json();
+}
+
+export const getSlotsAsync = async (doctorId: string, date: string): Promise<Slot[]> => {
+    try {
+        const res = await fetch(`${API_BASE}/slots?doctorId=${doctorId}&date=${date}`, { cache: 'no-store' });
+        if (!res.ok) return [];
+        return await res.json();
+    } catch (e) {
+        console.error("Failed to fetch slots", e);
+        return [];
+    }
+}
+
+// --- END API CLIENT ---
+
 // Helper to handle window/localStorage in Next.js
 const getFromStorage = (key: string) => {
     if (typeof window === "undefined") return null

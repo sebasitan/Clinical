@@ -12,6 +12,8 @@ export type Doctor = {
 
 export type DayOfWeek = "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday"
 
+export type TimeSlot = string
+
 export type ScheduleTimeRange = {
     start: string // HH:mm
     end: string   // HH:mm

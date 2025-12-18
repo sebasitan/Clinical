@@ -19,34 +19,49 @@ import {
     Building2,
     UserCog,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    Stethoscope
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
 import { cn } from "@/lib/utils"
 import { useState, useEffect } from "react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { getDoctors } from "@/lib/storage"
+import type { Doctor } from "@/lib/types"
 
 export function AdminNav() {
     const pathname = usePathname()
     const { logout, admin } = useAdminAuth()
     const [isCollapsed, setIsCollapsed] = useState(false)
     const [isMobileOpen, setIsMobileOpen] = useState(false)
+    const [doctors, setDoctors] = useState<Doctor[]>([])
 
     // Close mobile menu on route change
     useEffect(() => {
         setIsMobileOpen(false)
     }, [pathname])
 
+    useEffect(() => {
+        setDoctors(getDoctors().filter(d => d.isActive))
+    }, [])
+
     const navItems = [
         { href: "/admin/dashboard", label: "Overview", icon: LayoutDashboard },
-        { href: "/admin/schedule", label: "Schedule", icon: ClipboardList },
-        { href: "/admin/availability", label: "Availability", icon: Clock },
+        {
+            href: "/admin/schedule",
+            label: "Schedule",
+            icon: ClipboardList,
+            subItems: doctors.map(d => ({
+                href: `/admin/doctors/${d.id}`,
+                label: d.name.split(' ').slice(0, 2).join(' '),
+                icon: Stethoscope
+            }))
+        },
         { href: "/admin/doctors", label: "Doctors", icon: Users },
         { href: "/admin/receptionists", label: "Receptionists", icon: UserCog },
         { href: "/admin/patients", label: "Patients", icon: UserSearch },
-        { href: "/admin/facilities", label: "Facilities", icon: Building2 },
-        { href: "/admin/reports", label: "Analytics", icon: FilePieChart },
+        { href: "/admin/reports", label: "Reports", icon: FilePieChart },
         { href: "/admin/audit", label: "Audit Logs", icon: ActivitySquare },
         { href: "/admin/settings", label: "Settings", icon: Settings },
     ]
@@ -101,34 +116,62 @@ export function AdminNav() {
                     </div>
 
                     {/* Nav Items */}
-                    <nav className="flex-1 space-y-2 overflow-y-auto pr-2 -mr-2 scrollbar-hide">
+                    <nav className="flex-1 space-y-1 overflow-y-auto pr-2 -mr-2 scrollbar-hide">
                         {navItems.map((item) => {
                             const Icon = item.icon
-                            const isActive = pathname === item.href
+                            const isActive = pathname === item.href || (item.subItems?.some(s => pathname === s.href))
                             return (
-                                <Link key={item.href} href={item.href}>
-                                    <Button
-                                        variant="ghost"
-                                        className={cn(
-                                            "w-full h-12 rounded-2xl relative group transition-all duration-200",
-                                            isCollapsed ? "px-0 justify-center" : "px-4 justify-start gap-4",
-                                            isActive
-                                                ? "bg-slate-900 text-white shadow-xl shadow-slate-200 hover:bg-slate-800"
-                                                : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-                                        )}
-                                        title={isCollapsed ? item.label : undefined}
-                                    >
-                                        <Icon className={cn(
-                                            "w-5 h-5 transition-transform duration-300 group-hover:scale-110",
-                                            isActive ? "text-blue-400" : "text-slate-400"
-                                        )} />
-                                        {!isCollapsed && <span className="font-bold text-sm tracking-tight">{item.label}</span>}
+                                <div key={item.href} className="space-y-1">
+                                    <Link href={item.href}>
+                                        <Button
+                                            variant="ghost"
+                                            className={cn(
+                                                "w-full h-12 rounded-2xl relative group transition-all duration-200",
+                                                isCollapsed ? "px-0 justify-center" : "px-4 justify-start gap-4",
+                                                isActive
+                                                    ? "bg-slate-900 text-white shadow-xl shadow-slate-200 hover:bg-slate-800"
+                                                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                                            )}
+                                            title={isCollapsed ? item.label : undefined}
+                                        >
+                                            <Icon className={cn(
+                                                "w-5 h-5 transition-transform duration-300 group-hover:scale-110",
+                                                isActive ? "text-blue-400" : "text-slate-400"
+                                            )} />
+                                            {!isCollapsed && <span className="font-bold text-sm tracking-tight">{item.label}</span>}
 
-                                        {isActive && !isCollapsed && (
-                                            <div className="absolute right-4 w-1.5 h-1.5 rounded-full bg-blue-400" />
-                                        )}
-                                    </Button>
-                                </Link>
+                                            {isActive && !isCollapsed && (
+                                                <div className="absolute right-4 w-1.5 h-1.5 rounded-full bg-blue-400" />
+                                            )}
+                                        </Button>
+                                    </Link>
+
+                                    {/* Render Sub-items for Schedule if not collapsed */}
+                                    {!isCollapsed && item.subItems && isActive && (
+                                        <div className="pl-12 space-y-1 animate-in slide-in-from-top-2 duration-300">
+                                            {item.subItems.map((sub) => {
+                                                const SubIcon = sub.icon
+                                                const isSubActive = pathname === sub.href
+                                                return (
+                                                    <Link key={sub.href} href={sub.href}>
+                                                        <Button
+                                                            variant="ghost"
+                                                            className={cn(
+                                                                "w-full h-9 rounded-xl px-3 justify-start gap-3 transition-all",
+                                                                isSubActive
+                                                                    ? "bg-blue-50 text-blue-700 font-bold"
+                                                                    : "text-slate-400 hover:bg-slate-50 hover:text-slate-600"
+                                                            )}
+                                                        >
+                                                            <SubIcon className={cn("w-3.5 h-3.5", isSubActive ? "text-blue-600" : "text-slate-300")} />
+                                                            <span className="text-[11px] truncate">{sub.label}</span>
+                                                        </Button>
+                                                    </Link>
+                                                )
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
                             )
                         })}
                     </nav>

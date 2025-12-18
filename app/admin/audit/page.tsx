@@ -2,106 +2,139 @@
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
 import { getAuditLogs } from "@/lib/storage"
-import { formatDate } from "@/lib/date-utils"
 import type { AuditLog } from "@/lib/types"
-import { Search, Shield, Clock, User } from "lucide-react"
+import {
+    Activity,
+    Search,
+    Filter,
+    User,
+    Calendar,
+    Clock,
+    ShieldCheck,
+    ShieldAlert,
+    Trash2,
+    RefreshCcw,
+    UserCog,
+    Stethoscope
+} from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
 
 export default function AuditLogsPage() {
     const { isLoading } = useAdminAuth()
     const [logs, setLogs] = useState<AuditLog[]>([])
-    const [searchQuery, setSearchQuery] = useState("")
+    const [search, setSearch] = useState("")
 
     useEffect(() => {
-        loadData()
-    }, [])
-
-    const loadData = () => {
         setLogs(getAuditLogs())
-    }
-
-    const filteredLogs = logs.filter(log =>
-        log.adminUsername.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        log.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        log.details.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-
-    const getActionColor = (action: string) => {
-        if (action.includes("Login")) return "text-blue-600 bg-blue-50"
-        if (action.includes("Delete")) return "text-rose-600 bg-rose-50"
-        if (action.includes("Create") || action.includes("Add")) return "text-emerald-600 bg-emerald-50"
-        return "text-slate-600 bg-slate-100"
-    }
+    }, [])
 
     if (isLoading) return null
 
-    return (
-        <div className="flex-1 bg-slate-50/50">
-            <main className="container mx-auto px-6 py-10">
+    const filteredLogs = logs.filter(log =>
+        log.adminUsername.toLowerCase().includes(search.toLowerCase()) ||
+        log.action.toLowerCase().includes(search.toLowerCase()) ||
+        log.details.toLowerCase().includes(search.toLowerCase())
+    ).reverse()
 
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+    const getActionIcon = (action: string) => {
+        if (action.includes("Add")) return <ShieldCheck className="w-4 h-4 text-emerald-500" />
+        if (action.includes("Delete")) return <Trash2 className="w-4 h-4 text-rose-500" />
+        if (action.includes("Update")) return <RefreshCcw className="w-4 h-4 text-blue-500" />
+        if (action.includes("Login")) return <User className="w-4 h-4 text-slate-500" />
+        return <Activity className="w-4 h-4 text-slate-500" />
+    }
+
+    return (
+        <div className="min-h-screen bg-slate-50/50 pb-20">
+            {/* Header */}
+            <header className="bg-white border-b border-slate-100 sticky top-0 z-30 shadow-sm">
+                <div className="container mx-auto px-8 h-20 flex items-center justify-between">
                     <div>
-                        <h1 className="text-4xl font-sans font-bold text-slate-900 tracking-tight">Security Audit</h1>
-                        <p className="text-slate-500 mt-1">Immutable record of administrative actions and system events.</p>
+                        <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                            Security Audit
+                            <span className="text-slate-200 font-light">/</span>
+                            <span className="text-slate-400 font-medium text-lg">Activity Logs</span>
+                        </h1>
                     </div>
-                    <div className="relative group max-w-sm w-full">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors w-4 h-4" />
+                </div>
+            </header>
+
+            <main className="container mx-auto px-8 py-10 space-y-8">
+                {/* Filters */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
+                    <div className="relative flex-1 max-w-md">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <Input
-                            placeholder="Filter logs..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="h-12 pl-12 rounded-2xl bg-white border-slate-100 shadow-sm font-medium"
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            placeholder="Search actions, admins or details..."
+                            className="h-12 pl-12 rounded-2xl bg-slate-50 border-none font-medium focus:ring-blue-100"
                         />
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <Button variant="outline" className="h-12 rounded-2xl border-slate-200 gap-2 font-bold px-6">
+                            <Filter className="w-4 h-4" />
+                            Filters
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            onClick={() => setLogs(getAuditLogs())}
+                            className="h-12 w-12 rounded-2xl border border-slate-100 text-slate-400 hover:text-slate-900"
+                        >
+                            <RefreshCcw className="w-5 h-5" />
+                        </Button>
                     </div>
                 </div>
 
-                <Card className="border-none shadow-sm shadow-slate-200/50 rounded-[2.5rem] overflow-hidden bg-white">
+                {/* Logs Table */}
+                <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
                     <CardContent className="p-0">
                         {filteredLogs.length === 0 ? (
-                            <div className="py-24 text-center opacity-40">
-                                <Shield className="w-16 h-16 mx-auto mb-4 text-slate-300" />
-                                <p className="text-xl font-bold text-slate-900">No activity logged.</p>
+                            <div className="py-32 text-center">
+                                <ShieldAlert className="w-12 h-12 text-slate-100 mx-auto mb-4" />
+                                <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">No activity records found</p>
                             </div>
                         ) : (
-                            <Table>
-                                <TableHeader className="bg-slate-50/50">
-                                    <TableRow className="border-slate-50">
-                                        <TableHead className="px-8 h-16 text-[10px] font-black uppercase text-slate-400">Timestamp</TableHead>
-                                        <TableHead className="px-8 h-16 text-[10px] font-black uppercase text-slate-400">Administrator</TableHead>
-                                        <TableHead className="px-8 h-16 text-[10px] font-black uppercase text-slate-400">Action</TableHead>
-                                        <TableHead className="px-8 h-16 text-[10px] font-black uppercase text-slate-400">Event Details</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filteredLogs.map(log => (
-                                        <TableRow key={log.id} className="border-slate-50 hover:bg-slate-50/50 transition-colors">
-                                            <TableCell className="px-8 py-5">
-                                                <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
-                                                    <Clock className="w-3 h-3" />
-                                                    {new Date(log.timestamp).toLocaleString()}
+                            <div className="divide-y divide-slate-50">
+                                {filteredLogs.map((log) => (
+                                    <div key={log.id} className="p-8 flex flex-col md:flex-row md:items-center gap-6 hover:bg-slate-50/50 transition-colors">
+                                        <div className="flex items-center gap-4 min-w-[200px]">
+                                            <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0">
+                                                {getActionIcon(log.action)}
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-black text-slate-900 uppercase tracking-tight">{log.action}</p>
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                    <Badge variant="outline" className="bg-slate-50 border-none text-[10px] font-black uppercase text-slate-500 px-1.5 py-0">
+                                                        {log.adminUsername}
+                                                    </Badge>
                                                 </div>
-                                            </TableCell>
-                                            <TableCell className="px-8 py-5">
-                                                <div className="flex items-center gap-2">
-                                                    <User className="w-4 h-4 text-slate-400" />
-                                                    <span className="text-sm font-bold text-slate-900">{log.adminUsername}</span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="px-8 py-5">
-                                                <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-lg ${getActionColor(log.action)}`}>
-                                                    {log.action}
-                                                </span>
-                                            </TableCell>
-                                            <TableCell className="px-8 py-5 text-sm text-slate-600 font-medium">
+                                            </div>
+                                        </div>
+
+                                        <div className="flex-1">
+                                            <p className="text-sm font-medium text-slate-600 leading-relaxed">
                                                 {log.details}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
+                                            </p>
+                                        </div>
+
+                                        <div className="flex flex-col items-end gap-1 shrink-0">
+                                            <div className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-widest">
+                                                <Calendar className="w-3 h-3" />
+                                                {new Date(log.timestamp).toLocaleDateString()}
+                                            </div>
+                                            <div className="flex items-center gap-2 text-[10px] font-black text-blue-500/60 uppercase tracking-widest">
+                                                <Clock className="w-3 h-3" />
+                                                {new Date(log.timestamp).toLocaleTimeString()}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         )}
                     </CardContent>
                 </Card>

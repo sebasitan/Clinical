@@ -2,12 +2,12 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { authenticateAdmin, setCurrentAdmin } from "@/lib/storage"
+import { authenticateAdmin, setCurrentAdmin, initializeDemoData } from "@/lib/storage"
 import { useToast } from "@/hooks/use-toast"
 import { Shield, Lock, User, ArrowRight, Sparkles } from "lucide-react"
 import Image from "next/image"
@@ -18,6 +18,10 @@ export default function AdminLoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
+
+  useEffect(() => {
+    initializeDemoData()
+  }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()

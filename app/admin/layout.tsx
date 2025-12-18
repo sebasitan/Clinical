@@ -1,7 +1,9 @@
 "use client"
 
+import { useEffect } from "react"
 import { usePathname } from "next/navigation"
 import { AdminNav } from "@/components/admin-nav"
+import { initializeDemoData } from "@/lib/storage"
 
 export default function AdminLayout({
     children,
@@ -9,7 +11,11 @@ export default function AdminLayout({
     children: React.ReactNode
 }) {
     const pathname = usePathname()
-    const isLoginPage = pathname === "/admin/login"
+    const isLoginPage = pathname === "/admin/login" || pathname === "/admin/login/"
+
+    useEffect(() => {
+        initializeDemoData()
+    }, [])
 
     if (isLoginPage) {
         return <>{children}</>

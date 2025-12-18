@@ -6,6 +6,34 @@ export type Doctor = {
     phone: string
     email: string
     isActive: boolean
+    isAvailable: boolean // Quick toggle
+    slotDuration: 15 | 20 | 30 // in minutes
+}
+
+export type DayOfWeek = "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday"
+
+export type ScheduleTimeRange = {
+    start: string // HH:mm
+    end: string   // HH:mm
+}
+
+export type DoctorWeeklySchedule = {
+    doctorId: string
+    days: {
+        [key in DayOfWeek]?: ScheduleTimeRange[]
+    }
+}
+
+export type LeaveType = "full" | "partial" | "emergency"
+
+export type DoctorLeave = {
+    id: string
+    doctorId: string
+    date: string // ISO date string
+    type: LeaveType
+    startTime?: string // for partial/emergency
+    endTime?: string   // for partial/emergency
+    reason?: string
 }
 
 export type Patient = {
@@ -18,23 +46,20 @@ export type Patient = {
     type: "new" | "existing"
 }
 
-export type TimeSlot =
-    | "9:00 AM to 9:30 AM"
-    | "10:00 AM to 10:30 AM"
-    | "11:00 AM to 11:30 AM"
-    | "2:00 PM to 2:30 PM"
-    | "3:00 PM to 3:30 PM"
-    | "4:00 PM to 4:30 PM"
-
 export type SlotStatus = "available" | "booked" | "blocked" | "locked"
+export type SlotType = "public" | "admin-only"
 
 export type Slot = {
     id: string
     doctorId: string
     date: string
-    timeRange: string
+    timeRange: string // e.g. "9:00 AM to 9:30 AM"
+    startTime: string // HH:mm for logic
+    endTime: string   // HH:mm for logic
     status: SlotStatus
+    type: SlotType
     appointmentId?: string
+    blockReason?: string
 }
 
 export type Appointment = {
@@ -110,3 +135,4 @@ export type Facility = {
     description: string
     status: "operational" | "maintenance" | "closed"
 }
+

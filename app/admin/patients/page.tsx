@@ -7,15 +7,16 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
-import { getPatients, getAppointments } from "@/lib/storage"
+import { getPatients, getAppointments, getDoctors } from "@/lib/storage"
 import { formatDate } from "@/lib/date-utils"
-import type { Patient, Appointment } from "@/lib/types"
-import { Search, UserSearch, History, Mail, Phone, ExternalLink } from "lucide-react"
+import type { Patient, Appointment, Doctor } from "@/lib/types"
+import { Search, UserSearch, History, Mail, Phone, ExternalLink, Activity, Calendar } from "lucide-react"
 
 export default function PatientsPage() {
     const { isLoading } = useAdminAuth()
     const [patients, setPatients] = useState<Patient[]>([])
     const [appointments, setAppointments] = useState<Appointment[]>([])
+    const [doctors, setDoctors] = useState<Doctor[]>([])
     const [searchQuery, setSearchQuery] = useState("")
     const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
 
@@ -26,6 +27,7 @@ export default function PatientsPage() {
     const loadData = () => {
         setPatients(getPatients())
         setAppointments(getAppointments())
+        setDoctors(getDoctors())
     }
 
     const filteredPatients = patients.filter(p =>
@@ -122,35 +124,46 @@ export default function PatientsPage() {
                             <div className="py-12 text-center text-slate-400 italic">No historical data available.</div>
                         ) : (
                             <div className="space-y-6">
-                                {patientHistory.map((apt, i) => (
-                                    <div key={apt.id} className="flex gap-6 group">
-                                        <div className="flex flex-col items-center">
-                                            <div className="w-3 h-3 rounded-full bg-blue-600 shadow-[0_0_0_4px_rgba(37,99,235,0.1)] shrink-0" />
-                                            {i < patientHistory.length - 1 && <div className="w-px h-full bg-slate-100 mt-2" />}
-                                        </div>
-                                        <div className="flex-1 pb-6">
-                                            <div className="flex items-center justify-between mb-1">
-                                                <span className="text-sm font-black text-slate-900">{formatDate(apt.appointmentDate)}</span>
-                                                <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-lg ${apt.status === 'completed' ? 'bg-emerald-50 text-emerald-600' :
-                                                    apt.status === 'cancelled' ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'
-                                                    }`}>
-                                                    {apt.status}
-                                                </span>
+                                {patientHistory.map((apt, i) => {
+                                    const doctor = doctors.find(d => d.id === apt.doctorId);
+                                    return (
+                                        <div key={apt.id} className="flex gap-6 group">
+                                            <div className="flex flex-col items-center">
+                                                <div className="w-3 h-3 rounded-full bg-blue-600 shadow-[0_0_0_4px_rgba(37,99,235,0.1)] shrink-0" />
+                                                {i < patientHistory.length - 1 && <div className="w-px h-full bg-slate-100 mt-2" />}
                                             </div>
-                                            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 group-hover:bg-white group-hover:shadow-md transition-all">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center border border-slate-100">
-                                                        <History className="w-4 h-4 text-slate-400" />
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-xs font-bold text-slate-700">Clinical Consultation</p>
-                                                        <p className="text-[10px] text-slate-400 uppercase font-black">{apt.timeSlot}</p>
+                                            <div className="flex-1 pb-6">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <span className="text-sm font-black text-slate-900">{formatDate(apt.appointmentDate)}</span>
+                                                    <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-lg ${apt.status === 'completed' ? 'bg-emerald-50 text-emerald-600' :
+                                                        apt.status === 'cancelled' ? 'bg-rose-100 text-rose-600' : 'bg-amber-50 text-amber-600'
+                                                        }`}>
+                                                        {apt.status}
+                                                    </span>
+                                                </div>
+                                                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 group-hover:bg-white group-hover:shadow-md transition-all">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center border border-slate-100 overflow-hidden shadow-sm">
+                                                            {doctor?.photo ? (
+                                                                <img src={doctor.photo} alt={doctor.name} className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <History className="w-5 h-5 text-slate-400" />
+                                                            )}
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <p className="text-xs font-black text-slate-900 leading-tight">Consultation with {doctor?.name || "Unassigned Provider"}</p>
+                                                            <div className="flex items-center gap-2 mt-0.5">
+                                                                <span className="text-[10px] text-slate-400 uppercase font-bold tracking-tight">{apt.timeSlot}</span>
+                                                                <span className="text-slate-200">|</span>
+                                                                <span className="text-[10px] text-blue-500 font-bold tracking-tight">{doctor?.specialization || "General Dentistry"}</span>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </div>

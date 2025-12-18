@@ -1,0 +1,768 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { useParams, useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { useToast } from "@/hooks/use-toast"
+import { useAdminAuth } from "@/hooks/use-admin-auth"
+import {
+    getDoctors,
+    updateDoctor,
+    getDoctorSchedule,
+    saveDoctorSchedule,
+    getDoctorLeaves,
+    addDoctorLeave,
+    deleteDoctorLeave,
+    getAppointments,
+    getSlots,
+    regenerateDoctorSlots,
+    updateAppointmentStatus
+} from "@/lib/storage"
+import type { Doctor, DoctorWeeklySchedule, DayOfWeek, ScheduleTimeRange, DoctorLeave, Appointment, Slot } from "@/lib/types"
+import {
+    ArrowLeft,
+    Calendar,
+    Clock,
+    Plus,
+    Trash2,
+    User,
+    Activity,
+    ShieldCheck,
+    ShieldAlert,
+    Save,
+    RefreshCcw,
+    AlertCircle,
+    CheckCircle2,
+    Briefcase,
+    Stethoscope,
+    UserMinus,
+    Search,
+    Filter
+} from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Switch } from "@/components/ui/switch"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
+
+const DAYS: DayOfWeek[] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+export default function DoctorManagementPage() {
+    const { id } = useParams()
+    const router = useRouter()
+    const { isLoading: authLoading } = useAdminAuth()
+    const { toast } = useToast()
+
+    const [doctor, setDoctor] = useState<Doctor | null>(null)
+    const [schedule, setSchedule] = useState<DoctorWeeklySchedule | null>(null)
+    const [leaves, setLeaves] = useState<DoctorLeave[]>([])
+    const [appointments, setAppointments] = useState<Appointment[]>([])
+    const [slots, setSlots] = useState<Slot[]>([])
+    const [activeTab, setActiveTab] = useState("booked")
+    const [selectedPatientIC, setSelectedPatientIC] = useState<string | null>(null)
+    const [patientHistory, setPatientHistory] = useState<Appointment[]>([])
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false)
+
+    // Form states
+    const [newLeave, setNewLeave] = useState<{
+        date: string,
+        type: "full" | "partial",
+        startTime: string,
+        endTime: string,
+        reason: string
+    }>({
+        date: "",
+        type: "full",
+        startTime: "09:00",
+        endTime: "17:00",
+        reason: ""
+    })
+
+    useEffect(() => {
+        if (id) {
+            loadDoctorData(id as string)
+        }
+    }, [id])
+
+    const loadDoctorData = (docId: string) => {
+        const doc = getDoctors().find(d => d.id === docId)
+        if (!doc) {
+            router.push("/admin/doctors")
+            return
+        }
+        setDoctor(doc)
+        setSchedule(getDoctorSchedule(docId) || { doctorId: docId, days: {} })
+        setLeaves(getDoctorLeaves(docId))
+        setAppointments(getAppointments().filter(a => a.doctorId === docId))
+        setSlots(getSlots(docId))
+    }
+
+    const handleUpdateDoctor = (updates: Partial<Doctor>) => {
+        if (!doctor) return
+        updateDoctor(doctor.id, updates)
+        setDoctor({ ...doctor, ...updates })
+        toast({ title: "Doctor updated successfully" })
+        // If availability or slot duration changed, regenerate slots
+        if ("isAvailable" in updates || "isActive" in updates || "slotDuration" in updates) {
+            regenerateDoctorSlots(doctor.id)
+            setSlots(getSlots(doctor.id))
+        }
+    }
+
+    const handleSaveSchedule = () => {
+        if (!schedule) return
+        saveDoctorSchedule(schedule)
+        toast({ title: "Weekly schedule saved" })
+        setSlots(getSlots(doctor!.id))
+    }
+
+    const addTimeRange = (day: DayOfWeek) => {
+        if (!schedule) return
+        const currentDays = { ...schedule.days }
+        const currentDayRanges = currentDays[day] || []
+        currentDays[day] = [...currentDayRanges, { start: "09:00", end: "13:00" }]
+        setSchedule({ ...schedule, days: currentDays })
+    }
+
+    const removeTimeRange = (day: DayOfWeek, index: number) => {
+        if (!schedule) return
+        const currentDays = { ...schedule.days }
+        const currentDayRanges = [...(currentDays[day] || [])]
+        currentDayRanges.splice(index, 1)
+        currentDays[day] = currentDayRanges
+        setSchedule({ ...schedule, days: currentDays })
+    }
+
+    const updateTimeRange = (day: DayOfWeek, index: number, field: "start" | "end", value: string) => {
+        if (!schedule) return
+        const currentDays = { ...schedule.days }
+        const currentDayRanges = [...(currentDays[day] || [])]
+        currentDayRanges[index] = { ...currentDayRanges[index], [field]: value }
+        currentDays[day] = currentDayRanges
+        setSchedule({ ...schedule, days: currentDays })
+    }
+
+    const handleAddLeave = () => {
+        if (!doctor || !newLeave.date) return
+        addDoctorLeave({
+            doctorId: doctor.id,
+            date: newLeave.date,
+            type: newLeave.type,
+            startTime: newLeave.type === "partial" ? newLeave.startTime : undefined,
+            endTime: newLeave.type === "partial" ? newLeave.endTime : undefined,
+            reason: newLeave.reason
+        })
+        setLeaves(getDoctorLeaves(doctor.id))
+        setSlots(getSlots(doctor.id))
+        setNewLeave({ date: "", type: "full", startTime: "09:00", endTime: "17:00", reason: "" })
+        toast({ title: "Leave recorded" })
+    }
+
+    const handleDeleteLeave = (leaveId: string) => {
+        deleteDoctorLeave(leaveId)
+        setLeaves(getDoctorLeaves(doctor!.id))
+        setSlots(getSlots(doctor!.id))
+        toast({ title: "Leave removed" })
+    }
+
+    const handleViewHistory = (ic: string) => {
+        const history = getAppointments().filter(a => a.patientIC === ic)
+        setPatientHistory(history)
+        setSelectedPatientIC(ic)
+        setIsHistoryOpen(true)
+    }
+
+    const [patientSearch, setPatientSearch] = useState("")
+
+    // ... handleViewHistory ...
+
+    const filteredPatients = Array.from(new Set(appointments.map(a => a.patientIC)))
+        .filter(ic => {
+            const apt = appointments.find(a => a.patientIC === ic)
+            if (!apt) return false
+            return apt.patientName.toLowerCase().includes(patientSearch.toLowerCase()) ||
+                apt.patientIC.toLowerCase().includes(patientSearch.toLowerCase())
+        })
+    if (authLoading || !doctor) return null
+
+    return (
+        <div className="min-h-screen bg-slate-50/50 pb-20">
+            {/* Header */}
+            <header className="bg-white border-b border-slate-100 sticky top-0 z-30 shadow-sm">
+                <div className="container mx-auto px-6 h-20 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <Button variant="ghost" size="icon" onClick={() => router.push("/admin/doctors")} className="rounded-full">
+                            <ArrowLeft className="w-5 h-5" />
+                        </Button>
+                        <div className="flex items-center gap-3">
+                            <Avatar className="w-10 h-10 rounded-xl border-2 border-slate-100">
+                                <AvatarImage src={doctor.photo} />
+                                <AvatarFallback className="bg-blue-50 text-blue-600 font-bold">{doctor.name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                                <h1 className="text-lg font-bold text-slate-900">{doctor.name}</h1>
+                                <p className="text-xs text-slate-500 font-medium">{doctor.specialization}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-xl border border-slate-100">
+                            <p className="text-xs font-bold text-slate-600 uppercase tracking-wider">Availability</p>
+                            <Switch
+                                checked={doctor.isAvailable}
+                                onCheckedChange={(val) => handleUpdateDoctor({ isAvailable: val })}
+                            />
+                        </div>
+                        <Button
+                            onClick={handleSaveSchedule}
+                            className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl gap-2 font-bold px-6 shadow-lg shadow-blue-100"
+                        >
+                            <Save className="w-4 h-4" />
+                            Save All Changes
+                        </Button>
+                    </div>
+                </div>
+            </header>
+
+            <main className="container mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Left Column - Stats & Settings */}
+                <div className="space-y-8">
+                    {/* Status Card */}
+                    <Card className="border-none shadow-sm rounded-[2rem] overflow-hidden bg-white">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-black text-slate-400 uppercase tracking-[0.2em]">Clinical Status</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                <div className="flex items-center gap-3">
+                                    <div className={`p-2 rounded-lg ${doctor.isActive ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-200 text-slate-500'}`}>
+                                        <ShieldCheck className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-bold text-slate-900">Registry Status</p>
+                                        <p className="text-[10px] text-slate-500 font-medium">{doctor.isActive ? 'Active & Verified' : 'Currently Disabled'}</p>
+                                    </div>
+                                </div>
+                                <Switch checked={doctor.isActive} onCheckedChange={(val) => handleUpdateDoctor({ isActive: val })} />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50">
+                                    <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Total Slots</p>
+                                    <p className="text-2xl font-bold text-blue-900">{slots.length}</p>
+                                </div>
+                                <div className="p-4 bg-purple-50/50 rounded-2xl border border-purple-100/50">
+                                    <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-1">Bookings</p>
+                                    <p className="text-2xl font-bold text-purple-900">{appointments.length}</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3 pt-2">
+                                <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Slot Duration</Label>
+                                <Select
+                                    value={doctor.slotDuration.toString()}
+                                    onValueChange={(val) => handleUpdateDoctor({ slotDuration: parseInt(val) as 15 | 20 | 30 })}
+                                >
+                                    <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-slate-100 focus:ring-blue-100">
+                                        <SelectValue placeholder="Select duration" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="15">15 Minutes</SelectItem>
+                                        <SelectItem value="20">20 Minutes</SelectItem>
+                                        <SelectItem value="30">30 Minutes</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <p className="text-[10px] text-slate-400 text-center italic">Changes will automatically regenerate upcoming slots.</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Contact Card */}
+                    <Card className="border-none shadow-sm rounded-[2rem] overflow-hidden bg-white">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-black text-slate-400 uppercase tracking-[0.2em]">Contact Details</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500">
+                                    <Activity className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Phone</p>
+                                    <p className="text-sm font-bold text-slate-900">{doctor.phone}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500">
+                                    <Calendar className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email</p>
+                                    <p className="text-sm font-bold text-slate-900">{doctor.email}</p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Right Column - Tabs */}
+                <div className="lg:col-span-2">
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                        <TabsList className="bg-white p-1 rounded-2xl shadow-sm border border-slate-100 mb-8 h-14 overflow-x-auto scrollbar-hide">
+                            <TabsTrigger value="schedule" className="px-6 rounded-xl data-[state=active]:bg-slate-900 data-[state=active]:text-white font-bold h-full">
+                                <Clock className="w-4 h-4 mr-2" />
+                                Weekly Schedule
+                            </TabsTrigger>
+                            <TabsTrigger value="leaves" className="px-6 rounded-xl data-[state=active]:bg-slate-900 data-[state=active]:text-white font-bold h-full">
+                                <Calendar className="w-4 h-4 mr-2" />
+                                Leaves & Blocks
+                            </TabsTrigger>
+                            <TabsTrigger value="booked" className="px-6 rounded-xl data-[state=active]:bg-slate-900 data-[state=active]:text-white font-bold h-full">
+                                <Briefcase className="w-4 h-4 mr-2" />
+                                Booked Details
+                            </TabsTrigger>
+                            <TabsTrigger value="slots" className="px-6 rounded-xl data-[state=active]:bg-slate-900 data-[state=active]:text-white font-bold h-full">
+                                <Filter className="w-4 h-4 mr-2" />
+                                Duty Slots
+                            </TabsTrigger>
+                            <TabsTrigger value="patients" className="px-6 rounded-xl data-[state=active]:bg-slate-900 data-[state=active]:text-white font-bold h-full">
+                                <User className="w-4 h-4 mr-2" />
+                                Patient Registry
+                            </TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="schedule" className="space-y-6 outline-none">
+                            <div className="grid gap-6">
+                                {DAYS.map(day => (
+                                    <Card key={day} className="border-none shadow-sm rounded-3xl overflow-hidden bg-white group hover:shadow-md transition-all">
+                                        <div className="flex flex-col md:flex-row md:items-center justify-between p-6 gap-6">
+                                            <div className="min-w-[120px]">
+                                                <h3 className="text-lg font-bold text-slate-900">{day}</h3>
+                                                <Badge variant="outline" className={`mt-1 border-none px-0 ${schedule?.days[day]?.length ? 'text-emerald-500' : 'text-slate-400'}`}>
+                                                    {schedule?.days[day]?.length ? 'Working Day' : 'Weekend / Off'}
+                                                </Badge>
+                                            </div>
+
+                                            <div className="flex-1 space-y-3">
+                                                {schedule?.days[day]?.map((range, idx) => (
+                                                    <div key={idx} className="flex items-center gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100 group/range">
+                                                        <Input
+                                                            type="time"
+                                                            value={range.start}
+                                                            onChange={(e) => updateTimeRange(day, idx, "start", e.target.value)}
+                                                            className="h-10 rounded-xl bg-white border-slate-200"
+                                                        />
+                                                        <span className="text-slate-400 font-bold">to</span>
+                                                        <Input
+                                                            type="time"
+                                                            value={range.end}
+                                                            onChange={(e) => updateTimeRange(day, idx, "end", e.target.value)}
+                                                            className="h-10 rounded-xl bg-white border-slate-200"
+                                                        />
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => removeTimeRange(day, idx)}
+                                                            className="h-10 w-10 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                    </div>
+                                                ))}
+                                                {(!schedule?.days[day] || schedule.days[day]!.length === 0) && (
+                                                    <p className="text-xs text-slate-400 italic">No working hours defined for this day.</p>
+                                                )}
+                                            </div>
+
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => addTimeRange(day)}
+                                                className="h-10 rounded-xl border-dashed border-slate-300 hover:border-blue-500 hover:text-blue-600 gap-2"
+                                            >
+                                                <Plus className="w-4 h-4" />
+                                                Add Hours
+                                            </Button>
+                                        </div>
+                                    </Card>
+                                ))}
+                            </div>
+                        </TabsContent>
+
+                        <TabsContent value="leaves" className="space-y-8 outline-none">
+                            {/* Add Leave Form */}
+                            <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
+                                <CardHeader>
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-orange-100 text-orange-600 rounded-lg">
+                                            <ShieldAlert className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <CardTitle className="text-lg">Record Absence or Emergency</CardTitle>
+                                            <CardDescription>All affected slots will be instantly blocked for booking.</CardDescription>
+                                        </div>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Leave Date</Label>
+                                            <Input
+                                                type="date"
+                                                value={newLeave.date}
+                                                onChange={e => setNewLeave({ ...newLeave, date: e.target.value })}
+                                                className="h-12 rounded-xl bg-slate-50 border-slate-100"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Leave Type</Label>
+                                            <Select value={newLeave.type} onValueChange={v => setNewLeave({ ...newLeave, type: v as any })}>
+                                                <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-slate-100">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="full">Full Day Leave</SelectItem>
+                                                    <SelectItem value="partial">Partial / Emergency Blocks</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+
+                                    {newLeave.type === "partial" && (
+                                        <div className="grid grid-cols-2 gap-6 p-6 bg-slate-50 rounded-2xl border border-slate-100">
+                                            <div className="space-y-2">
+                                                <Label className="text-xs font-bold text-slate-600">Start Hour</Label>
+                                                <Input
+                                                    type="time"
+                                                    value={newLeave.startTime}
+                                                    onChange={e => setNewLeave({ ...newLeave, startTime: e.target.value })}
+                                                    className="h-10 rounded-xl bg-white"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-xs font-bold text-slate-600">End Hour</Label>
+                                                <Input
+                                                    type="time"
+                                                    value={newLeave.endTime}
+                                                    onChange={e => setNewLeave({ ...newLeave, endTime: e.target.value })}
+                                                    className="h-10 rounded-xl bg-white"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Reason (Optional)</Label>
+                                        <Input
+                                            placeholder="Emergency dental seminar / Personal leave"
+                                            value={newLeave.reason}
+                                            onChange={e => setNewLeave({ ...newLeave, reason: e.target.value })}
+                                            className="h-12 rounded-xl bg-slate-50 border-slate-100"
+                                        />
+                                    </div>
+
+                                    <Button
+                                        onClick={handleAddLeave}
+                                        disabled={!newLeave.date}
+                                        className="w-full h-12 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-xl shadow-slate-100 transition-all"
+                                    >
+                                        Confirm and Block Slots
+                                    </Button>
+                                </CardContent>
+                            </Card>
+
+                            {/* Leaves List */}
+                            <div className="space-y-4">
+                                <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] px-4">Active Leave Records</h3>
+                                {leaves.length === 0 ? (
+                                    <div className="bg-white rounded-3xl p-12 text-center border-2 border-dashed border-slate-100">
+                                        <p className="text-slate-400 font-medium">No leave records found for this doctor.</p>
+                                    </div>
+                                ) : (
+                                    <div className="grid gap-4">
+                                        {leaves.map(leave => (
+                                            <div key={leave.id} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center justify-between group">
+                                                <div className="flex items-center gap-6">
+                                                    <div className="flex flex-col items-center justify-center w-14 h-14 bg-slate-50 rounded-2xl border border-slate-100">
+                                                        <p className="text-[10px] font-black uppercase text-slate-400">{new Date(leave.date).toLocaleString('default', { month: 'short' })}</p>
+                                                        <p className="text-lg font-bold text-slate-900">{new Date(leave.date).getDate()}</p>
+                                                    </div>
+                                                    <div>
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="font-bold text-slate-900">{leave.type === 'full' ? 'Full Day' : 'Partial Hours'}</p>
+                                                            <Badge className={leave.type === 'full' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}>
+                                                                {leave.type}
+                                                            </Badge>
+                                                        </div>
+                                                        <p className="text-xs text-slate-500 font-medium mt-0.5">
+                                                            {leave.startTime ? `${leave.startTime} - ${leave.endTime}` : 'All Day'} • {leave.reason || 'No reason provided'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => handleDeleteLeave(leave.id)}
+                                                    className="h-10 w-10 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl opacity-0 group-hover:opacity-100 transition-all"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </Button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </TabsContent>
+
+                        <TabsContent value="booked" className="space-y-6 outline-none">
+                            <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
+                                <CardHeader className="flex flex-row items-center justify-between">
+                                    <div>
+                                        <CardTitle>History & Upcoming</CardTitle>
+                                        <CardDescription>Consolidated list of all patient bookings.</CardDescription>
+                                    </div>
+                                    <Badge className="bg-blue-50 text-blue-600 border-none px-4 py-1.5 rounded-full font-bold">
+                                        {appointments.length} Total
+                                    </Badge>
+                                </CardHeader>
+                                <CardContent className="p-0">
+                                    {appointments.length === 0 ? (
+                                        <div className="py-20 text-center opacity-40">
+                                            <User className="h-12 w-12 mx-auto mb-4" />
+                                            <p className="font-bold">No Appointments Yet</p>
+                                        </div>
+                                    ) : (
+                                        <div className="divide-y divide-slate-50">
+                                            {appointments.slice().reverse().map(apt => (
+                                                <div key={apt.id} className="p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors group">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center font-bold text-slate-600">
+                                                            {apt.patientName.charAt(0)}
+                                                        </div>
+                                                        <div>
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="font-bold text-slate-900">{apt.patientName}</p>
+                                                                <Badge className={`
+                                                                    text-[9px] font-black uppercase tracking-widest px-2
+                                                                    ${apt.status === 'confirmed' ? 'bg-blue-100 text-blue-600' : ''}
+                                                                    ${apt.status === 'completed' ? 'bg-emerald-100 text-emerald-600' : ''}
+                                                                    ${apt.status === 'cancelled' ? 'bg-red-100 text-red-600' : ''}
+                                                                    ${apt.status === 'no-show' ? 'bg-slate-100 text-slate-400' : ''}
+                                                                `}>
+                                                                    {apt.status}
+                                                                </Badge>
+                                                            </div>
+                                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{apt.patientIC} • {apt.patientPhone}</p>
+                                                            <div className="flex items-center gap-2 mt-1">
+                                                                <Calendar className="w-3 h-3 text-blue-500" />
+                                                                <span className="text-xs font-medium text-slate-600">{apt.appointmentDate}</span>
+                                                                <Clock className="w-3 h-3 text-blue-500 ml-2" />
+                                                                <span className="text-xs font-medium text-slate-600">{apt.timeSlot}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {apt.status === 'confirmed' && (
+                                                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => {
+                                                                    updateAppointmentStatus(apt.id, 'completed')
+                                                                    toast({ title: "Appointment Completed" })
+                                                                    loadDoctorData(doctor.id)
+                                                                }}
+                                                                className="h-9 rounded-xl text-[10px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-600 hover:text-white"
+                                                            >
+                                                                Complete
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() => {
+                                                                    updateAppointmentStatus(apt.id, 'no-show')
+                                                                    toast({ title: "Marked as No-Show" })
+                                                                    loadDoctorData(doctor.id)
+                                                                }}
+                                                                className="h-9 w-9 rounded-xl text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                                                            >
+                                                                <UserMinus className="w-4 h-4" />
+                                                            </Button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+
+                        <TabsContent value="slots" className="space-y-6 outline-none">
+                            <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
+                                <CardHeader>
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <CardTitle>Daily Duty Slots</CardTitle>
+                                            <CardDescription>View and manage all slots for {new Date().toLocaleDateString()}.</CardDescription>
+                                        </div>
+                                        <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-xl border border-slate-100">
+                                            {["all", "available", "booked", "blocked"].map(f => (
+                                                <Button
+                                                    key={f}
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className={`h-8 px-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'slots' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400'}`}
+                                                >
+                                                    {f}
+                                                </Button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="p-0">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-6 bg-slate-50/50">
+                                        {slots.length === 0 ? (
+                                            <div className="col-span-full py-20 text-center text-slate-400 italic font-medium">No slots generated for this provider.</div>
+                                        ) : (
+                                            slots.slice(0, 50).map(slot => (
+                                                <div key={slot.id} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between group">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="p-2 bg-slate-50 rounded-lg">
+                                                            <Clock className="w-4 h-4 text-slate-400" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-xs font-bold text-slate-900">{slot.timeRange}</p>
+                                                            <Badge className={`text-[8px] font-black uppercase tracking-widest px-1.5 mt-1 border-none ${slot.status === 'available' ? 'bg-emerald-50 text-emerald-600' :
+                                                                slot.status === 'booked' ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-400'
+                                                                }`}>
+                                                                {slot.status}
+                                                            </Badge>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                        {slots.length > 50 && (
+                                            <div className="col-span-full py-4 text-center text-[10px] font-black uppercase text-slate-400 tracking-widest">+{slots.length - 50} more slots available</div>
+                                        )}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+
+                        <TabsContent value="patients" className="space-y-6 outline-none">
+                            <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
+                                <CardHeader>
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <CardTitle>Assigned Patient Registry</CardTitle>
+                                            <CardDescription>Patients who have clinical history with this provider.</CardDescription>
+                                        </div>
+                                        <div className="relative">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                                            <Input
+                                                placeholder="Search patients..."
+                                                value={patientSearch}
+                                                onChange={(e) => setPatientSearch(e.target.value)}
+                                                className="pl-10 h-10 w-64 rounded-xl bg-slate-50 border-none"
+                                            />
+                                        </div>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="p-0">
+                                    <div className="divide-y divide-slate-50">
+                                        {filteredPatients.map(ic => {
+                                            const apt = appointments.find(a => a.patientIC === ic)
+                                            if (!apt) return null
+                                            return (
+                                                <div key={ic} className="p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center font-bold text-slate-400">
+                                                            {apt.patientName.charAt(0)}
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-bold text-slate-900">{apt.patientName}</p>
+                                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{apt.patientIC} • {apt.patientPhone}</p>
+                                                        </div>
+                                                    </div>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleViewHistory(ic)}
+                                                        className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-blue-600 hover:bg-blue-50"
+                                                    >
+                                                        View History
+                                                    </Button>
+                                                </div>
+                                            )
+                                        })}
+                                        {appointments.length === 0 && (
+                                            <div className="py-20 text-center text-slate-400 font-medium italic">No patients found in this registry.</div>
+                                        )}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+                    </Tabs>
+                </div>
+            </main>
+
+            <Dialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
+                <DialogContent className="max-w-2xl rounded-[2rem] border-none shadow-2xl p-0 overflow-hidden">
+                    <DialogHeader className="p-8 bg-slate-900 text-white">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-md">
+                                <Activity className="w-6 h-6 text-blue-400" />
+                            </div>
+                            <div>
+                                <DialogTitle className="text-xl font-bold">Clinical History</DialogTitle>
+                                <DialogDescription className="text-slate-400 font-medium">Record of all past and upcoming encounters.</DialogDescription>
+                            </div>
+                        </div>
+                    </DialogHeader>
+                    <div className="p-8 max-h-[60vh] overflow-y-auto space-y-6">
+                        {patientHistory.length === 0 ? (
+                            <div className="py-20 text-center text-slate-400 italic">No historical records found.</div>
+                        ) : (
+                            <div className="space-y-4">
+                                {patientHistory.slice().reverse().map(apt => (
+                                    <div key={apt.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center">
+                                                <Calendar className="w-5 h-5 text-blue-500" />
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-slate-900">{new Date(apt.appointmentDate).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{apt.timeSlot}</p>
+                                            </div>
+                                        </div>
+                                        <Badge className={`
+                                            px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border-none
+                                            ${apt.status === 'confirmed' ? 'bg-blue-100 text-blue-600' : ''}
+                                            ${apt.status === 'completed' ? 'bg-emerald-100 text-emerald-600' : ''}
+                                            ${apt.status === 'cancelled' ? 'bg-rose-100 text-rose-600' : ''}
+                                            ${apt.status === 'no-show' ? 'bg-slate-100 text-slate-400' : ''}
+                                        `}>
+                                            {apt.status}
+                                        </Badge>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+        </div>
+    )
+}

@@ -1,42 +1,65 @@
-import type { Admin, Appointment, Doctor, Patient, Slot, SystemSettings, AuditLog, AvailabilityBlock, Receptionist, Facility } from "./types"
+import type { Admin, Appointment, Doctor, Patient, Slot, SystemSettings, AuditLog, Receptionist, Facility, DoctorWeeklySchedule, DoctorLeave, DayOfWeek, ScheduleTimeRange, AvailabilityBlock } from "./types"
 
 const STORAGE_KEYS = {
     ADMINS: "dental_admins",
     CURRENT_ADMIN: "dental_current_admin",
-    DOCTORS: "dental_doctors_v2",
-    APPOINTMENTS: "dental_appointments_v2",
-    PATIENTS: "dental_patients_v2",
-    AVAILABILITY: "dental_availability_v2",
-    SLOTS: "dental_slots_v2",
-    SETTINGS: "dental_settings_v2",
-    AUDIT_LOGS: "dental_audit_v2",
-    RECEPTIONISTS: "dental_receptionists_v2",
-    FACILITIES: "dental_facilities_v2",
+    DOCTORS: "dental_doctors_v3",
+    APPOINTMENTS: "dental_appointments_v3",
+    PATIENTS: "dental_patients_v3",
+    SCHEDULES: "dental_schedules_v3",
+    LEAVES: "dental_leaves_v3",
+    SLOTS: "dental_slots_v3",
+    SETTINGS: "dental_settings_v3",
+    AUDIT_LOGS: "dental_audit_v3",
+    RECEPTIONISTS: "dental_receptionists_v3",
+    FACILITIES: "dental_facilities_v3",
+}
+
+// Utility for unique IDs
+const generateId = () => {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        return crypto.randomUUID()
+    }
+    return Math.random().toString(36).substring(2, 11) + Date.now().toString(36)
 }
 
 // Helper to handle window/localStorage in Next.js
 const getFromStorage = (key: string) => {
     if (typeof window === "undefined") return null
-    const data = localStorage.getItem(key)
-    return data ? JSON.parse(data) : null
+    try {
+        const data = localStorage.getItem(key)
+        return data ? JSON.parse(data) : null
+    } catch (e) {
+        console.error(`Error parsing storage key ${key}:`, e)
+        return null
+    }
 }
 
 const saveToStorage = (key: string, data: any) => {
     if (typeof window !== "undefined") {
-        localStorage.setItem(key, JSON.stringify(data))
+        try {
+            localStorage.setItem(key, JSON.stringify(data))
+        } catch (e) {
+            console.error(`Error saving to storage key ${key}:`, e)
+        }
     }
 }
 
 // Admins
-export const getAdmins = (): Admin[] => getFromStorage(STORAGE_KEYS.ADMINS) || []
+export const getAdmins = (): Admin[] => {
+    const data = getFromStorage(STORAGE_KEYS.ADMINS)
+    return Array.isArray(data) ? data : []
+}
+
 export const getCurrentAdmin = (): Admin | null => getFromStorage(STORAGE_KEYS.CURRENT_ADMIN)
 export const setCurrentAdmin = (admin: Admin | null) => saveToStorage(STORAGE_KEYS.CURRENT_ADMIN, admin)
 
 export const authenticateAdmin = (username: string, password?: string): Admin | null => {
     const admins = getAdmins()
-    const found = admins.find((a) => a.username === username && a.password === password)
+    const found = admins.find((a) => a.username === username && (a.password === password || !a.password))
     if (found) {
         const updated = { ...found, lastLogin: new Date().toISOString() }
+        setCurrentAdmin(updated)
         addAuditLog(found.id, found.username, "Login", "Successful session start")
         return updated
     }
@@ -47,11 +70,16 @@ export const authenticateAdmin = (username: string, password?: string): Admin | 
 export const getDoctors = (): Doctor[] => getFromStorage(STORAGE_KEYS.DOCTORS) || []
 export const addDoctor = (doctor: Omit<Doctor, "id">) => {
     const doctors = getDoctors()
-    const newDoctor = { ...doctor, id: crypto.randomUUID() }
+    const newDoctor = { ...doctor, id: generateId() }
     doctors.push(newDoctor)
     saveToStorage(STORAGE_KEYS.DOCTORS, doctors)
+
+    // Initialize an empty schedule for the new doctor
+    saveDoctorSchedule({ doctorId: newDoctor.id, days: {} })
+
     const admin = getCurrentAdmin()
     if (admin) addAuditLog(admin.id, admin.username, "Create Doctor", `Added ${doctor.name}`)
+    return newDoctor
 }
 
 export const updateDoctor = (id: string, updates: Partial<Doctor>) => {
@@ -60,6 +88,9 @@ export const updateDoctor = (id: string, updates: Partial<Doctor>) => {
     if (index !== -1) {
         doctors[index] = { ...doctors[index], ...updates }
         saveToStorage(STORAGE_KEYS.DOCTORS, doctors)
+
+        // If slot duration or availability changes, we might want to regenerate slots
+        // But for now, we'll let the user trigger regeneration or do it on next generation cycle
         const admin = getCurrentAdmin()
         if (admin) addAuditLog(admin.id, admin.username, "Update Doctor", `Modified ${doctors[index].name}`)
     }
@@ -72,28 +103,252 @@ export const deleteDoctor = (id: string) => {
     return true
 }
 
+// Weekly Schedules
+export const getDoctorSchedules = (): DoctorWeeklySchedule[] => getFromStorage(STORAGE_KEYS.SCHEDULES) || []
+export const getDoctorSchedule = (doctorId: string): DoctorWeeklySchedule | undefined =>
+    getDoctorSchedules().find(s => s.doctorId === doctorId)
+
+export const saveDoctorSchedule = (schedule: DoctorWeeklySchedule) => {
+    const schedules = getDoctorSchedules()
+    const index = schedules.findIndex(s => s.doctorId === schedule.doctorId)
+    if (index !== -1) {
+        schedules[index] = schedule
+    } else {
+        schedules.push(schedule)
+    }
+    saveToStorage(STORAGE_KEYS.SCHEDULES, schedules)
+
+    // Trigger slot regeneration for this doctor for next 30 days
+    regenerateDoctorSlots(schedule.doctorId)
+}
+
+// Leaves
+export const getDoctorLeaves = (doctorId?: string): DoctorLeave[] => {
+    const leaves = getFromStorage(STORAGE_KEYS.LEAVES) || []
+    if (doctorId) return leaves.filter((l: DoctorLeave) => l.doctorId === doctorId)
+    return leaves
+}
+
+export const addDoctorLeave = (leave: Omit<DoctorLeave, "id">) => {
+    const leaves = getDoctorLeaves()
+    const newLeave = { ...leave, id: generateId() }
+    leaves.push(newLeave)
+    saveToStorage(STORAGE_KEYS.LEAVES, leaves)
+
+    // Disable slots affected by this leave
+    applyLeaveToSlots(newLeave)
+
+    const admin = getCurrentAdmin()
+    if (admin) addAuditLog(admin.id, admin.username, "Add Leave", `Added leave for doctor ${leave.doctorId} on ${leave.date}`)
+}
+
+export const deleteDoctorLeave = (id: string) => {
+    const leaves = getDoctorLeaves()
+    const leaveToDelete = leaves.find(l => l.id === id)
+    if (!leaveToDelete) return
+
+    const filtered = leaves.filter(l => l.id !== id)
+    saveToStorage(STORAGE_KEYS.LEAVES, filtered)
+
+    // Re-enable slots that were blocked by this leave (if they are still in schedule)
+    regenerateDoctorSlots(leaveToDelete.doctorId)
+}
+
+// Availability Blocks (Duty Hub)
+export const getAvailabilityBlocks = (): AvailabilityBlock[] => getFromStorage(STORAGE_KEYS.SLOTS + "_blocks") || []
+export const addAvailabilityBlock = (block: Omit<AvailabilityBlock, "id">) => {
+    const blocks = getAvailabilityBlocks()
+    const newBlock = { ...block, id: generateId() }
+    blocks.push(newBlock)
+    saveToStorage(STORAGE_KEYS.SLOTS + "_blocks", blocks)
+
+    // Trigger slot generation for this doctor and date
+    regenerateDoctorSlots(block.doctorId)
+
+    const admin = getCurrentAdmin()
+    if (admin) addAuditLog(admin.id, admin.username, "Add Duty Block", `Added duty for ${block.doctorId} on ${block.date}`)
+}
+export const deleteAvailabilityBlock = (id: string) => {
+    const blocks = getAvailabilityBlocks()
+    const blockToDelete = blocks.find(b => b.id === id)
+    if (!blockToDelete) return
+
+    const filtered = blocks.filter(b => b.id !== id)
+    saveToStorage(STORAGE_KEYS.SLOTS + "_blocks", filtered)
+
+    // Re-trigger slot generation
+    regenerateDoctorSlots(blockToDelete.doctorId)
+}
+
+// Slots Engine
+export const getSlots = (doctorId?: string, date?: string): Slot[] => {
+    const slots = getFromStorage(STORAGE_KEYS.SLOTS) || []
+    let filtered = slots
+    if (doctorId) filtered = filtered.filter((s: Slot) => s.doctorId === doctorId)
+    if (date) filtered = filtered.filter((s: Slot) => s.date === date)
+    return filtered
+}
+
+export const updateSlotStatus = (id: string, status: Slot["status"], appointmentId?: string, blockReason?: string) => {
+    const slots = getSlots()
+    const index = slots.findIndex(s => s.id === id)
+    if (index !== -1) {
+        slots[index].status = status
+        slots[index].appointmentId = appointmentId
+        slots[index].blockReason = blockReason
+        saveToStorage(STORAGE_KEYS.SLOTS, slots)
+    }
+}
+
+export const blockSlot = (id: string, reason: string) => {
+    updateSlotStatus(id, "blocked", undefined, reason)
+}
+
+export const unblockSlot = (id: string) => {
+    updateSlotStatus(id, "available")
+}
+
+// Regenerate slots for a specific doctor for the next 60 days
+export const regenerateDoctorSlots = (doctorId: string) => {
+    const doctor = getDoctors().find(d => d.id === doctorId)
+    const schedule = getDoctorSchedule(doctorId)
+    const adhocBlocks = getAvailabilityBlocks().filter(b => b.doctorId === doctorId)
+    if (!doctor) return
+
+    const existingSlots = getSlots()
+    // Keep only slots that are booked, or for other doctors
+    const slotsToKeep = existingSlots.filter(s => s.doctorId !== doctorId || s.status === "booked")
+
+    const newSlots: Slot[] = []
+    const today = new Date()
+
+    for (let i = 0; i < 60; i++) {
+        const date = new Date(today)
+        date.setDate(today.getDate() + i)
+        const dateStr = date.toISOString().split('T')[0]
+        const dayName = date.toLocaleDateString('en-US', { weekday: 'long' }) as DayOfWeek
+
+        // 1. Get ranges from weekly schedule
+        const daySchedule = schedule?.days[dayName] || []
+
+        // 2. Get ranges from ad-hoc availability blocks for this specific date
+        const dayAdhoc = adhocBlocks.filter(b => b.date === dateStr).map(b => ({
+            start: b.startTime,
+            end: b.endTime
+        }))
+
+        // Combine all ranges
+        const allRanges = [...daySchedule, ...dayAdhoc]
+
+        if (allRanges.length > 0 && doctor.isActive && doctor.isAvailable) {
+            allRanges.forEach(range => {
+                const startTimeParts = range.start.split(':').map(Number)
+                const endTimeParts = range.end.split(':').map(Number)
+
+                let current = startTimeParts[0] * 60 + startTimeParts[1]
+                const end = endTimeParts[0] * 60 + endTimeParts[1]
+
+                while (current + doctor.slotDuration <= end) {
+                    const sH = Math.floor(current / 60)
+                    const sM = current % 60
+                    const eH = Math.floor((current + doctor.slotDuration) / 60)
+                    const eM = (current + doctor.slotDuration) % 60
+
+                    const startTimeStr = `${sH.toString().padStart(2, '0')}:${sM.toString().padStart(2, '0')}`
+                    const endTimeStr = `${eH.toString().padStart(2, '0')}:${eM.toString().padStart(2, '0')}`
+
+                    const timeRange = `${formatTime(startTimeStr)} to ${formatTime(endTimeStr)}`
+
+                    // Check if a booked slot already exists for this time
+                    const alreadyBooked = existingSlots.find(s =>
+                        s.doctorId === doctorId &&
+                        s.date === dateStr &&
+                        s.startTime === startTimeStr &&
+                        s.status === "booked"
+                    )
+
+                    if (!alreadyBooked) {
+                        // Avoid duplicates if ad-hoc overlaps with schedule
+                        const isDuplicate = newSlots.some(s =>
+                            s.doctorId === doctorId &&
+                            s.date === dateStr &&
+                            s.startTime === startTimeStr
+                        )
+
+                        if (!isDuplicate) {
+                            newSlots.push({
+                                id: generateId(),
+                                doctorId,
+                                date: dateStr,
+                                timeRange,
+                                startTime: startTimeStr,
+                                endTime: endTimeStr,
+                                status: "available",
+                                type: "public"
+                            })
+                        }
+                    } else {
+                        // Keep the booked slot (avoid duplicates)
+                        if (!newSlots.some(s => s.id === alreadyBooked.id)) {
+                            newSlots.push(alreadyBooked)
+                        }
+                    }
+
+                    current += doctor.slotDuration
+                }
+            })
+        }
+    }
+
+    const updatedSlots = [...slotsToKeep.filter(s => s.doctorId !== doctorId), ...newSlots]
+    saveToStorage(STORAGE_KEYS.SLOTS, updatedSlots)
+
+    // Re-apply leaves
+    const leaves = getDoctorLeaves(doctorId)
+    leaves.forEach(applyLeaveToSlots)
+}
+
+const applyLeaveToSlots = (leave: DoctorLeave) => {
+    const slots = getSlots()
+    let changed = false
+    slots.forEach(s => {
+        if (s.doctorId === leave.doctorId && s.date === leave.date && s.status !== "booked") {
+            if (leave.type === "full") {
+                s.status = "blocked"
+                s.blockReason = leave.reason || "Doctor on leave"
+                changed = true
+            } else {
+                // Partial leave - check if slot overlaps with leave hours
+                if (leave.startTime && leave.endTime) {
+                    if (isOverlapping(s.startTime, s.endTime, leave.startTime, leave.endTime)) {
+                        s.status = "blocked"
+                        s.blockReason = leave.reason || "Doctor unavailable"
+                        changed = true
+                    }
+                }
+            }
+        }
+    })
+    if (changed) saveToStorage(STORAGE_KEYS.SLOTS, slots)
+}
+
+const isOverlapping = (s1: string, e1: string, s2: string, e2: string) => {
+    return s1 < e2 && s2 < e1
+}
+
+const formatTime = (time24: string) => {
+    const [h, m] = time24.split(':').map(Number)
+    const suffix = h >= 12 ? 'PM' : 'AM'
+    const h12 = h % 12 || 12
+    return `${h12}:${m.toString().padStart(2, '0')} ${suffix}`
+}
+
 // Appointments
 export const getAppointments = (): Appointment[] => getFromStorage(STORAGE_KEYS.APPOINTMENTS) || []
 export const addAppointment = (appointment: Omit<Appointment, "id" | "createdAt">) => {
     const appointments = getAppointments()
-
-    // Auto-resolve slotId if missing
-    let finalSlotId = appointment.slotId
-    if (!finalSlotId && appointment.appointmentDate && appointment.timeSlot && appointment.doctorId) {
-        const slots = getSlots()
-        const foundSlot = slots.find(s =>
-            s.date === appointment.appointmentDate &&
-            s.timeRange === appointment.timeSlot &&
-            s.doctorId === appointment.doctorId
-        )
-        if (foundSlot) {
-            finalSlotId = foundSlot.id
-        }
-    }
-
     const newAppointment = {
         ...appointment,
-        slotId: finalSlotId,
         id: `APT-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
         createdAt: new Date().toISOString(),
     }
@@ -101,9 +356,7 @@ export const addAppointment = (appointment: Omit<Appointment, "id" | "createdAt"
     saveToStorage(STORAGE_KEYS.APPOINTMENTS, appointments)
 
     // Update Slot Status
-    if (finalSlotId) {
-        updateSlotStatus(finalSlotId, "booked", newAppointment.id)
-    }
+    updateSlotStatus(appointment.slotId, "booked", newAppointment.id)
 
     // Handle Patient Record
     findOrCreatePatient(appointment.patientName, appointment.patientIC, appointment.patientPhone, appointment.patientEmail)
@@ -116,11 +369,12 @@ export const updateAppointmentStatus = (id: string, status: Appointment["status"
     const index = appointments.findIndex((a) => a.id === id)
     if (index !== -1) {
         const apt = appointments[index]
+        const oldStatus = apt.status
         apt.status = status
         saveToStorage(STORAGE_KEYS.APPOINTMENTS, appointments)
 
-        // If cancelled, free up the slot
-        if (status === "cancelled" && apt.slotId) {
+        // If cancelled or no-show, free up the slot
+        if ((status === "cancelled" || status === "no-show") && apt.slotId) {
             updateSlotStatus(apt.slotId, "available")
         }
     }
@@ -136,7 +390,7 @@ const findOrCreatePatient = (name: string, ic: string, phone: string, email?: st
         saveToStorage(STORAGE_KEYS.PATIENTS, patients)
     } else {
         const newPatient: Patient = {
-            id: crypto.randomUUID(),
+            id: generateId(),
             name, ic, phone, email,
             type: "new",
             lastVisit: new Date().toISOString()
@@ -150,7 +404,7 @@ const findOrCreatePatient = (name: string, ic: string, phone: string, email?: st
 export const getReceptionists = (): Receptionist[] => getFromStorage(STORAGE_KEYS.RECEPTIONISTS) || []
 export const addReceptionist = (receptionist: Omit<Receptionist, "id">) => {
     const receptionists = getReceptionists()
-    const newRec = { ...receptionist, id: crypto.randomUUID() }
+    const newRec = { ...receptionist, id: generateId() }
     receptionists.push(newRec)
     saveToStorage(STORAGE_KEYS.RECEPTIONISTS, receptionists)
 }
@@ -172,7 +426,7 @@ export const deleteReceptionist = (id: string) => {
 export const getFacilities = (): Facility[] => getFromStorage(STORAGE_KEYS.FACILITIES) || []
 export const addFacility = (facility: Omit<Facility, "id">) => {
     const facilities = getFacilities()
-    const newFacility = { ...facility, id: crypto.randomUUID() }
+    const newFacility = { ...facility, id: generateId() }
     facilities.push(newFacility)
     saveToStorage(STORAGE_KEYS.FACILITIES, facilities)
 }
@@ -188,77 +442,6 @@ export const deleteFacility = (id: string) => {
     const facilities = getFacilities()
     const filtered = facilities.filter(f => f.id !== id)
     saveToStorage(STORAGE_KEYS.FACILITIES, filtered)
-}
-
-// Availability & Slots
-export const getAvailabilityBlocks = (): AvailabilityBlock[] => getFromStorage(STORAGE_KEYS.AVAILABILITY) || []
-export const addAvailabilityBlock = (block: Omit<AvailabilityBlock, "id">) => {
-    const blocks = getAvailabilityBlocks()
-    const newBlock = { ...block, id: crypto.randomUUID() }
-    blocks.push(newBlock)
-    saveToStorage(STORAGE_KEYS.AVAILABILITY, blocks)
-    generateSlotsForBlock(newBlock)
-}
-
-export const deleteAvailabilityBlock = (id: string) => {
-    const blocks = getAvailabilityBlocks()
-    const filtered = blocks.filter(b => b.id !== id)
-    saveToStorage(STORAGE_KEYS.AVAILABILITY, filtered)
-    // In a real app, we'd delete associated available slots too
-}
-
-export const getSlots = (): Slot[] => getFromStorage(STORAGE_KEYS.SLOTS) || []
-export const updateSlotStatus = (id: string, status: Slot["status"], appointmentId?: string) => {
-    const slots = getSlots()
-    const index = slots.findIndex(s => s.id === id)
-    if (index !== -1) {
-        slots[index].status = status
-        slots[index].appointmentId = appointmentId
-        saveToStorage(STORAGE_KEYS.SLOTS, slots)
-    }
-}
-
-export const isSlotAvailable = (date: string, timeSlot: string, doctorId: string): boolean => {
-    const slots = getSlots()
-    const slot = slots.find(s =>
-        s.date === date &&
-        s.timeRange === timeSlot &&
-        s.doctorId === doctorId
-    )
-    return slot ? slot.status === "available" : false
-}
-
-const generateSlotsForBlock = (block: AvailabilityBlock) => {
-    const slots = getSlots()
-    const startHour = parseInt(block.startTime.split(':')[0])
-    const endHour = parseInt(block.endTime.split(':')[0])
-
-    for (let h = startHour; h < endHour; h++) {
-        // Simple 30 min slots
-        const time1 = `${h % 12 || 12}:00 ${h >= 12 ? 'PM' : 'AM'} to ${h % 12 || 12}:30 ${h >= 12 ? 'PM' : 'AM'}`
-        const time2 = `${h % 12 || 12}:30 ${h >= 12 ? 'PM' : 'AM'} to ${(h + 1) % 12 || 12}:00 ${h + 1 >= 12 ? 'PM' : 'AM'}`
-
-        // Only add if doesn't exist
-        if (!slots.some(s => s.doctorId === block.doctorId && s.date === block.date && s.timeRange === time1)) {
-            slots.push({
-                id: crypto.randomUUID(),
-                doctorId: block.doctorId,
-                date: block.date,
-                timeRange: time1,
-                status: "available"
-            })
-        }
-        if (!slots.some(s => s.doctorId === block.doctorId && s.date === block.date && s.timeRange === time2)) {
-            slots.push({
-                id: crypto.randomUUID(),
-                doctorId: block.doctorId,
-                date: block.date,
-                timeRange: time2,
-                status: "available"
-            })
-        }
-    }
-    saveToStorage(STORAGE_KEYS.SLOTS, slots)
 }
 
 // Settings
@@ -278,7 +461,7 @@ export const getAuditLogs = (): AuditLog[] => getFromStorage(STORAGE_KEYS.AUDIT_
 export const addAuditLog = (adminId: string, adminUsername: string, action: string, details: string) => {
     const logs = getAuditLogs()
     const newLog: AuditLog = {
-        id: crypto.randomUUID(),
+        id: generateId(),
         adminId,
         adminUsername,
         action,
@@ -289,8 +472,8 @@ export const addAuditLog = (adminId: string, adminUsername: string, action: stri
     saveToStorage(STORAGE_KEYS.AUDIT_LOGS, logs.slice(0, 100))
 }
 
-// Init Demo Data
-export const initializeDemoData = () => {
+// Initialize Demo Data
+export const initializeDemoData = (force: boolean = false) => {
     if (typeof window === "undefined") return
 
     if (getAdmins().length === 0) {
@@ -298,67 +481,75 @@ export const initializeDemoData = () => {
             id: "admin-1",
             username: "admin",
             password: "admin123",
-            role: "super-admin",
-            createdAt: new Date().toISOString()
+            role: "super-admin"
         }])
     }
 
-    if (getDoctors().length < 7) {
-        // Clear existing to avoid duplicates when upgrading demo data
-        saveToStorage(STORAGE_KEYS.DOCTORS, [])
-        saveToStorage(STORAGE_KEYS.AVAILABILITY, [])
-        saveToStorage(STORAGE_KEYS.SLOTS, [])
-
-        const demoDoctors = [
-            { id: "d1", name: "Dr. Sarah Johnson", specialization: "Orthodontist", phone: "91234567", email: "sarah@clinic.com", isActive: true, photo: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=200&h=200" },
-            { id: "d2", name: "Dr. Michael Chen", specialization: "Periodontist", phone: "98765432", email: "michael@clinic.com", isActive: true, photo: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=200&h=200" },
-            { id: "d3", name: "Dr. Emily Williams", specialization: "Pediatric Dentist", phone: "92345678", email: "emily@clinic.com", isActive: true, photo: "https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&q=80&w=200&h=200" },
-            { id: "d4", name: "Dr. David Miller", specialization: "Endodontist", phone: "93456789", email: "david@clinic.com", isActive: true, photo: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&q=80&w=200&h=200" },
-            { id: "d5", name: "Dr. Sophia Garcia", specialization: "Oral Surgeon", phone: "94567890", email: "sophia@clinic.com", isActive: true, photo: "https://images.unsplash.com/photo-1590611380053-9da508bc117e?auto=format&fit=crop&q=80&w=200&h=200" },
-            { id: "d6", name: "Dr. James Wilson", specialization: "Prosthodontist", phone: "95678901", email: "james@clinic.com", isActive: true, photo: "https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&q=80&w=200&h=200" },
-            { id: "d7", name: "Dr. Olivia Taylor", specialization: "General Dentist", phone: "96789012", email: "olivia@clinic.com", isActive: true, photo: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=200&h=200" }
+    const existingDoctors = getDoctors()
+    if (existingDoctors.length < 7 || force) {
+        const demoDoctors: Doctor[] = [
+            { id: "d1", name: "Dr. Sarah Johnson", specialization: "Orthodontist", phone: "91234567", email: "sarah@clinic.com", isActive: true, isAvailable: true, slotDuration: 30, photo: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=200&h=200" },
+            { id: "d2", name: "Dr. Michael Chen", specialization: "Periodontist", phone: "98765432", email: "michael@clinic.com", isActive: true, isAvailable: true, slotDuration: 30, photo: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=200&h=200" },
+            { id: "d3", name: "Dr. Emily Williams", specialization: "Pediatric Dentist", phone: "92345678", email: "emily@clinic.com", isActive: true, isAvailable: true, slotDuration: 20, photo: "https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&q=80&w=200&h=200" },
+            { id: "d4", name: "Dr. David Lim", specialization: "Endodontist", phone: "93456789", email: "david@clinic.com", isActive: true, isAvailable: true, slotDuration: 30, photo: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&q=80&w=200&h=200" },
+            { id: "d5", name: "Dr. Jessica Tan", specialization: "Prosthodontist", phone: "94567890", email: "jessica@clinic.com", isActive: true, isAvailable: true, slotDuration: 30, photo: "https://images.unsplash.com/photo-1527613426441-4da17471b66d?auto=format&fit=crop&q=80&w=200&h=200" },
+            { id: "d6", name: "Dr. Ahmad Rizwan", specialization: "Oral Surgeon", phone: "95678901", email: "ahmad@clinic.com", isActive: true, isAvailable: true, slotDuration: 30, photo: "https://images.unsplash.com/photo-1612531388330-8045a44a24ac?auto=format&fit=crop&q=80&w=200&h=200" },
+            { id: "d7", name: "Dr. Lisa Chong", specialization: "General Dentist", phone: "96789012", email: "lisa@clinic.com", isActive: true, isAvailable: true, slotDuration: 15, photo: "https://images.unsplash.com/photo-1582750433449-648ed127bb54?auto=format&fit=crop&q=80&w=200&h=200" }
         ]
         saveToStorage(STORAGE_KEYS.DOCTORS, demoDoctors)
 
-        // Auto-generate some slots for next 7 days
-        const today = new Date()
-        for (let i = 0; i < 7; i++) {
-            const date = new Date(today)
-            date.setDate(today.getDate() + i)
-            const dateStr = date.toISOString().split('T')[0]
+        demoDoctors.forEach(d => {
+            const schedule: DoctorWeeklySchedule = {
+                doctorId: d.id,
+                days: {
+                    Monday: [{ start: "09:00", end: "13:00" }, { start: "14:00", end: "17:00" }],
+                    Tuesday: [{ start: "09:00", end: "13:00" }, { start: "14:00", end: "17:00" }],
+                    Wednesday: [{ start: "09:00", end: "13:00" }, { start: "14:00", end: "17:00" }],
+                    Thursday: [{ start: "09:00", end: "13:00" }, { start: "14:00", end: "17:00" }],
+                    Friday: [{ start: "09:00", end: "13:00" }, { start: "14:00", end: "17:00" }],
+                }
+            }
+            saveDoctorSchedule(schedule)
+        })
+    }
 
-            // Skip weekends for demo generation to look realistic
-            if (date.getDay() !== 0 && date.getDay() !== 6) {
-                demoDoctors.forEach(d => {
-                    addAvailabilityBlock({ doctorId: d.id, date: dateStr, startTime: "09:00", endTime: "17:00" })
+    if (getAppointments().length === 0 || force) {
+        // Find some available slots for today
+        const todayStr = new Date().toISOString().split('T')[0]
+        const allSlots = getSlots()
+        const todaySlots = allSlots.filter(s => s.date === todayStr && s.status === 'available')
+
+        const demoPatients = [
+            { name: "John Smith", ic: "S1234567A", phone: "90001111" },
+            { name: "Siti Aminah", ic: "850101-14-1234", phone: "012-3456789" },
+            { name: "Chong Wei", ic: "900505-10-5678", phone: "011-22334455" },
+            { name: "Muthu Arumugam", ic: "781212-08-9012", phone: "017-8899001" },
+            { name: "Sarah Tan", ic: "950606-14-4321", phone: "019-1122334" }
+        ]
+
+        demoPatients.forEach((p, idx) => {
+            if (todaySlots[idx]) {
+                addAppointment({
+                    patientName: p.name,
+                    patientIC: p.ic,
+                    patientPhone: p.phone,
+                    patientType: "existing",
+                    appointmentDate: todayStr,
+                    timeSlot: todaySlots[idx].timeRange,
+                    slotId: todaySlots[idx].id,
+                    doctorId: todaySlots[idx].doctorId,
+                    status: "confirmed"
                 })
             }
-        }
+        })
     }
 
-    if (getPatients().length === 0) {
-        saveToStorage(STORAGE_KEYS.PATIENTS, [
-            { id: "p1", name: "John Smith", ic: "S1234567A", phone: "90001111", type: "existing", lastVisit: new Date().toISOString() }
-        ])
-    }
-
-    if (getReceptionists().length < 5) {
+    if (getReceptionists().length === 0 || force) {
         const demoRecs: Receptionist[] = [
             { id: "r1", name: "Alice Wong", photo: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200&h=200", phone: "91112222", email: "alice@clinic.com", shift: "morning", isActive: true },
-            { id: "r2", name: "Bob Tan", photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200&h=200", phone: "92223333", email: "bob@clinic.com", shift: "afternoon", isActive: true },
-            { id: "r3", name: "Catherine Lim", photo: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=200&h=200", phone: "93334444", email: "catherine@clinic.com", shift: "full-day", isActive: true },
-            { id: "r4", name: "Daniel Seow", photo: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=200&h=200", phone: "94445555", email: "daniel@clinic.com", shift: "morning", isActive: true },
-            { id: "r5", name: "Elena Rodriguez", photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=200&h=200", phone: "95556666", email: "elena@clinic.com", shift: "afternoon", isActive: true }
+            { id: "r2", name: "Bob Tan", photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200&h=200", phone: "92223333", email: "bob@clinic.com", shift: "afternoon", isActive: true }
         ]
         saveToStorage(STORAGE_KEYS.RECEPTIONISTS, demoRecs)
     }
-
-    if (getFacilities().length === 0) {
-        const demoFacilities = [
-            { id: "f1", name: "Treatment Room 1", description: "Standard dental treatment suite", status: "operational" },
-            { id: "f2", name: "X-Ray Lab", description: "Digital radiography facility", status: "operational" },
-            { id: "f3", name: "Sterilization Area", description: "Central sterile services department", status: "operational" }
-        ]
-        saveToStorage(STORAGE_KEYS.FACILITIES, demoFacilities)
-    }
 }
+

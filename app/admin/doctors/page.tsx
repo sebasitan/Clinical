@@ -29,7 +29,9 @@ export default function DoctorsPage() {
         specialization: "",
         phone: "",
         email: "",
-        isActive: true
+        isActive: true,
+        isAvailable: true,
+        slotDuration: 30 as 15 | 20 | 30
     })
     const { toast } = useToast()
 
@@ -50,11 +52,21 @@ export default function DoctorsPage() {
                 specialization: doctor.specialization,
                 phone: doctor.phone,
                 email: doctor.email,
-                isActive: doctor.isActive
+                isActive: doctor.isActive,
+                isAvailable: doctor.isAvailable,
+                slotDuration: doctor.slotDuration
             })
         } else {
             setEditingDoctor(null)
-            setFormData({ name: "", specialization: "", phone: "", email: "", isActive: true })
+            setFormData({
+                name: "",
+                specialization: "",
+                phone: "",
+                email: "",
+                isActive: true,
+                isAvailable: true,
+                slotDuration: 30
+            })
         }
         setIsDialogOpen(true)
     }
@@ -199,6 +211,14 @@ export default function DoctorsPage() {
                                                 </TableCell>
                                                 <TableCell className="px-8 py-6 text-right">
                                                     <div className="flex items-center justify-end gap-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            asChild
+                                                            className="h-10 rounded-xl hover:bg-slate-50 border-slate-200 transition-all text-slate-900 font-bold px-4"
+                                                        >
+                                                            <a href={`/admin/doctors/${doctor.id}`}>Manage</a>
+                                                        </Button>
                                                         <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(doctor)} className="h-10 w-10 rounded-xl hover:bg-white hover:shadow-md border border-transparent hover:border-slate-100 transition-all text-slate-400 hover:text-blue-600">
                                                             <Edit className="h-4 w-4" />
                                                         </Button>
@@ -212,6 +232,7 @@ export default function DoctorsPage() {
                                                         </Button>
                                                     </div>
                                                 </TableCell>
+
                                             </TableRow>
                                         )
                                     })}

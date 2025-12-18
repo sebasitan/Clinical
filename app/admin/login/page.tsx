@@ -172,12 +172,6 @@ export default function AdminLoginPage() {
                   )}
                 </Button>
 
-                <div className="mt-8 p-4 rounded-xl bg-blue-50 border border-blue-100 flex items-start gap-3">
-                  <Sparkles className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
-                  <p className="text-xs text-blue-700 leading-relaxed">
-                    <span className="font-bold">Demo Access:</span> Use <code className="bg-blue-200 px-1.5 py-0.5 rounded text-blue-800 font-bold">admin</code> / <code className="bg-blue-200 px-1.5 py-0.5 rounded text-blue-800 font-bold">admin123</code> to explore the management platform.
-                  </p>
-                </div>
               </form>
             </div>
           </div>

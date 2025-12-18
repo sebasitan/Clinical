@@ -77,7 +77,7 @@ export default function MigratePage() {
                             </li>
                             <li className="flex items-center gap-2">
                                 <CheckCircle2 className="w-4 h-4 text-green-600" />
-                                <span>Admin account (admin/admin123)</span>
+                                <span>Default administrator account</span>
                             </li>
                             <li className="flex items-center gap-2">
                                 <CheckCircle2 className="w-4 h-4 text-green-600" />
@@ -141,11 +141,6 @@ export default function MigratePage() {
                         </div>
                     )}
 
-                    <div className="pt-4 border-t border-slate-200">
-                        <p className="text-xs text-slate-500 text-center">
-                            After migration, you can login with: <strong>admin</strong> / <strong>admin123</strong>
-                        </p>
-                    </div>
                 </CardContent>
             </Card>
         </div>

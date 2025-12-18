@@ -198,12 +198,15 @@ export function AdminNav() {
                         <div className={cn("flex items-center gap-2", isCollapsed ? "flex-col" : "justify-between")}>
                             <Button
                                 variant="ghost"
-                                size="icon"
                                 onClick={logout}
-                                className="h-12 w-12 rounded-2xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all group"
-                                title="Log Out"
+                                className={cn(
+                                    "h-12 rounded-2xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-all group",
+                                    isCollapsed ? "w-12 px-0 justify-center" : "w-full justify-start gap-4 px-4"
+                                )}
+                                title={isCollapsed ? "Log Out" : undefined}
                             >
                                 <LogOut className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+                                {!isCollapsed && <span className="font-bold text-sm tracking-tight text-rose-600">Log Out</span>}
                             </Button>
 
                             <Button

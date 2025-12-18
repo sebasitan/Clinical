@@ -19,7 +19,7 @@ export const DoctorModel = models.Doctor || model('Doctor', DoctorSchema);
 const AppointmentSchema = new Schema({
     id: { type: String, required: true, unique: true },
     patientName: { type: String, required: true },
-    patientIC: { type: String, required: true },
+    patientIC: { type: String },
     patientType: { type: String, required: true }, // 'new' | 'existing'
     patientPhone: { type: String, required: true },
     patientEmail: String,

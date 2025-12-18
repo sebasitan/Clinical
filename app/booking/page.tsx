@@ -20,12 +20,10 @@ import {
 } from "@/components/ui/input-otp"
 
 const TIME_SLOTS: TimeSlot[] = [
-  "9:00 AM to 9:30 AM",
-  "10:00 AM to 10:30 AM",
-  "11:00 AM to 11:30 AM",
-  "2:00 PM to 2:30 PM",
-  "3:00 PM to 3:30 PM",
-  "4:00 PM to 4:30 PM",
+  "9:00 AM - 9:30 AM", "9:30 AM - 10:00 AM", "10:00 AM - 10:30 AM", "10:30 AM - 11:00 AM",
+  "11:00 AM - 11:30 AM", "11:30 AM - 12:00 PM", "12:00 PM - 12:30 PM", "12:30 PM - 1:00 PM",
+  "2:00 PM - 2:30 PM", "2:30 PM - 3:00 PM", "3:00 PM - 3:30 PM", "3:30 PM - 4:00 PM",
+  "4:00 PM - 4:30 PM", "4:30 PM - 5:00 PM", "5:00 PM - 5:30 PM", "5:30 PM - 6:00 PM"
 ]
 
 export default function BookingPage() {
@@ -82,14 +80,27 @@ export default function BookingPage() {
       const date = new Date(today)
       date.setDate(date.getDate() + i)
 
-      // Skip weekends (0 = Sunday, 6 = Saturday)
-      if (date.getDay() !== 0 && date.getDay() !== 6) {
+      // Skip Sundays (0)
+      if (date.getDay() !== 0) {
         dates.push(date.toISOString().split("T")[0])
       }
     }
 
     setAvailableDates(dates)
   }
+
+  const validateEmail = (email: string) => {
+    return String(email)
+      .toLowerCase()
+      .match(
+        /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
+      );
+  };
+
+  const validatePhone = (phone: string) => {
+    // Basic phone validation (starts with + or digits, at least 8 chars)
+    return phone.length >= 8 && /^[0-9+ ]+$/.test(phone);
+  };
 
   // Removed the unused `remarks` state and related logic from original
 
@@ -126,22 +137,50 @@ export default function BookingPage() {
 
     // Step 4: Patient Information
     if (step === 4) {
-      if (!patientName || !patientIC || !patientPhone) {
+      if (!patientName || !patientPhone) {
         toast({
           title: "Information required",
-          description: "Please fill in all required fields",
+          description: "Please fill in Name and Phone Number",
           variant: "destructive",
         })
         return
       }
 
-      if (patientType === "new" && !patientEmail) {
+      if (patientType === "existing" && !patientIC) {
         toast({
-          title: "Email required",
-          description: "Email is required for new patients",
+          title: "Identification required",
+          description: "Patient ID (IC) is required for returning patients",
           variant: "destructive",
         })
         return
+      }
+
+      if (!validatePhone(patientPhone)) {
+        toast({
+          title: "Invalid Phone",
+          description: "Please enter a valid phone number",
+          variant: "destructive",
+        })
+        return
+      }
+
+      if (patientType === "new") {
+        if (!patientEmail) {
+          toast({
+            title: "Email required",
+            description: "Email is required for new patients",
+            variant: "destructive",
+          })
+          return
+        }
+        if (!validateEmail(patientEmail)) {
+          toast({
+            title: "Invalid Email",
+            description: "Please enter a valid email address",
+            variant: "destructive",
+          })
+          return
+        }
       }
     }
 
@@ -210,10 +249,10 @@ export default function BookingPage() {
       if (!slot) return; // Should be handled by check above
       const appointment = await addAppointmentAsync({
         patientName,
-        patientIC,
+        patientIC: patientType === "existing" ? patientIC : "NEW_PATIENT",
         patientType: patientType as "existing" | "new",
         patientPhone,
-        patientEmail: patientType === "new" ? patientEmail : undefined,
+        patientEmail,
         appointmentDate: selectedDate,
         timeSlot: selectedTimeSlot as TimeSlot,
         slotId: slot.id,
@@ -240,8 +279,8 @@ export default function BookingPage() {
   const addToCalendar = () => {
     if (!selectedDate || !selectedTimeSlot || !selectedDoctor) return;
 
-    // Parse time slot: "9:00 AM to 9:30 AM"
-    const [startPart] = selectedTimeSlot.split(" to ");
+    // Parse time slot: "9:00 AM - 9:30 AM"
+    const [startPart] = selectedTimeSlot.split(" - ");
 
     // Create Date objects
     const startDateTime = new Date(`${selectedDate} ${startPart}`);
@@ -681,19 +720,21 @@ export default function BookingPage() {
                         </div>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="patientIC" className="text-slate-900 font-bold ml-1 text-xs uppercase tracking-wider">NRIC / FIN</Label>
-                        <div className="relative group">
-                          <Input
-                            id="patientIC"
-                            value={patientIC}
-                            onChange={(e) => setPatientIC(e.target.value)}
-                            placeholder="S1234567A"
-                            className="h-14 pl-12 rounded-2xl bg-slate-50 border-slate-100 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium text-slate-900 placeholder:text-slate-400"
-                          />
-                          <Shield className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors w-5 h-5" />
+                      {patientType === "existing" && (
+                        <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                          <Label htmlFor="patientIC" className="text-slate-900 font-bold ml-1 text-xs uppercase tracking-wider">NRIC / FIN</Label>
+                          <div className="relative group">
+                            <Input
+                              id="patientIC"
+                              value={patientIC}
+                              onChange={(e) => setPatientIC(e.target.value)}
+                              placeholder="S1234567A"
+                              className="h-14 pl-12 rounded-2xl bg-slate-50 border-slate-100 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium text-slate-900 placeholder:text-slate-400"
+                            />
+                            <Shield className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors w-5 h-5" />
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
 
                     {/* Phone */}

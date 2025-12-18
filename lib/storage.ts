@@ -308,7 +308,7 @@ export const regenerateDoctorSlots = (doctorId: string) => {
                     const startTimeStr = `${sH.toString().padStart(2, '0')}:${sM.toString().padStart(2, '0')}`
                     const endTimeStr = `${eH.toString().padStart(2, '0')}:${eM.toString().padStart(2, '0')}`
 
-                    const timeRange = `${formatTime(startTimeStr)} to ${formatTime(endTimeStr)}`
+                    const timeRange = `${formatTime(startTimeStr)} - ${formatTime(endTimeStr)}`
 
                     // Check if a booked slot already exists for this time
                     const alreadyBooked = existingSlots.find(s =>

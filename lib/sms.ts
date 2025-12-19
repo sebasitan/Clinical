@@ -1,9 +1,5 @@
 import twilio from 'twilio';
 
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const verifyServiceSid = process.env.TWILIO_VERIFY_SERVICE_SID;
-
 /**
  * Sanitizes phone number to E.164 format
  */
@@ -18,8 +14,10 @@ function sanitizePhone(phone: string): string {
 }
 
 function getTwilioClient() {
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
     if (!accountSid || !authToken) {
-        throw new Error('Twilio Credentials Missing (SID/Token)');
+        throw new Error('Twilio Credentials Missing (TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN)');
     }
     return twilio(accountSid, authToken);
 }
@@ -31,7 +29,7 @@ function getTwilioClient() {
 export async function sendSMSOTP(to: string) {
     try {
         const client = getTwilioClient();
-        const serviceSid = verifyServiceSid || 'VA549c93a543dddbd19698d9133ab327a5';
+        const serviceSid = process.env.TWILIO_VERIFY_SERVICE_SID || 'VA549c93a543dddbd19698d9133ab327a5';
         const formattedPhone = sanitizePhone(to);
 
         console.log(`[Twilio] Sending OTP to ${formattedPhone} using service ${serviceSid}`);
@@ -55,7 +53,7 @@ export async function sendSMSOTP(to: string) {
 export async function verifySMSOTP(to: string, code: string) {
     try {
         const client = getTwilioClient();
-        const serviceSid = verifyServiceSid || 'VA549c93a543dddbd19698d9133ab327a5';
+        const serviceSid = process.env.TWILIO_VERIFY_SERVICE_SID || 'VA549c93a543dddbd19698d9133ab327a5';
         const formattedPhone = sanitizePhone(to);
 
         const verificationCheck = await client.verify.v2.services(serviceSid)

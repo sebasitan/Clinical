@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -47,6 +47,7 @@ export default function BookingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showOtpVerification, setShowOtpVerification] = useState(false)
   const [otp, setOtp] = useState("")
+  const timeSlotsRef = useRef<HTMLDivElement>(null)
 
   const { toast } = useToast()
 
@@ -68,6 +69,13 @@ export default function BookingPage() {
       if (selectedDoctorId && selectedDate) {
         const slots = await getSlotsAsync(selectedDoctorId, selectedDate)
         setDailySlots(slots)
+
+        // On mobile, scroll to time slots when date is selected
+        if (window.innerWidth < 1024 && timeSlotsRef.current) {
+          setTimeout(() => {
+            timeSlotsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 100);
+        }
       }
     }
     fetchSlots()
@@ -105,11 +113,14 @@ export default function BookingPage() {
 
   // Removed the unused `remarks` state and related logic from original
 
-  const handleNext = (dateOverride?: string, timeOverride?: TimeSlot | "") => {
+  const handleNext = (dateOverride?: any, timeOverride?: TimeSlot | "") => {
+    // Check if first arg is an event (for direct button onClick={handleNext})
+    const isEvent = dateOverride && typeof dateOverride === 'object' && 'preventDefault' in dateOverride;
+
     // Determine actual values to check (either state or overrides)
     const currentStep = step;
-    const date = dateOverride !== undefined ? dateOverride : selectedDate;
-    const time = timeOverride !== undefined ? timeOverride : selectedTimeSlot;
+    const date = (dateOverride !== undefined && !isEvent) ? dateOverride as string : selectedDate;
+    const time = (timeOverride !== undefined) ? timeOverride : selectedTimeSlot;
 
     // Step 1: Patient Type Selection
     if (currentStep === 1 && !patientType) {
@@ -652,6 +663,7 @@ export default function BookingPage() {
 
                 {/* Time Grid Selection */}
                 <div
+                  ref={timeSlotsRef}
                   className={cn(
                     "w-full lg:w-1/2 bg-white rounded-[3rem] shadow-2xl overflow-hidden isolate flex flex-col border border-slate-100 transition-all duration-500",
                     selectedDate ? "opacity-100" : "opacity-40"

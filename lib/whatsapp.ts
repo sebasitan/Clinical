@@ -1,10 +1,13 @@
 import twilio from 'twilio';
 
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
-
-const client = twilio(accountSid, authToken);
+function getTwilioClient() {
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    if (!accountSid || !authToken) {
+        throw new Error('Twilio Credentials Missing (TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN)');
+    }
+    return twilio(accountSid, authToken);
+}
 
 export async function sendWhatsAppConfirmation(
     to: string,
@@ -15,6 +18,8 @@ export async function sendWhatsAppConfirmation(
     appointmentId: string
 ) {
     try {
+        const client = getTwilioClient();
+        const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
         // Format phone number for WhatsApp (must include country code)
         const formattedPhone = to.startsWith('+') ? `whatsapp:${to}` : `whatsapp:+${to}`;
 
@@ -62,6 +67,8 @@ export async function sendWhatsAppReminder(
     timeSlot: string
 ) {
     try {
+        const client = getTwilioClient();
+        const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
         const formattedPhone = to.startsWith('+') ? `whatsapp:${to}` : `whatsapp:+${to}`;
 
         const message = await client.messages.create({
@@ -91,6 +98,8 @@ See you soon! 🦷
 
 export async function sendWhatsAppOTP(to: string, otp: string) {
     try {
+        const client = getTwilioClient();
+        const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
         const formattedPhone = to.startsWith('+') ? `whatsapp:${to}` : `whatsapp:+${to}`;
 
         const message = await client.messages.create({

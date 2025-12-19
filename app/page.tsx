@@ -105,8 +105,8 @@ export default function HomePage() {
 
               <div className="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start pt-4">
                 <Link href="/booking">
-                  <Button size="lg" className="h-14 px-10 bg-rose-500 hover:bg-rose-600 text-white rounded-full text-sm font-bold uppercase tracking-widest shadow-xl shadow-rose-200 transition-all hover:-translate-y-1">
-                    Get Started
+                  <Button size="lg" className="h-14 px-10 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-sm font-bold uppercase tracking-widest shadow-xl shadow-blue-200 transition-all hover:-translate-y-1">
+                    Book Appointment
                   </Button>
                 </Link>
 

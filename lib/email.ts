@@ -1,7 +1,5 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 export async function sendAppointmentConfirmation(
     to: string,
     patientName: string,
@@ -11,6 +9,7 @@ export async function sendAppointmentConfirmation(
     appointmentId: string
 ) {
     try {
+        const resend = new Resend(process.env.RESEND_API_KEY);
         const { data, error } = await resend.emails.send({
             from: 'Klinik Pergigian Setapak <onboarding@resend.dev>',
             to: [to],
@@ -104,6 +103,7 @@ export async function sendAppointmentReminder(
     timeSlot: string
 ) {
     try {
+        const resend = new Resend(process.env.RESEND_API_KEY);
         const { data, error } = await resend.emails.send({
             from: 'Klinik Pergigian Setapak <onboarding@resend.dev>',
             to: [to],

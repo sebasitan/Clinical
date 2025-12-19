@@ -27,7 +27,7 @@ import { useAdminAuth } from "@/hooks/use-admin-auth"
 import { cn } from "@/lib/utils"
 import { useState, useEffect } from "react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { getDoctors } from "@/lib/storage"
+import { getDoctorsAsync } from "@/lib/storage"
 import type { Doctor } from "@/lib/types"
 
 export function AdminNav() {
@@ -43,7 +43,11 @@ export function AdminNav() {
     }, [pathname])
 
     useEffect(() => {
-        setDoctors(getDoctors().filter(d => d.isActive))
+        const load = async () => {
+            const docs = await getDoctorsAsync()
+            setDoctors(docs.filter(d => d.isActive))
+        }
+        load()
     }, [])
 
     const navItems = [

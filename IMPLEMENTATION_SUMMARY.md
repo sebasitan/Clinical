@@ -22,12 +22,12 @@
 - **Credentials Added**: ✓
 - **Status**: Ready to use (needs integration in booking flow)
 
-### 4. **WhatsApp Notifications (Twilio)** ✓
-- Appointment confirmation via WhatsApp
-- Appointment reminders via WhatsApp
-- OTP verification via WhatsApp
+### 4. **SMS OTP Verification (Twilio Verify)** ✓
+- Secure OTP verification via SMS
+- Uses Twilio Verify Service (VA...)
+- Server-side verification logic
 - **Credentials Added**: ✓
-- **Status**: Ready to use (needs integration in booking flow)
+- **Status**: Fully functional and integrated
 
 ### 5. **Doctor Management Enhancements** ✓
 - Photo upload functionality
@@ -51,10 +51,11 @@ CLOUDINARY_API_SECRET=your_cloudinary_secret
 # Resend (Email)
 RESEND_API_KEY=your_resend_api_key
 
-# Twilio (WhatsApp)
+# Twilio
 TWILIO_ACCOUNT_SID=your_twilio_sid
 TWILIO_AUTH_TOKEN=your_twilio_auth_token
 TWILIO_PHONE_NUMBER=your_twilio_phone_number
+TWILIO_VERIFY_SERVICE_SID=VA549c93a543dddbd19698d9133ab327a5
 ```
 
 ---

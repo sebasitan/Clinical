@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
-import { getDoctors, getAvailabilityBlocks, addAvailabilityBlock, deleteAvailabilityBlock } from "@/lib/storage"
+import { getDoctorsAsync, getAvailabilityBlocks, addAvailabilityBlock, deleteAvailabilityBlock } from "@/lib/storage"
 import type { Doctor, AvailabilityBlock } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import {
@@ -80,8 +80,9 @@ export default function AvailabilityPage() {
         loadData()
     }, [])
 
-    const loadData = () => {
-        setDoctors(getDoctors().filter(d => d.isActive))
+    const loadData = async () => {
+        const docs = await getDoctorsAsync()
+        setDoctors(docs.filter(d => d.isActive))
         setBlocks(getAvailabilityBlocks())
     }
 

@@ -45,6 +45,34 @@ export const getDoctorsAsync = async (): Promise<Doctor[]> => {
     }
 }
 
+export const addDoctorAsync = async (doctor: Omit<Doctor, "id">) => {
+    const res = await fetch(`${API_BASE}/doctors`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(doctor)
+    });
+    if (!res.ok) throw new Error('Failed to create doctor');
+    return await res.json();
+}
+
+export const updateDoctorAsync = async (id: string, updates: Partial<Doctor>) => {
+    const res = await fetch(`${API_BASE}/doctors/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+    });
+    if (!res.ok) throw new Error('Failed to update doctor');
+    return await res.json();
+}
+
+export const deleteDoctorAsync = async (id: string) => {
+    const res = await fetch(`${API_BASE}/doctors/${id}`, {
+        method: 'DELETE'
+    });
+    if (!res.ok) throw new Error('Failed to delete doctor');
+    return await res.json();
+}
+
 export const addAppointmentAsync = async (appointment: any) => {
     const res = await fetch(`${API_BASE}/appointments`, {
         method: 'POST',
@@ -55,9 +83,12 @@ export const addAppointmentAsync = async (appointment: any) => {
     return await res.json();
 }
 
-export const getSlotsAsync = async (doctorId: string, date: string): Promise<Slot[]> => {
+export const getSlotsAsync = async (doctorId?: string, date?: string): Promise<Slot[]> => {
     try {
-        const res = await fetch(`${API_BASE}/slots?doctorId=${doctorId}&date=${date}`, { cache: 'no-store' });
+        let url = `${API_BASE}/slots?`;
+        if (doctorId) url += `doctorId=${doctorId}&`;
+        if (date) url += `date=${date}`;
+        const res = await fetch(url, { cache: 'no-store' });
         if (!res.ok) return [];
         return await res.json();
     } catch (e) {
@@ -395,6 +426,27 @@ const formatTime = (time24: string) => {
 }
 
 // Appointments
+export const getAppointmentsAsync = async (): Promise<Appointment[]> => {
+    try {
+        const res = await fetch(`${API_BASE}/appointments`, { cache: 'no-store' });
+        if (!res.ok) return [];
+        return await res.json();
+    } catch (e) {
+        console.error("Failed to fetch appointments", e);
+        return [];
+    }
+}
+
+export const updateAppointmentStatusAsync = async (id: string, status: Appointment["status"]) => {
+    const res = await fetch(`${API_BASE}/appointments/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+    });
+    if (!res.ok) throw new Error('Failed to update appointment status');
+    return await res.json();
+}
+
 export const getAppointments = (): Appointment[] => getFromStorage(STORAGE_KEYS.APPOINTMENTS) || []
 export const addAppointment = (appointment: Omit<Appointment, "id" | "createdAt">) => {
     const appointments = getAppointments()
@@ -432,6 +484,17 @@ export const updateAppointmentStatus = (id: string, status: Appointment["status"
 }
 
 // Patients
+export const getPatientsAsync = async (): Promise<Patient[]> => {
+    try {
+        const res = await fetch(`${API_BASE}/patients`, { cache: 'no-store' });
+        if (!res.ok) return [];
+        return await res.json();
+    } catch (e) {
+        console.error("Failed to fetch patients", e);
+        return [];
+    }
+}
+
 export const getPatients = (): Patient[] => getFromStorage(STORAGE_KEYS.PATIENTS) || []
 const findOrCreatePatient = (name: string, ic: string, phone: string, email?: string) => {
     const patients = getPatients()
@@ -452,6 +515,45 @@ const findOrCreatePatient = (name: string, ic: string, phone: string, email?: st
 }
 
 // Receptionists
+export const getReceptionistsAsync = async (): Promise<Receptionist[]> => {
+    try {
+        const res = await fetch(`${API_BASE}/receptionists`, { cache: 'no-store' });
+        if (!res.ok) return [];
+        return await res.json();
+    } catch (e) {
+        console.error("Failed to fetch receptionists", e);
+        return [];
+    }
+}
+
+export const addReceptionistAsync = async (receptionist: Omit<Receptionist, "id">) => {
+    const res = await fetch(`${API_BASE}/receptionists`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(receptionist)
+    });
+    if (!res.ok) throw new Error('Failed to add receptionist');
+    return await res.json();
+}
+
+export const updateReceptionistAsync = async (id: string, updates: Partial<Receptionist>) => {
+    const res = await fetch(`${API_BASE}/receptionists/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+    });
+    if (!res.ok) throw new Error('Failed to update receptionist');
+    return await res.json();
+}
+
+export const deleteReceptionistAsync = async (id: string) => {
+    const res = await fetch(`${API_BASE}/receptionists/${id}`, {
+        method: 'DELETE'
+    });
+    if (!res.ok) throw new Error('Failed to delete receptionist');
+    return await res.json();
+}
+
 export const getReceptionists = (): Receptionist[] => getFromStorage(STORAGE_KEYS.RECEPTIONISTS) || []
 export const addReceptionist = (receptionist: Omit<Receptionist, "id">) => {
     const receptionists = getReceptionists()

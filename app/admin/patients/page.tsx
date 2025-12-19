@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
-import { getPatients, getAppointments, getDoctors } from "@/lib/storage"
+import { getPatientsAsync, getAppointmentsAsync, getDoctorsAsync } from "@/lib/storage"
 import { formatDate } from "@/lib/date-utils"
 import type { Patient, Appointment, Doctor } from "@/lib/types"
 import { Search, UserSearch, History, Mail, Phone, ExternalLink, Activity, Calendar } from "lucide-react"
@@ -24,10 +24,15 @@ export default function PatientsPage() {
         loadData()
     }, [])
 
-    const loadData = () => {
-        setPatients(getPatients())
-        setAppointments(getAppointments())
-        setDoctors(getDoctors())
+    const loadData = async () => {
+        const [pts, apts, docs] = await Promise.all([
+            getPatientsAsync(),
+            getAppointmentsAsync(),
+            getDoctorsAsync()
+        ])
+        setPatients(pts)
+        setAppointments(apts)
+        setDoctors(docs)
     }
 
     const filteredPatients = patients.filter(p =>

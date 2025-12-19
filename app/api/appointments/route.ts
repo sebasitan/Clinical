@@ -52,6 +52,52 @@ export async function POST(request: Request) {
             );
         }
 
+        // 4. Send Notifications (Non-blocking)
+        try {
+            const doctor = await DoctorModel.findOne({ id: body.doctorId });
+            const doctorName = doctor ? doctor.name : 'Doctor';
+
+            console.log(`[API] Processing notifications for appointment ${appointmentId}`);
+
+            // Send Email
+            if (body.patientEmail) {
+                console.log(`[Email] Attempting to send to: ${body.patientEmail}`);
+                const emailResult = await sendAppointmentConfirmation(
+                    body.patientEmail,
+                    body.patientName,
+                    doctorName,
+                    body.appointmentDate,
+                    body.timeSlot,
+                    appointmentId
+                );
+                if (emailResult.success) {
+                    console.log(`[Email] Successfully sent to ${body.patientEmail}. ID: ${emailResult.data?.id}`);
+                } else {
+                    console.error(`[Email] Failed to send to ${body.patientEmail}:`, emailResult.error);
+                }
+            }
+
+            // Send WhatsApp
+            if (body.patientPhone) {
+                console.log(`[WhatsApp] Attempting to send to: ${body.patientPhone}`);
+                const waResult = await sendWhatsAppConfirmation(
+                    body.patientPhone,
+                    body.patientName,
+                    doctorName,
+                    body.appointmentDate,
+                    body.timeSlot,
+                    appointmentId
+                );
+                if (waResult.success) {
+                    console.log(`[WhatsApp] Successfully sent to ${body.patientPhone}. ID: ${waResult.messageId}`);
+                } else {
+                    console.error(`[WhatsApp] Failed to send to ${body.patientPhone}:`, waResult.error);
+                }
+            }
+        } catch (notifErr) {
+            console.error('[API] Critical notification logic error:', notifErr);
+        }
+
         return NextResponse.json(newAppointment, { status: 201 });
     } catch (error) {
         console.error(error);

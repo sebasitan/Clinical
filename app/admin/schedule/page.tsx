@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
-import { getSlots, getDoctors, updateSlotStatus, getAppointments, updateAppointmentStatus, addAppointment } from "@/lib/storage"
+import { getSlotsAsync, getDoctorsAsync, updateSlotStatus, getAppointmentsAsync, updateAppointmentStatusAsync, addAppointment } from "@/lib/storage"
 import type { Slot, Doctor, Appointment } from "@/lib/types"
 import {
     Clock,
@@ -61,10 +61,15 @@ export default function SchedulePage() {
         loadData()
     }, [selectedDate])
 
-    const loadData = () => {
-        setSlots(getSlots().filter(s => s.date === selectedDate))
-        setDoctors(getDoctors().filter(d => d.isActive))
-        setAppointments(getAppointments())
+    const loadData = async () => {
+        const [allSlots, docs, apts] = await Promise.all([
+            getSlotsAsync(undefined, selectedDate),
+            getDoctorsAsync(),
+            getAppointmentsAsync()
+        ])
+        setSlots(allSlots)
+        setDoctors(docs.filter(d => d.isActive))
+        setAppointments(apts)
     }
 
     const resetToToday = () => {
@@ -85,10 +90,14 @@ export default function SchedulePage() {
         loadData()
     }
 
-    const handleAppointmentAction = (appointmentId: string, status: Appointment['status']) => {
-        updateAppointmentStatus(appointmentId, status)
-        toast({ title: `Case marked as ${status}` })
-        loadData()
+    const handleAppointmentAction = async (appointmentId: string, status: Appointment['status']) => {
+        try {
+            await updateAppointmentStatusAsync(appointmentId, status)
+            toast({ title: `Case marked as ${status}` })
+            loadData()
+        } catch (e) {
+            toast({ title: "Failed to update", variant: "destructive" })
+        }
     }
 
     const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false)

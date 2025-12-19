@@ -5,11 +5,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
 import {
-    getAppointments,
-    getDoctors,
-    getPatients,
-    getSlots,
-    initializeDemoData,
+    getAppointmentsAsync,
+    getDoctorsAsync,
+    getPatientsAsync,
+    getSlotsAsync,
 } from "@/lib/storage"
 import { formatDate } from "@/lib/date-utils"
 import type { Appointment, Doctor, Patient, Slot } from "@/lib/types"
@@ -40,15 +39,20 @@ export default function AdminDashboardPage() {
     const todayStr = new Date().toISOString().split('T')[0]
 
     useEffect(() => {
-        initializeDemoData()
         loadData()
     }, [])
 
-    const loadData = () => {
-        setAppointments(getAppointments())
-        setDoctors(getDoctors())
-        setPatients(getPatients())
-        setSlots(getSlots())
+    const loadData = async () => {
+        const [apts, docs, pts, slts] = await Promise.all([
+            getAppointmentsAsync(),
+            getDoctorsAsync(),
+            getPatientsAsync(),
+            getSlotsAsync(undefined, todayStr)
+        ])
+        setAppointments(apts)
+        setDoctors(docs)
+        setPatients(pts)
+        setSlots(slts)
     }
 
     if (isLoading) {

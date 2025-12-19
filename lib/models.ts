@@ -82,3 +82,49 @@ const SlotSchema = new Schema({
 });
 
 export const SlotModel = models.Slot || model('Slot', SlotSchema);
+
+// --- Schedule Schema ---
+const ScheduleSchema = new Schema({
+    doctorId: { type: String, required: true },
+    days: {
+        Monday: [{ start: String, end: String }],
+        Tuesday: [{ start: String, end: String }],
+        Wednesday: [{ start: String, end: String }],
+        Thursday: [{ start: String, end: String }],
+        Friday: [{ start: String, end: String }],
+        Saturday: [{ start: String, end: String }],
+        Sunday: [{ start: String, end: String }]
+    }
+});
+
+export const ScheduleModel = models.Schedule || model('Schedule', ScheduleSchema);
+
+// --- Leave Schema ---
+const LeaveSchema = new Schema({
+    id: { type: String, required: true, unique: true },
+    doctorId: { type: String, required: true },
+    date: { type: String, required: true },
+    type: { type: String, enum: ['full', 'partial', 'emergency'], default: 'full' },
+    startTime: String,
+    endTime: String,
+    reason: String
+});
+
+export const LeaveModel = models.Leave || model('Leave', LeaveSchema);
+
+// --- Receptionist Schema ---
+const ReceptionistSchema = new Schema({
+    id: { type: String, required: true, unique: true },
+    name: { type: String, required: true },
+    photo: String,
+    phone: { type: String, required: true },
+    email: { type: String, required: true },
+    shift: {
+        type: String,
+        enum: ['morning', 'afternoon', 'full-day'],
+        default: 'full-day'
+    },
+    isActive: { type: Boolean, default: true }
+}, { timestamps: true });
+
+export const ReceptionistModel = models.Receptionist || model('Receptionist', ReceptionistSchema);

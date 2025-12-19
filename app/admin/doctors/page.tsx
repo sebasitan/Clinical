@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
-import { getDoctorsAsync, addDoctor, updateDoctor, deleteDoctor, getAppointments } from "@/lib/storage"
+import { getDoctorsAsync, addDoctorAsync, updateDoctorAsync, deleteDoctorAsync, getAppointments } from "@/lib/storage"
 import type { Doctor } from "@/lib/types"
 import { Plus, Edit, Trash2, Users, Stethoscope, Phone, Mail, MoreHorizontal, UserPlus, Search, TrendingUp, ShieldCheck, Upload, Image as ImageIcon } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -118,7 +118,7 @@ export default function DoctorsPage() {
         }
     }
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
 
         if (!formData.name || !formData.specialization || !formData.phone || !formData.email) {
@@ -130,39 +130,53 @@ export default function DoctorsPage() {
             return
         }
 
-        if (editingDoctor) {
-            updateDoctor(editingDoctor.id, formData)
+        try {
+            if (editingDoctor) {
+                await updateDoctorAsync(editingDoctor.id, formData)
+                toast({
+                    title: "Profile Updated",
+                    description: `Information for ${formData.name} has been synchronized.`,
+                })
+            } else {
+                await addDoctorAsync(formData)
+                toast({
+                    title: "Doctor Added",
+                    description: "New medical doctor has been registered in the system.",
+                })
+            }
+            loadData()
+            handleCloseDialog()
+        } catch (error: any) {
             toast({
-                title: "Profile Updated",
-                description: `Information for ${formData.name} has been synchronized.`,
-            })
-        } else {
-            addDoctor(formData)
-            toast({
-                title: "Doctor Added",
-                description: "New medical doctor has been registered in the system.",
+                title: "Operation Failed",
+                description: error.message,
+                variant: "destructive",
             })
         }
-
-        loadData()
-        handleCloseDialog()
     }
 
-    const toggleStatus = (doctor: Doctor) => {
-        updateDoctor(doctor.id, { isActive: !doctor.isActive })
-        toast({ title: doctor.isActive ? "Provider Disabled" : "Provider Activated" })
-        loadData()
+    const toggleStatus = async (doctor: Doctor) => {
+        try {
+            await updateDoctorAsync(doctor.id, { isActive: !doctor.isActive })
+            toast({ title: doctor.isActive ? "Provider Disabled" : "Provider Activated" })
+            loadData()
+        } catch (error: any) {
+            toast({ title: "Failed to update status", variant: "destructive" })
+        }
     }
 
-    const handleDelete = (id: string) => {
+    const handleDelete = async (id: string) => {
         if (window.confirm("Are you sure you want to remove this medical doctor? This action is permanent.")) {
-            if (deleteDoctor(id)) {
+            try {
+                await deleteDoctorAsync(id)
                 loadData()
                 toast({
                     title: "Doctor Removed",
                     description: "Record has been successfully deleted from your database.",
                     variant: "destructive"
                 })
+            } catch (error: any) {
+                toast({ title: "Delete failed", variant: "destructive" })
             }
         }
     }

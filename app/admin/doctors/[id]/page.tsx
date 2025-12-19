@@ -9,17 +9,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useToast } from "@/hooks/use-toast"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
 import {
-    getDoctors,
-    updateDoctor,
+    getDoctorsAsync,
+    updateDoctorAsync,
     getDoctorSchedule,
     saveDoctorSchedule,
     getDoctorLeaves,
     addDoctorLeave,
     deleteDoctorLeave,
-    getAppointments,
-    getSlots,
+    getAppointmentsAsync,
+    getSlotsAsync,
     regenerateDoctorSlots,
-    updateAppointmentStatus
+    updateAppointmentStatusAsync
 } from "@/lib/storage"
 import type { Doctor, DoctorWeeklySchedule, DayOfWeek, ScheduleTimeRange, DoctorLeave, Appointment, Slot } from "@/lib/types"
 import {
@@ -94,8 +94,14 @@ export default function DoctorManagementPage() {
         }
     }, [id])
 
-    const loadDoctorData = (docId: string) => {
-        const doc = getDoctors().find(d => d.id === docId)
+    const loadDoctorData = async (docId: string) => {
+        const [docs, apts, drSlots] = await Promise.all([
+            getDoctorsAsync(),
+            getAppointmentsAsync(),
+            getSlotsAsync(docId)
+        ])
+
+        const doc = docs.find(d => d.id === docId)
         if (!doc) {
             router.push("/admin/doctors")
             return
@@ -103,19 +109,23 @@ export default function DoctorManagementPage() {
         setDoctor(doc)
         setSchedule(getDoctorSchedule(docId) || { doctorId: docId, days: {} })
         setLeaves(getDoctorLeaves(docId))
-        setAppointments(getAppointments().filter(a => a.doctorId === docId))
-        setSlots(getSlots(docId))
+        setAppointments(apts.filter(a => a.doctorId === docId))
+        setSlots(drSlots)
     }
 
-    const handleUpdateDoctor = (updates: Partial<Doctor>) => {
+    const handleUpdateDoctor = async (updates: Partial<Doctor>) => {
         if (!doctor) return
-        updateDoctor(doctor.id, updates)
-        setDoctor({ ...doctor, ...updates })
-        toast({ title: "Doctor updated successfully" })
-        // If availability or slot duration changed, regenerate slots
-        if ("isAvailable" in updates || "isActive" in updates || "slotDuration" in updates) {
-            regenerateDoctorSlots(doctor.id)
-            setSlots(getSlots(doctor.id))
+        try {
+            await updateDoctorAsync(doctor.id, updates)
+            setDoctor({ ...doctor, ...updates })
+            toast({ title: "Doctor updated successfully" })
+            // If availability or slot duration changed, regenerate slots
+            if ("isAvailable" in updates || "isActive" in updates || "slotDuration" in updates) {
+                regenerateDoctorSlots(doctor.id)
+                setSlots(getSlots(doctor.id))
+            }
+        } catch (error: any) {
+            toast({ title: "Update failed", variant: "destructive" })
         }
     }
 
@@ -577,10 +587,14 @@ export default function DoctorManagementPage() {
                                                             <Button
                                                                 variant="outline"
                                                                 size="sm"
-                                                                onClick={() => {
-                                                                    updateAppointmentStatus(apt.id, 'completed')
-                                                                    toast({ title: "Appointment Completed" })
-                                                                    loadDoctorData(doctor.id)
+                                                                onClick={async () => {
+                                                                    try {
+                                                                        await updateAppointmentStatusAsync(apt.id, 'completed')
+                                                                        toast({ title: "Appointment Completed" })
+                                                                        loadDoctorData(doctor.id)
+                                                                    } catch (e) {
+                                                                        toast({ title: "Failed to update", variant: "destructive" })
+                                                                    }
                                                                 }}
                                                                 className="h-9 rounded-xl text-[10px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-600 hover:text-white"
                                                             >
@@ -589,10 +603,14 @@ export default function DoctorManagementPage() {
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
-                                                                onClick={() => {
-                                                                    updateAppointmentStatus(apt.id, 'no-show')
-                                                                    toast({ title: "Marked as No-Show" })
-                                                                    loadDoctorData(doctor.id)
+                                                                onClick={async () => {
+                                                                    try {
+                                                                        await updateAppointmentStatusAsync(apt.id, 'no-show')
+                                                                        toast({ title: "Marked as No-Show" })
+                                                                        loadDoctorData(doctor.id)
+                                                                    } catch (e) {
+                                                                        toast({ title: "Failed to update", variant: "destructive" })
+                                                                    }
                                                                 }}
                                                                 className="h-9 w-9 rounded-xl text-slate-400 hover:bg-rose-50 hover:text-rose-600"
                                                             >

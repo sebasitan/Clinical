@@ -10,8 +10,9 @@ import { useToast } from "@/hooks/use-toast"
 import { getDoctorsAsync, addAppointmentAsync, getSlotsAsync, seedDatabaseAsync } from "@/lib/storage"
 import type { Doctor, TimeSlot, Slot } from "@/lib/types"
 import { CheckCircle2, User, Clock, Phone, Mail, Check, Sparkles, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Shield, ArrowRight, MapPin, Stethoscope } from "lucide-react"
-import { Calendar } from "@/components/ui/calendar"
+import { CalendarDatePickerContent } from "@/components/ui/calendar-date-picker"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { cn } from "@/lib/utils"
 import {
   InputOTP,
   InputOTPGroup,
@@ -104,9 +105,14 @@ export default function BookingPage() {
 
   // Removed the unused `remarks` state and related logic from original
 
-  const handleNext = () => {
+  const handleNext = (dateOverride?: string, timeOverride?: TimeSlot | "") => {
+    // Determine actual values to check (either state or overrides)
+    const currentStep = step;
+    const date = dateOverride !== undefined ? dateOverride : selectedDate;
+    const time = timeOverride !== undefined ? timeOverride : selectedTimeSlot;
+
     // Step 1: Patient Type Selection
-    if (step === 1 && !patientType) {
+    if (currentStep === 1 && !patientType) {
       toast({
         title: "Selection required",
         description: "Please select patient type",
@@ -116,7 +122,7 @@ export default function BookingPage() {
     }
 
     // Step 2: Doctor Selection
-    if (step === 2 && !selectedDoctorId) {
+    if (currentStep === 2 && !selectedDoctorId) {
       toast({
         title: "Selection required",
         description: "Please select a doctor",
@@ -126,7 +132,7 @@ export default function BookingPage() {
     }
 
     // Step 3: Date and Time Selection
-    if (step === 3 && (!selectedDate || !selectedTimeSlot)) {
+    if (currentStep === 3 && (!date || !time)) {
       toast({
         title: "Selection required",
         description: "Please select both date and time slot",
@@ -136,7 +142,7 @@ export default function BookingPage() {
     }
 
     // Step 4: Patient Information
-    if (step === 4) {
+    if (currentStep === 4) {
       if (!patientName || !patientPhone) {
         toast({
           title: "Information required",
@@ -197,7 +203,9 @@ export default function BookingPage() {
     setStep(step - 1)
   }
 
-  const initiateBooking = () => {
+  const [generatedOtp, setGeneratedOtp] = useState("")
+
+  const initiateBooking = async () => {
     // Check local state availability
     const slot = dailySlots.find(s => s.timeRange === selectedTimeSlot)
     if (!slot || slot.status !== 'available') {
@@ -209,24 +217,71 @@ export default function BookingPage() {
       return
     }
 
-    // Show OTP input
-    setShowOtpVerification(true)
-    toast({
-      title: "OTP Sent",
-      description: "An OTP has been sent to your mobile number. (Use 123456)",
-    })
+    try {
+      console.log(`[Flow] Requesting SMS OTP for ${patientPhone} via Twilio Verify...`)
+      const res = await fetch('/api/otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: patientPhone })
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to send OTP')
+      }
+
+      // Show OTP input
+      setShowOtpVerification(true)
+      toast({
+        title: "OTP Sent",
+        description: "A verification code has been sent to your mobile number via SMS.",
+      })
+    } catch (e: any) {
+      console.error('OTP Send Error:', e)
+      // Fallback for demo if Twilio is not configured properly
+      setShowOtpVerification(true)
+      setGeneratedOtp("123456") // Safety fallback
+      toast({
+        title: "Connection Issue",
+        description: `${e.message}. Demo mode active: use code 123456.`,
+        variant: "default",
+      })
+    }
   }
 
-  const verifyAndBook = () => {
-    if (otp !== "123456") {
-      toast({
-        title: "Invalid OTP",
-        description: "The OTP you entered is incorrect. Please try again.",
-        variant: "destructive",
-      })
+  const verifyAndBook = async () => {
+    // Special case for demo fallback
+    if (generatedOtp === "123456" && otp === "123456") {
+      finalizeBooking()
       return
     }
-    finalizeBooking()
+
+    setIsSubmitting(true)
+    try {
+      const res = await fetch('/api/otp/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: patientPhone, code: otp })
+      })
+
+      if (res.ok) {
+        finalizeBooking()
+      } else {
+        toast({
+          title: "Invalid OTP",
+          description: "The verification code is incorrect or expired.",
+          variant: "destructive",
+        })
+        setIsSubmitting(false)
+      }
+    } catch (e) {
+      toast({
+        title: "Verification Error",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      })
+      setIsSubmitting(false)
+    }
   }
 
   const finalizeBooking = async () => {
@@ -376,13 +431,6 @@ export default function BookingPage() {
             </div>
           </div>
 
-          {/* Back Button */}
-          {step > 1 && step < 6 && (
-            <button onClick={handleBack} className="group flex items-center gap-2 text-slate-400 hover:text-slate-900 transition-colors mb-8 w-fit">
-              <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-              <span className="font-medium">Back</span>
-            </button>
-          )}
 
           {/* Step 1: Patient Type */}
           {/* Step 1: Patient Type */}
@@ -509,160 +557,191 @@ export default function BookingPage() {
             </div>
           )}
 
-          {/* Mobile Sticky Footer for Step 2 moved to shared footer logic below */}
-          <div className="hidden lg:flex mt-10 justify-end">
-            <Button
-              onClick={handleNext}
-              disabled={!selectedDoctorId}
-              size="lg"
-              className="rounded-full px-10 h-14 bg-slate-900 hover:bg-slate-800 text-lg shadow-xl shadow-slate-200"
-            >
-              Continue <ArrowRight className="ml-2 w-5 h-5" />
-            </Button>
-          </div>
+          {step === 2 && (
+            <div className="hidden lg:flex mt-10 justify-between items-center">
+              <Button
+                onClick={handleBack}
+                variant="outline"
+                size="lg"
+                className="rounded-full px-12 h-16 border-slate-200 text-slate-600 font-bold text-xl hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all hover:scale-105 active:scale-95"
+              >
+                <ChevronLeft className="mr-3 w-6 h-6" /> Back
+              </Button>
+              <Button
+                onClick={handleNext}
+                disabled={!selectedDoctorId}
+                size="lg"
+                className="rounded-full px-12 h-16 bg-slate-900 hover:bg-slate-800 text-xl font-bold shadow-2xl shadow-slate-300 transition-all hover:scale-105 active:scale-95"
+              >
+                Continue <ArrowRight className="ml-3 w-6 h-6" />
+              </Button>
+            </div>
+          )}
 
 
           {/* Step 3: Date & Time */}
           {step === 3 && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 pb-24 lg:pb-0">
-              <h1 className="font-sans font-bold text-3xl md:text-5xl text-slate-900 mb-4 tracking-tight">When works for you?</h1>
-              <p className="font-sans text-xl text-slate-500 mb-12">Availability for {selectedDoctor?.name}.</p>
+              <div className="flex flex-col mb-8">
+                <h1 className="font-sans font-bold text-3xl md:text-5xl text-slate-900 mb-2 tracking-tight leading-tight">When works for you?</h1>
+                <p className="font-sans text-xl text-slate-500">Availability for {selectedDoctor?.name}.</p>
+              </div>
 
-              <div className="space-y-10">
-                {/* Date Strip */}
+              <div className="flex flex-col lg:flex-row gap-8 items-stretch justify-center max-w-7xl mx-auto lg:h-[700px]">
                 {/* Date Selection - Calendar */}
-                {/* Date Selection - Calendar */}
-                <div className="flex flex-col items-center">
-                  <div className="w-full max-w-md bg-white rounded-[2rem] border-0 shadow-2xl overflow-hidden flex flex-col md:flex-row">
-                    {/* Header / Info Panel */}
-                    <div className="bg-blue-600 p-8 flex flex-col justify-between text-white md:w-2/5 min-h-[200px] md:min-h-full relative overflow-hidden">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-                      <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2" />
+                <div className="w-full lg:w-1/2 bg-white rounded-[3rem] shadow-2xl overflow-hidden isolate flex flex-col border border-slate-100">
+                  {/* Header / Info Panel - Dark Premium Gradient */}
+                  <div className="bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#0F172A] p-10 flex flex-col justify-between text-white relative overflow-hidden h-[200px] shrink-0 rounded-t-[3rem]">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
+                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-500/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl" />
 
-                      <div className="relative z-10">
-                        <p className="text-blue-100 font-medium text-lg mb-1">{selectedDate ? new Date(selectedDate).getFullYear() : '2024'}</p>
-                        <h3 className="font-bold text-4xl md:text-5xl leading-tight">
-                          {selectedDate ? new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'short' }) : 'Pick'} <br />
-                          <span className="opacity-90">{selectedDate ? new Date(selectedDate).getDate() : 'Date'}</span>
+                    <div className="relative z-10 flex flex-col items-center justify-center h-full">
+                      <p className="text-blue-300 font-bold text-xs uppercase tracking-[0.3em] mb-4 opacity-80">Selected Date</p>
+                      <div className="flex items-center gap-6">
+                        <h3 className="font-bold text-8xl tracking-tighter leading-none text-white">
+                          {selectedDate ? new Date(selectedDate).getDate() : '--'}
                         </h3>
-                      </div>
-                      <div className="relative z-10 mt-auto pt-6">
-                        <p className="text-blue-200 font-medium uppercase tracking-widest text-xs">Selected</p>
-                        <p className="font-bold text-xl">{selectedDate ? new Date(selectedDate).toLocaleDateString('en-US', { month: 'long' }) : 'Month'}</p>
+                        <div className="flex flex-col items-start justify-center leading-tight">
+                          <span className="font-bold text-3xl uppercase tracking-tight text-blue-400">{selectedDate ? new Date(selectedDate).toLocaleDateString('en-US', { month: 'short' }) : 'Month'}</span>
+                          <span className="text-slate-400 font-bold text-xl">{selectedDate ? new Date(selectedDate).getFullYear() : 'Year'}</span>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Calendar Body */}
-                    <div className="p-6 md:p-8 bg-white md:w-3/5 flex justify-center items-center">
-                      <Calendar
-                        mode="single"
-                        fromDate={new Date()}
-                        selected={selectedDate ? new Date(selectedDate) : undefined}
-                        onSelect={(date) => {
-                          if (date) {
-                            const offsetDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000));
-                            setSelectedDate(offsetDate.toISOString().split("T")[0]);
-                          } else {
-                            setSelectedDate("");
-                          }
-                        }}
-                        disabled={(date) => {
+                    <div className="relative z-10 flex justify-between items-center w-full">
+                      <div className="flex items-center gap-2 bg-white/5 px-5 py-2 rounded-full backdrop-blur-md border border-white/10">
+                        <CalendarIcon className="w-4 h-4 text-blue-400" />
+                        <span className="text-xs font-bold uppercase tracking-widest text-slate-300">{selectedDate ? new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long' }) : 'Select a date'}</span>
+                      </div>
+                      <span className="text-[0.6rem] font-bold uppercase tracking-[0.3em] text-slate-500">Step 3/5</span>
+                    </div>
+                  </div>
+
+                  <div className="p-6 bg-white flex-1 flex flex-col overflow-hidden rounded-b-[3rem]">
+                    <CalendarDatePickerContent
+                      id="booking-date-picker"
+                      date={selectedDate ? new Date(selectedDate) : undefined}
+                      onDateSelect={(date) => {
+                        if (date) {
+                          const year = date.getFullYear();
+                          const month = String(date.getMonth() + 1).padStart(2, '0');
+                          const day = String(date.getDate()).padStart(2, '0');
+                          setSelectedDate(`${year}-${month}-${day}`);
+                        } else {
+                          setSelectedDate("");
+                        }
+                      }}
+                      calendarProps={{
+                        fromDate: new Date(),
+                        disabled: (date: Date) => {
                           const today = new Date();
                           today.setHours(0, 0, 0, 0);
-                          return date < today || date.getDay() === 0 || date.getDay() === 6;
-                        }}
-                        className="p-0 w-full"
-                        classNames={{
-                          months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-                          month: "space-y-4 w-full",
-                          caption: "flex justify-center pt-1 relative items-center mb-4",
-                          caption_label: "text-lg font-bold text-slate-900",
-                          nav: "flex items-center absolute top-1/2 -translate-y-1/2 -inset-x-2 md:-inset-x-4 justify-between pointer-events-none z-10",
-                          button_previous: "pointer-events-auto h-10 w-10 bg-white shadow-xl border border-slate-100 rounded-full p-0 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all opacity-100 hover:scale-110 active:scale-95",
-                          button_next: "pointer-events-auto h-10 w-10 bg-white shadow-xl border border-slate-100 rounded-full p-0 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all opacity-100 hover:scale-110 active:scale-95",
-                          table: "w-full border-collapse space-y-1",
-                          head_row: "flex justify-between mb-2",
-                          head_cell: "text-slate-400 rounded-md w-10 font-bold text-[0.8rem] uppercase tracking-wide",
-                          row: "flex w-full mt-2 justify-between",
-                          cell: "h-10 w-10 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-slate-100/50 [&:has([aria-selected])]:bg-transparent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
-                          day: "h-10 w-10 p-0 font-medium aria-selected:opacity-100 hover:bg-slate-50 hover:text-blue-600 rounded-full transition-all duration-300",
-                          day_range_end: "day-range-end",
-                          day_selected: "bg-blue-600 text-white hover:bg-blue-700 hover:text-white focus:bg-blue-600 focus:text-white shadow-lg shadow-blue-300 scale-110",
-                          day_today: "text-blue-600 font-bold bg-blue-50",
-                          day_outside: "text-slate-300 opacity-50 aria-selected:bg-slate-100/50 aria-selected:text-slate-500 aria-selected:opacity-30 hidden",
-                          day_disabled: "text-slate-200 opacity-30",
-                          day_range_middle: "aria-selected:bg-slate-100 aria-selected:text-slate-900",
-                          day_hidden: "invisible",
-                        }}
-                      />
-                    </div>
+                          return date < today || date.getDay() === 0;
+                        },
+                        className: "p-0 border-0 shadow-none w-full max-w-full",
+                        classNames: {
+                          day_selected: "bg-blue-600 text-white hover:bg-blue-700 hover:text-white focus:bg-blue-600 focus:text-white shadow-lg shadow-blue-300 scale-110 font-bold rounded-xl",
+                          day_today: "text-blue-600 font-bold bg-blue-50 rounded-xl",
+                          day: "h-10 w-10 md:h-12 md:w-12 p-0 font-medium aria-selected:opacity-100 hover:bg-slate-50 hover:text-blue-600 rounded-xl transition-all duration-300",
+                          head_cell: "text-slate-400 rounded-md w-10 md:w-12 font-bold text-[0.8rem] uppercase tracking-wide py-3",
+                        }
+                      }}
+                    />
                   </div>
                 </div>
 
-                {/* Time Grid */}
-                {/* Time Grid */}
-                <div className={`transition-all duration-500 ${selectedDate ? "opacity-100 translate-y-0" : "opacity-30 translate-y-4"}`}>
-                  <div className="flex flex-col items-center">
-                    <div className="w-full max-w-md bg-white rounded-[2rem] border-0 shadow-2xl overflow-hidden flex flex-col md:flex-row">
-                      {/* Header / Info Panel */}
-                      <div className="bg-slate-900 p-8 flex flex-col justify-between text-white md:w-2/5 min-h-[150px] md:min-h-full relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
-                        <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+                {/* Time Grid Selection */}
+                <div
+                  className={cn(
+                    "w-full lg:w-1/2 bg-white rounded-[3rem] shadow-2xl overflow-hidden isolate flex flex-col border border-slate-100 transition-all duration-500",
+                    selectedDate ? "opacity-100" : "opacity-40"
+                  )}
+                >
+                  {/* Header / Info Panel - Dark Premium Gradient */}
+                  <div className="bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#0F172A] p-10 flex flex-col justify-between text-white relative overflow-hidden h-[200px] shrink-0 rounded-t-[3rem]">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
+                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-500/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl" />
 
-                        <div className="relative z-10">
-                          <Label className="text-slate-400 font-medium text-xs uppercase tracking-widest mb-1 block">Available Time</Label>
-                          <h3 className="font-bold text-3xl md:text-4xl leading-tight text-blue-400">
-                            {selectedTimeSlot ? selectedTimeSlot.split(' ')[0] : '--:--'} <span className="text-lg text-slate-500">{selectedTimeSlot ? selectedTimeSlot.split(' ')[1] : ''}</span>
-                          </h3>
-                        </div>
-
-                        <div className="relative z-10 mt-auto pt-4">
-                          <div className="flex items-center gap-2 text-slate-300 text-sm">
-                            <Clock className="w-4 h-4" />
-                            <span>{selectedTimeSlot || 'Select Time'}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Time Slots Body */}
-                      <div className="p-6 md:p-8 bg-white md:w-3/5">
-                        <div className="grid grid-cols-1 gap-3">
-                          {TIME_SLOTS.map(time => {
-                            const slot = dailySlots.find(s => s.timeRange === time);
-                            const available = slot && slot.status === 'available';
-                            return (
-                              <button
-                                key={time}
-                                disabled={!available}
-                                onClick={() => available && setSelectedTimeSlot(time)}
-                                className={`py-3 px-4 rounded-xl border font-bold text-sm transition-all duration-200 flex items-center justify-between group ${selectedTimeSlot === time
-                                  ? "bg-slate-900 border-slate-900 text-white shadow-lg shadow-slate-200 scale-[1.02]"
-                                  : !available
-                                    ? "bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed decoration-slice"
-                                    : "bg-white border-slate-100 text-slate-600 hover:border-blue-400 hover:text-blue-600 hover:shadow-md"
-                                  }`}
-                              >
-                                <span>{time}</span>
-                                {selectedTimeSlot === time && <Check className="w-4 h-4 text-blue-400" />}
-                              </button>
-                            )
-                          })}
-                        </div>
-                      </div>
+                    <div className="relative z-10 flex flex-col items-center justify-center h-full">
+                      <p className="text-blue-300 font-bold text-xs uppercase tracking-[0.3em] mb-4 opacity-80">Selected Sessions</p>
+                      <h3 className="font-bold text-6xl md:text-7xl leading-tight text-white tracking-tighter">
+                        {selectedTimeSlot ? selectedTimeSlot.split(' ')[0] : '--:--'} <span className="text-3xl text-blue-400 normal-case tracking-normal">{selectedTimeSlot ? selectedTimeSlot.split(' ')[1] : ''}</span>
+                      </h3>
                     </div>
+
+                    <div className="relative z-10 flex justify-between items-center w-full">
+                      <div className="flex items-center gap-2 bg-white/5 px-5 py-2 rounded-full backdrop-blur-md border border-white/10">
+                        <Clock className="w-4 h-4 text-blue-400" />
+                        <span className="text-xs font-bold uppercase tracking-widest text-slate-300">{selectedTimeSlot || 'Select a time slot'}</span>
+                      </div>
+                      {selectedTimeSlot && (
+                        <div className="bg-blue-500 h-2 w-2 rounded-full animate-pulse shadow-[0_0_15px_rgba(59,130,246,0.8)]" />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Time Slots Area */}
+                  <div className="p-8 bg-white flex-1 flex flex-col rounded-b-[3rem]">
+                    {!selectedDate ? (
+                      <div className="flex-1 flex flex-col items-center justify-center text-slate-300 py-10 border-2 border-dashed border-slate-50 rounded-3xl">
+                        <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                          <CalendarIcon className="w-8 h-8 opacity-20" />
+                        </div>
+                        <p className="text-sm font-bold uppercase tracking-widest opacity-40">Choose a date first</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {TIME_SLOTS.map(time => {
+                          const slot = dailySlots.find(s => s.timeRange === time);
+                          const available = slot && slot.status === 'available';
+                          return (
+                            <button
+                              key={time}
+                              disabled={!available}
+                              onClick={() => {
+                                if (available) {
+                                  setSelectedTimeSlot(time);
+                                  // Auto-advance to details step with the fresh value
+                                  // Use a small delay for visual feedback before transition
+                                  setTimeout(() => handleNext(selectedDate, time), 300);
+                                }
+                              }}
+                              className={`py-3 px-2 rounded-full border-2 font-bold text-[0.7rem] md:text-xs transition-all duration-300 flex items-center justify-center text-center ${selectedTimeSlot === time
+                                ? "bg-blue-600 border-blue-600 text-white shadow-xl shadow-blue-200 scale-[1.02] ring-4 ring-blue-50"
+                                : !available
+                                  ? "bg-slate-50 border-slate-50 text-slate-300 cursor-not-allowed"
+                                  : "bg-white border-slate-100 text-slate-600 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50/30"
+                                }`}
+                            >
+                              <span>{time.split(' - ')[0]}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
 
 
-              <div className="hidden lg:flex mt-12 justify-end">
+
+              {/* Bottom Action Footer for Step 3 */}
+              <div className="hidden lg:flex mt-10 justify-between items-center container max-w-7xl mx-auto px-0">
+                <Button
+                  onClick={() => setStep(2)}
+                  variant="outline"
+                  size="lg"
+                  className="rounded-full px-12 h-16 border-slate-200 text-slate-600 font-bold text-xl hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all hover:scale-105 active:scale-95"
+                >
+                  <ChevronLeft className="mr-3 w-6 h-6" /> Back
+                </Button>
                 <Button
                   onClick={handleNext}
                   disabled={!selectedDate || !selectedTimeSlot}
                   size="lg"
-                  className="rounded-full px-10 h-14 bg-slate-900 hover:bg-slate-800 text-lg shadow-xl shadow-slate-200"
+                  className="rounded-full px-12 h-16 bg-slate-900 hover:bg-slate-800 text-xl font-bold shadow-2xl shadow-slate-300 transition-all hover:scale-105 active:scale-95"
                 >
-                  Continue <ArrowRight className="ml-2 w-5 h-5" />
+                  Continue <ArrowRight className="ml-3 w-6 h-6" />
                 </Button>
               </div>
             </div>
@@ -772,13 +851,21 @@ export default function BookingPage() {
                     )}
                   </div>
 
-                  <div className="mt-auto pt-10 flex justify-end">
+                  <div className="mt-auto pt-10 flex justify-between items-center">
+                    <Button
+                      onClick={handleBack}
+                      variant="outline"
+                      size="lg"
+                      className="rounded-full px-12 h-16 border-slate-200 text-slate-600 font-bold text-xl hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all hover:scale-105 active:scale-95"
+                    >
+                      <ChevronLeft className="mr-3 w-6 h-6" /> Back
+                    </Button>
                     <Button
                       onClick={handleNext}
                       size="lg"
-                      className="rounded-full px-10 h-14 bg-slate-900 hover:bg-slate-800 text-lg shadow-xl shadow-slate-200 transition-all hover:scale-105 active:scale-95"
+                      className="rounded-full px-12 h-16 bg-slate-900 hover:bg-slate-800 text-xl font-bold shadow-2xl shadow-slate-300 transition-all hover:scale-105 active:scale-95"
                     >
-                      Review Details <ArrowRight className="ml-2 w-5 h-5" />
+                      Review Details <ArrowRight className="ml-3 w-6 h-6" />
                     </Button>
                   </div>
                 </div>
@@ -874,13 +961,23 @@ export default function BookingPage() {
                       </div>
                     </div>
 
-                    <Button
-                      onClick={initiateBooking}
-                      size="lg"
-                      className="w-full rounded-full h-14 bg-blue-600 hover:bg-blue-700 text-lg shadow-xl shadow-blue-200 transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center"
-                    >
-                      Confirm Appointment
-                    </Button>
+                    <div className="flex justify-between items-center w-full gap-4">
+                      <Button
+                        onClick={handleBack}
+                        variant="outline"
+                        size="lg"
+                        className="rounded-full px-12 h-16 border-slate-200 text-slate-600 font-bold text-xl hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all hover:scale-105 active:scale-95 flex-1"
+                      >
+                        <ChevronLeft className="mr-3 w-6 h-6" /> Back
+                      </Button>
+                      <Button
+                        onClick={initiateBooking}
+                        size="lg"
+                        className="rounded-full h-16 bg-blue-600 hover:bg-blue-700 text-xl font-bold shadow-2xl shadow-blue-300 transition-all hover:scale-[1.05] active:scale-95 flex-[1.5] flex items-center justify-center"
+                      >
+                        Confirm Booking <ArrowRight className="ml-3 w-6 h-6" />
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   <div className="w-full max-w-sm text-center animate-in zoom-in-95 duration-300">
@@ -1010,30 +1107,41 @@ export default function BookingPage() {
                     Continue
                   </Button>
                 )}
-                {step === 3 && (
-                  <Button
-                    onClick={handleNext}
-                    disabled={!selectedDate || !selectedTimeSlot}
-                    className="w-full h-14 rounded-full bg-slate-900 hover:bg-slate-800 text-lg font-bold shadow-lg shadow-slate-200"
-                  >
-                    Continue
-                  </Button>
-                )}
+                {/* Mobile Continue button removed for Step 3 */}
+
                 {step === 4 && (
-                  <Button
-                    onClick={handleNext}
-                    className="w-full h-14 rounded-full bg-slate-900 hover:bg-slate-800 text-lg font-bold shadow-lg shadow-slate-200"
-                  >
-                    Review Details
-                  </Button>
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={handleBack}
+                      variant="outline"
+                      className="flex-1 h-14 rounded-full border-slate-200 text-slate-600 font-bold"
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      onClick={handleNext}
+                      className="flex-2 h-14 rounded-full bg-slate-900 hover:bg-slate-800 text-lg font-bold shadow-lg shadow-slate-200"
+                    >
+                      Continue
+                    </Button>
+                  </div>
                 )}
                 {step === 5 && !showOtpVerification && (
-                  <Button
-                    onClick={initiateBooking}
-                    className="w-full h-14 rounded-full bg-blue-600 hover:bg-blue-700 text-lg font-bold shadow-lg shadow-blue-200"
-                  >
-                    Confirm Booking
-                  </Button>
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={handleBack}
+                      variant="outline"
+                      className="flex-1 h-14 rounded-full border-slate-200 text-slate-600 font-bold"
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      onClick={initiateBooking}
+                      className="flex-2 h-14 rounded-full bg-blue-600 hover:bg-blue-700 text-lg font-bold shadow-lg shadow-blue-200"
+                    >
+                      Confirm
+                    </Button>
+                  </div>
                 )}
                 {/* Note: Step 1 (patient type) doesn't need this as the cards themselves are buttons */}
               </div>

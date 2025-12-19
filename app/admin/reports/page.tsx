@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
-import { getAppointments, getDoctors, getSlots, getPatients } from "@/lib/storage"
+import { getAppointmentsAsync, getDoctorsAsync, getSlotsAsync, getPatientsAsync } from "@/lib/storage"
 import type { Appointment, Doctor, Slot, Patient } from "@/lib/types"
 import {
     BarChart3,
@@ -50,9 +50,17 @@ export default function ReportsPage() {
     })
 
     useEffect(() => {
-        setAppointments(getAppointments())
-        setDoctors(getDoctors())
-        setPatients(getPatients())
+        const load = async () => {
+            const [apts, docs, pts] = await Promise.all([
+                getAppointmentsAsync(),
+                getDoctorsAsync(),
+                getPatientsAsync()
+            ])
+            setAppointments(apts)
+            setDoctors(docs)
+            setPatients(pts)
+        }
+        load()
     }, [])
 
     // Data Processing

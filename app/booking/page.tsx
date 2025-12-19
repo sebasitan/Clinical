@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import { motion } from "framer-motion"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast"
 import { getDoctorsAsync, addAppointmentAsync, getSlotsAsync, seedDatabaseAsync } from "@/lib/storage"
 import type { Doctor, TimeSlot, Slot } from "@/lib/types"
-import { CheckCircle2, User, Clock, Phone, Mail, Check, Sparkles, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Shield, ArrowRight, MapPin, Stethoscope } from "lucide-react"
+import { CheckCircle2, User, Clock, Phone, Mail, Check, Sparkles, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Shield, ArrowRight, MapPin, Stethoscope, Smile } from "lucide-react"
 import { CalendarDatePickerContent } from "@/components/ui/calendar-date-picker"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
@@ -366,12 +367,76 @@ export default function BookingPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6 text-center">
-            <p className="text-muted-foreground">Loading booking form...</p>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+          className="relative mb-12"
+        >
+          {/* Main Icon with pulse effect */}
+          <div className="w-24 h-24 bg-blue-50 rounded-[2rem] flex items-center justify-center text-blue-600 relative z-10">
+            <motion.div
+              animate={{
+                rotate: [0, -10, 10, -10, 0],
+                scale: [1, 1.1, 1]
+              }}
+              transition={{
+                duration: 3,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+            >
+              <Smile className="w-12 h-12" />
+            </motion.div>
+          </div>
+
+          {/* Animated rings */}
+          <motion.div
+            animate={{ scale: [1, 1.4, 1], opacity: [0.3, 0, 0.3] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="absolute inset-0 bg-blue-400 rounded-[2rem] -z-0"
+          />
+          <motion.div
+            animate={{ scale: [1, 1.8, 1], opacity: [0.1, 0, 0.1] }}
+            transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
+            className="absolute inset-0 bg-blue-300 rounded-[2rem] -z-0"
+          />
+        </motion.div>
+
+        <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter mb-4">
+          Preparing Your <br />
+          <span className="text-blue-600">Dental Portal</span>
+        </h2>
+
+        <div className="flex items-center gap-2 mb-8">
+          {[0, 1, 2].map((i) => (
+            <motion.div
+              key={i}
+              animate={{
+                y: [0, -6, 0],
+                opacity: [0.3, 1, 0.3]
+              }}
+              transition={{
+                duration: 1,
+                repeat: Infinity,
+                delay: i * 0.2
+              }}
+              className="w-2 h-2 bg-blue-600 rounded-full"
+            />
+          ))}
+        </div>
+
+        <p className="text-slate-400 text-sm font-bold uppercase tracking-[0.2em] max-w-xs leading-relaxed">
+          Retrieving schedules and specialists for your perfect smile...
+        </p>
+
+        {/* Subtle decorative items */}
+        <div className="absolute bottom-12 left-0 right-0 flex justify-center gap-8 opacity-10">
+          <Stethoscope className="w-8 h-8 text-blue-900" />
+          <Shield className="w-8 h-8 text-blue-900" />
+          <Sparkles className="w-8 h-8 text-blue-900" />
+        </div>
       </div>
     )
   }

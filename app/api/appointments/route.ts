@@ -37,10 +37,40 @@ export async function POST(request: Request) {
             }
         }
 
-        // 2. Create Appointment
+        // 2. Handle Patient Record (Find or Create)
+        const { PatientModel } = await import('@/lib/models');
+        let patientIC = body.patientIC;
+
+        if (body.patientType === 'new' && (!patientIC || patientIC === 'NEW_PATIENT')) {
+            // Generate a readable, easy-to-type ID for new patients (e.g., KPS-123456)
+            patientIC = `KPS-${Math.floor(100000 + Math.random() * 900000)}`;
+        }
+
+        let patient = await PatientModel.findOne({ ic: patientIC });
+        if (patient) {
+            patient.name = body.patientName;
+            patient.phone = body.patientPhone;
+            if (body.patientEmail) patient.email = body.patientEmail;
+            patient.type = 'existing'; // Once visited, they are existing
+            patient.lastVisit = body.appointmentDate;
+            await patient.save();
+        } else {
+            await PatientModel.create({
+                id: `PAT-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+                name: body.patientName,
+                ic: patientIC,
+                phone: body.patientPhone,
+                email: body.patientEmail,
+                type: 'existing',
+                lastVisit: body.appointmentDate
+            });
+        }
+
+        // 3. Create Appointment
         const appointmentId = `APT-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
         const newAppointment = await AppointmentModel.create({
             ...body,
+            patientIC: patientIC, // Ensure generated IC is saved
             id: appointmentId
         });
 
@@ -68,7 +98,8 @@ export async function POST(request: Request) {
                     doctorName,
                     body.appointmentDate,
                     body.timeSlot,
-                    appointmentId
+                    appointmentId,
+                    patientIC
                 );
                 if (emailResult.success) {
                     console.log(`[Email] Successfully sent to ${body.patientEmail}. ID: ${emailResult.data?.id}`);
@@ -86,7 +117,8 @@ export async function POST(request: Request) {
                     doctorName,
                     body.appointmentDate,
                     body.timeSlot,
-                    appointmentId
+                    appointmentId,
+                    patientIC
                 );
                 if (waResult.success) {
                     console.log(`[WhatsApp] Successfully sent to ${body.patientPhone}. ID: ${waResult.messageId}`);

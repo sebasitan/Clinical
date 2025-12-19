@@ -46,6 +46,18 @@ export type Patient = {
     email?: string
     lastVisit?: string
     type: "new" | "existing"
+    continuedTreatment?: {
+        active: boolean
+        nextFollowUpDate?: string | Date
+        notes?: string
+        status?: 'in-progress' | 'completed'
+        reminderDaysBefore?: number[]
+        preferredChannels?: {
+            sms: boolean
+            whatsapp: boolean
+            email: boolean
+        }
+    }
 }
 
 export type SlotStatus = "available" | "booked" | "blocked" | "locked"

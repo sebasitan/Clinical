@@ -6,7 +6,8 @@ export async function sendAppointmentConfirmation(
     doctorName: string,
     appointmentDate: string,
     timeSlot: string,
-    appointmentId: string
+    appointmentId: string,
+    patientIC?: string
 ) {
     try {
         const resend = new Resend(process.env.RESEND_API_KEY);
@@ -46,6 +47,12 @@ export async function sendAppointmentConfirmation(
                                     <span class="label">Appointment ID:</span>
                                     <span class="value">${appointmentId}</span>
                                 </div>
+                                ${patientIC ? `
+                                <div class="detail-row">
+                                    <span class="label">Patient IC:</span>
+                                    <span class="value">${patientIC}</span>
+                                </div>
+                                ` : ''}
                                 <div class="detail-row">
                                     <span class="label">Doctor:</span>
                                     <span class="value">${doctorName}</span>

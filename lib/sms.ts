@@ -69,3 +69,31 @@ export async function verifySMSOTP(to: string, code: string) {
         return { success: false, error: error.message || 'Verification failed' };
     }
 }
+
+/**
+ * Sends a generic appointment reminder via SMS
+ */
+export async function sendSMSReminder(
+    to: string,
+    patientName: string,
+    doctorName: string,
+    appointmentDate: string,
+    timeSlot: string
+) {
+    try {
+        const client = getTwilioClient();
+        const from = process.env.TWILIO_PHONE_NUMBER;
+        const formattedPhone = sanitizePhone(to);
+
+        const message = await client.messages.create({
+            body: `⏰ Reminder: You have a dental appointment with ${doctorName} on ${appointmentDate} at ${timeSlot}. - Klinik Pergigian Setapak`,
+            from: from,
+            to: formattedPhone
+        });
+
+        return { success: true, sid: message.sid };
+    } catch (error: any) {
+        console.error('SMS Reminder Error:', error);
+        return { success: false, error: error.message };
+    }
+}

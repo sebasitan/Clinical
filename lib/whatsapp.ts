@@ -15,7 +15,8 @@ export async function sendWhatsAppConfirmation(
     doctorName: string,
     appointmentDate: string,
     timeSlot: string,
-    appointmentId: string
+    appointmentId: string,
+    patientIC?: string
 ) {
     try {
         const client = getTwilioClient();
@@ -34,6 +35,7 @@ Your dental appointment has been successfully scheduled at *Klinik Pergigian Set
 
 📋 *Appointment Details:*
 • ID: ${appointmentId}
+• Patient IC: ${patientIC || 'N/A'}
 • Doctor: ${doctorName}
 • Date: ${appointmentDate}
 • Time: ${timeSlot}

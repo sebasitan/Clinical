@@ -28,6 +28,8 @@ const TIME_SLOTS: TimeSlot[] = [
   "4:00 PM - 4:30 PM", "4:30 PM - 5:00 PM", "5:00 PM - 5:30 PM", "5:30 PM - 6:00 PM"
 ]
 
+const API_BASE = "/api"
+
 export default function BookingPage() {
   const [step, setStep] = useState(1)
   const [doctors, setDoctors] = useState<Doctor[]>([])
@@ -81,6 +83,39 @@ export default function BookingPage() {
     }
     fetchSlots()
   }, [selectedDoctorId, selectedDate])
+
+  // Auto-fetch patient details for existing patients
+  useEffect(() => {
+    const fetchPatientDetails = async () => {
+      if (patientType === "existing" && patientIC.length >= 5) {
+        try {
+          const res = await fetch(`${API_BASE}/patients?ic=${patientIC}`);
+          if (res.ok) {
+            const patient = await res.json();
+            if (patient && patient.name) {
+              setPatientName(patient.name);
+              setPatientPhone(patient.phone);
+              if (patient.email) setPatientEmail(patient.email);
+
+              toast({
+                title: "Profile Found",
+                description: `Welcome back, ${patient.name}! We've filled in your details.`,
+              });
+            }
+          }
+        } catch (e) {
+          console.error("Failed to fetch patient", e);
+        }
+      }
+    };
+
+    // Debounce the look-up
+    const timer = setTimeout(() => {
+      if (patientIC) fetchPatientDetails();
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [patientIC, patientType]);
 
   const generateAvailableDates = () => {
     const dates: string[] = []
@@ -328,6 +363,7 @@ export default function BookingPage() {
       })
 
       setConfirmationId(appointment.id)
+      if (appointment.patientIC) setPatientIC(appointment.patientIC)
       setStep(6)
     } catch (error) {
       toast({
@@ -883,12 +919,13 @@ export default function BookingPage() {
                             <Input
                               id="patientIC"
                               value={patientIC}
-                              onChange={(e) => setPatientIC(e.target.value)}
-                              placeholder="S1234567A"
+                              onChange={(e) => setPatientIC(e.target.value.toUpperCase())}
+                              placeholder="KPS-123456"
                               className="h-14 pl-12 rounded-2xl bg-slate-50 border-slate-100 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium text-slate-900 placeholder:text-slate-400"
                             />
                             <Shield className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors w-5 h-5" />
                           </div>
+                          <p className="text-[10px] text-slate-400 ml-1 font-medium italic">Example: KPS-123456</p>
                         </div>
                       )}
                     </div>
@@ -1135,6 +1172,15 @@ export default function BookingPage() {
                     <div>
                       <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Time Slot</p>
                       <p className="font-bold text-slate-900 text-sm">{selectedTimeSlot}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+                      <Shield className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Patient Identification</p>
+                      <p className="font-bold text-blue-600 text-sm">{patientIC}</p>
                     </div>
                   </div>
                   <div className="h-px bg-slate-50 w-full my-2" />

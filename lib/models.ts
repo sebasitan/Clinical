@@ -128,3 +128,55 @@ const ReceptionistSchema = new Schema({
 }, { timestamps: true });
 
 export const ReceptionistModel = models.Receptionist || model('Receptionist', ReceptionistSchema);
+
+// --- Patient Schema ---
+const PatientSchema = new Schema({
+    id: { type: String, required: true, unique: true },
+    name: { type: String, required: true },
+    ic: { type: String, required: true, unique: true },
+    phone: { type: String, required: true },
+    email: String,
+    type: { type: String, enum: ['new', 'existing'], default: 'new' },
+    lastVisit: String,
+    continuedTreatment: {
+        active: { type: Boolean, default: false },
+        nextFollowUpDate: Date,
+        notes: String,
+        status: { type: String, enum: ['in-progress', 'completed'], default: 'in-progress' },
+        reminderDaysBefore: { type: [Number], default: [2, 1] }, // default 2 and 1 day before
+        preferredChannels: {
+            sms: { type: Boolean, default: true },
+            whatsapp: { type: Boolean, default: true },
+            email: { type: Boolean, default: true }
+        }
+    }
+}, { timestamps: true });
+
+export const PatientModel = models.Patient || model('Patient', PatientSchema);
+
+// --- Reminder Schedule Schema ---
+const ReminderScheduleSchema = new Schema({
+    id: { type: String, required: true, unique: true },
+    title: { type: String, required: true },
+    type: { type: String, enum: ['broadcast', 'behavioral', 'appointment'], default: 'broadcast' },
+    targetGroup: {
+        type: String,
+        enum: ['all', 'inactive_3m', 'inactive_6m', 'specific_patient', 'scheduled_appointment'],
+        default: 'all'
+    },
+    patientIC: String,
+    // New sequence logic: [2, 1, 0] means 2 days before, 1 day before, and day of.
+    sequence: { type: [Number], default: [1] },
+    channels: {
+        sms: { type: Boolean, default: false },
+        whatsapp: { type: Boolean, default: true },
+        email: { type: Boolean, default: true }
+    },
+    messageTemplate: String,
+    scheduledAt: { type: Date }, // For broadcasts
+    lastExecutedAt: Date,
+    status: { type: String, enum: ['active', 'paused', 'completed'], default: 'active' },
+    createdBy: String
+}, { timestamps: true });
+
+export const ReminderModel = models.Reminder || model('Reminder', ReminderScheduleSchema);

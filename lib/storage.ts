@@ -486,7 +486,7 @@ export const updateAppointmentStatus = (id: string, status: Appointment["status"
 // Patients
 export const getPatientsAsync = async (): Promise<Patient[]> => {
     try {
-        const res = await fetch(`${API_BASE}/patients`, { cache: 'no-store' });
+        const res = await fetch(`${API_BASE}/patients?t=${Date.now()}`, { cache: 'no-store' });
         if (!res.ok) return [];
         return await res.json();
     } catch (e) {

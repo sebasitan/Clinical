@@ -43,7 +43,8 @@ import {
     ShieldX,
     Lock,
     Unlock,
-    Ban
+    Ban,
+    Search
 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Switch } from "@/components/ui/switch"
@@ -80,6 +81,15 @@ export default function DoctorManagementPage() {
     const [isCancelling, setIsCancelling] = useState(false)
     const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null)
     const [cancelReason, setCancelReason] = useState("")
+    const [patientSearch, setPatientSearch] = useState("")
+
+    const patientRegistry = Array.from(new Set(appointments.map(a => a.patientIC)))
+    const filteredPatients = patientRegistry.filter(ic => {
+        const apt = appointments.find(a => a.patientIC === ic)
+        const nameMatch = apt?.patientName.toLowerCase().includes(patientSearch.toLowerCase())
+        const icMatch = ic.toLowerCase().includes(patientSearch.toLowerCase())
+        return nameMatch || icMatch
+    })
 
     // Form states
     const [newLeave, setNewLeave] = useState<{

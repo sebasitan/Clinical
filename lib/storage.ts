@@ -347,6 +347,16 @@ export const blockSlot = (id: string, reason: string) => {
     updateSlotStatus(id, "blocked", undefined, reason)
 }
 
+export const updateSlotStatusAsync = async (id: string, status: Slot["status"], blockReason?: string) => {
+    const res = await fetch(`${API_BASE}/slots/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, blockReason })
+    });
+    if (!res.ok) throw new Error('Failed to update slot status');
+    return await res.json();
+}
+
 export const unblockSlot = (id: string) => {
     updateSlotStatus(id, "available")
 }

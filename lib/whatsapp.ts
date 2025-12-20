@@ -1,14 +1,5 @@
-import twilio from 'twilio';
+import { mocean } from './mocean';
 import { generateGoogleCalendarLink } from './calendar-utils';
-
-function getTwilioClient() {
-    const accountSid = process.env.TWILIO_ACCOUNT_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
-    if (!accountSid || !authToken) {
-        throw new Error('Twilio Credentials Missing (TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN)');
-    }
-    return twilio(accountSid, authToken);
-}
 
 export async function sendWhatsAppConfirmation(
     to: string,
@@ -27,15 +18,8 @@ export async function sendWhatsAppConfirmation(
             appointmentDate,
             timeSlot
         );
-        const client = getTwilioClient();
-        const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
-        // Format phone number for WhatsApp (must include country code)
-        const formattedPhone = to.startsWith('+') ? `whatsapp:${to}` : `whatsapp:+${to}`;
 
-        const message = await client.messages.create({
-            from: `whatsapp:${twilioPhone}`,
-            to: formattedPhone,
-            body: `✅ *Appointment Confirmed*
+        const message = `✅ *Appointment Confirmed*
 
 Dear ${patientName},
 
@@ -65,10 +49,10 @@ https://${process.env.VERCEL_URL || 'localhost:3000'}/appointments/${appointment
 
 📞 Contact: +60 3-4142 1234
 
-Thank you for choosing us! 🦷`,
-        });
+Thank you for choosing us! 🦷`;
 
-        return { success: true, messageId: message.sid };
+        const result = await mocean.sendWhatsApp(to, message);
+        return { success: result.success, messageId: result.msgid, error: result.error };
     } catch (error: any) {
         console.error('WhatsApp error:', error);
         return { success: false, error: error.message };
@@ -83,14 +67,7 @@ export async function sendWhatsAppReminder(
     timeSlot: string
 ) {
     try {
-        const client = getTwilioClient();
-        const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
-        const formattedPhone = to.startsWith('+') ? `whatsapp:${to}` : `whatsapp:+${to}`;
-
-        const message = await client.messages.create({
-            from: `whatsapp:${twilioPhone}`,
-            to: formattedPhone,
-            body: `⏰ *Appointment Reminder*
+        const message = `⏰ *Appointment Reminder*
 
 Dear ${patientName},
 
@@ -102,10 +79,10 @@ This is a friendly reminder about your upcoming dental appointment:
 
 See you soon! 🦷
 
-- Klinik Pergigian Setapak (Sri Rampai)`,
-        });
+- Klinik Pergigian Setapak (Sri Rampai)`;
 
-        return { success: true, messageId: message.sid };
+        const result = await mocean.sendWhatsApp(to, message);
+        return { success: result.success, messageId: result.msgid, error: result.error };
     } catch (error: any) {
         console.error('WhatsApp reminder error:', error);
         return { success: false, error: error.message };
@@ -114,14 +91,7 @@ See you soon! 🦷
 
 export async function sendWhatsAppOTP(to: string, otp: string) {
     try {
-        const client = getTwilioClient();
-        const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
-        const formattedPhone = to.startsWith('+') ? `whatsapp:${to}` : `whatsapp:+${to}`;
-
-        const message = await client.messages.create({
-            from: `whatsapp:${twilioPhone}`,
-            to: formattedPhone,
-            body: `🔐 *Verification Code*
+        const message = `🔐 *Verification Code*
 
 Your OTP for appointment booking:
 
@@ -130,10 +100,10 @@ Your OTP for appointment booking:
 This code will expire in 10 minutes.
 Do not share this code with anyone.
 
-- Klinik Pergigian Setapak (Sri Rampai)`,
-        });
+- Klinik Pergigian Setapak (Sri Rampai)`;
 
-        return { success: true, messageId: message.sid };
+        const result = await mocean.sendWhatsApp(to, message);
+        return { success: result.success, messageId: result.msgid, error: result.error };
     } catch (error: any) {
         console.error('WhatsApp OTP error:', error);
         return { success: false, error: error.message };
@@ -149,14 +119,7 @@ export async function sendWhatsAppRescheduled(
     appointmentId: string
 ) {
     try {
-        const client = getTwilioClient();
-        const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
-        const formattedPhone = to.startsWith('+') ? `whatsapp:${to}` : `whatsapp:${to.trim().startsWith('+') ? to.trim() : '+' + to.trim()}`;
-
-        await client.messages.create({
-            from: `whatsapp:${twilioPhone}`,
-            to: formattedPhone,
-            body: `📅 *Appointment Rescheduled*
+        const message = `📅 *Appointment Rescheduled*
 
 Dear ${patientName},
 
@@ -171,9 +134,10 @@ Your appointment has been successfully *rescheduled*.
 📍 *Location:*
 Klinik Pergigian Setapak (Sri Rampai)
 
-We look forward to seeing you at your new time! 🦷`
-        });
-        return { success: true };
+We look forward to seeing you at your new time! 🦷`;
+
+        const result = await mocean.sendWhatsApp(to, message);
+        return { success: result.success, error: result.error };
     } catch (error: any) {
         console.error('WhatsApp reschedule error:', error);
         return { success: false, error: error.message };
@@ -187,14 +151,7 @@ export async function sendWhatsAppCancelled(
     date: string
 ) {
     try {
-        const client = getTwilioClient();
-        const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
-        const formattedPhone = to.startsWith('+') ? `whatsapp:${to}` : `whatsapp:${to.trim().startsWith('+') ? to.trim() : '+' + to.trim()}`;
-
-        await client.messages.create({
-            from: `whatsapp:${twilioPhone}`,
-            to: formattedPhone,
-            body: `✕ *Appointment Cancelled*
+        const message = `✕ *Appointment Cancelled*
 
 Dear ${patientName},
 
@@ -203,9 +160,10 @@ This is to confirm that your appointment on *${date}* (ID: ${appointmentId}) has
 If this was a mistake, or you'd like to book a new slot, please visit:
 https://${process.env.VERCEL_URL || 'localhost:3000'}/booking
 
-- Klinik Pergigian Setapak (Sri Rampai)`
-        });
-        return { success: true };
+- Klinik Pergigian Setapak (Sri Rampai)`;
+
+        const result = await mocean.sendWhatsApp(to, message);
+        return { success: result.success, error: result.error };
     } catch (error: any) {
         console.error('WhatsApp cancel error:', error);
         return { success: false, error: error.message };

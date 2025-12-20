@@ -200,6 +200,23 @@ export const authenticateAdmin = (username: string, password?: string): Admin | 
         addAuditLog(found.id, found.username, "Login", "Successful session start")
         return updated
     }
+
+    // Check Receptionists
+    const receptionists = getReceptionists()
+    const foundRec = receptionists.find(r => r.username === username && (r.password === password || (!r.password && !password)))
+
+    if (foundRec && foundRec.isActive) {
+        const recAsAdmin: Admin = {
+            id: foundRec.id,
+            username: foundRec.username,
+            role: "receptionist",
+            lastLogin: new Date().toISOString()
+        }
+        setCurrentAdmin(recAsAdmin)
+        addAuditLog(foundRec.id, foundRec.username, "Login", "Receptionist session start")
+        return recAsAdmin
+    }
+
     return null
 }
 
@@ -771,8 +788,8 @@ export const initializeDemoData = (force: boolean = false) => {
 
     if (getReceptionists().length === 0 || force) {
         const demoRecs: Receptionist[] = [
-            { id: "r1", name: "Alice Wong", photo: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200&h=200", phone: "91112222", email: "alice@clinic.com", shift: "morning", isActive: true },
-            { id: "r2", name: "Bob Tan", photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200&h=200", phone: "92223333", email: "bob@clinic.com", shift: "afternoon", isActive: true }
+            { id: "r1", name: "Alice Wong", username: "alice", password: "123", photo: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200&h=200", phone: "91112222", email: "alice@clinic.com", shift: "morning", isActive: true },
+            { id: "r2", name: "Bob Tan", username: "bob", password: "123", photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200&h=200", phone: "92223333", email: "bob@clinic.com", shift: "afternoon", isActive: true }
         ]
         saveToStorage(STORAGE_KEYS.RECEPTIONISTS, demoRecs)
     }

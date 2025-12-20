@@ -180,3 +180,12 @@ const ReminderScheduleSchema = new Schema({
 }, { timestamps: true });
 
 export const ReminderModel = models.Reminder || model('Reminder', ReminderScheduleSchema);
+
+// --- OTP Schema (Temporary) ---
+const OTPSchema = new Schema({
+    phone: { type: String, required: true },
+    code: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now, expires: 600 } // Expires in 10 minutes
+});
+
+export const OTPModel = models.OTP || model('OTP', OTPSchema);

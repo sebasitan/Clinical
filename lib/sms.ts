@@ -1,72 +1,71 @@
-import twilio from 'twilio';
+import { mocean } from './mocean';
 import { generateGoogleCalendarLink } from './calendar-utils';
+import { OTPModel } from './models';
+import dbConnect from './db';
 
 /**
- * Sanitizes phone number to E.164 format
+ * Sanitizes phone number to format acceptable by general logic
  */
 function sanitizePhone(phone: string): string {
-    // Remove all non-numeric characters except +
-    let cleaned = phone.replace(/[^\d+]/g, '');
-    // Ensure it starts with +
-    if (!cleaned.startsWith('+')) {
-        cleaned = '+' + cleaned;
-    }
-    return cleaned;
-}
-
-function getTwilioClient() {
-    const accountSid = process.env.TWILIO_ACCOUNT_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
-    if (!accountSid || !authToken) {
-        throw new Error('Twilio Credentials Missing (TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN)');
-    }
-    return twilio(accountSid, authToken);
+    // Basic sanitization, ensure numbers only but keep + if international
+    // Mocean handles formats fairly well, but we should clear spaces
+    return phone.replace(/\s+/g, '');
 }
 
 /**
- * Sends a verification code (OTP) via SMS using Twilio Verify
+ * Sends a verification code (OTP) via SMS using Mocean
  * @param to Phone number in E.164 format
  */
 export async function sendSMSOTP(to: string) {
     try {
-        const client = getTwilioClient();
-        const serviceSid = process.env.TWILIO_VERIFY_SERVICE_SID || 'VA549c93a543dddbd19698d9133ab327a5';
+        await dbConnect();
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
         const formattedPhone = sanitizePhone(to);
 
-        console.log(`[Twilio] Sending OTP to ${formattedPhone} using service ${serviceSid}`);
+        console.log(`[Mocean] Generating OTP ${code} for ${formattedPhone}`);
 
-        const verification = await client.verify.v2.services(serviceSid)
-            .verifications
-            .create({ to: formattedPhone, channel: 'sms' });
+        // Store OTP in DB
+        await OTPModel.findOneAndUpdate(
+            { phone: formattedPhone },
+            { code: code, createdAt: new Date() },
+            { upsert: true, new: true }
+        );
 
-        return { success: true, sid: verification.sid };
+        // Send via Mocean
+        const result = await mocean.sendSMS(formattedPhone, `Your KPS Dental verification code is: ${code}`);
+
+        if (result.success) {
+            return { success: true, sid: result.msgid };
+        } else {
+            return { success: false, error: result.error };
+        }
     } catch (error: any) {
-        console.error('Twilio Verify Send Error:', error);
-        return { success: false, error: error.message || 'Unknown Twilio error' };
+        console.error('Mocean SMS OTP Error:', error);
+        return { success: false, error: error.message || 'Unknown error' };
     }
 }
 
 /**
  * Verifies the code entered by the user
- * @param to Phone number in E.164 format
+ * @param to Phone number
  * @param code The 6-digit code to verify
  */
 export async function verifySMSOTP(to: string, code: string) {
     try {
-        const client = getTwilioClient();
-        const serviceSid = process.env.TWILIO_VERIFY_SERVICE_SID || 'VA549c93a543dddbd19698d9133ab327a5';
+        await dbConnect();
         const formattedPhone = sanitizePhone(to);
 
-        const verificationCheck = await client.verify.v2.services(serviceSid)
-            .verificationChecks
-            .create({ to: formattedPhone, code });
+        const record = await OTPModel.findOne({ phone: formattedPhone });
 
-        return {
-            success: verificationCheck.status === 'approved',
-            status: verificationCheck.status
-        };
+        if (record && record.code === code) {
+            // Delete after successful verification (optional, or let TTL handle it)
+            await OTPModel.deleteOne({ _id: record._id });
+            return { success: true, status: 'approved' };
+        } else {
+            return { success: false, status: 'failed', error: 'Invalid or expired code' };
+        }
     } catch (error: any) {
-        console.error('Twilio Verify Check Error:', error);
+        console.error('Verify OTP Error:', error);
         return { success: false, error: error.message || 'Verification failed' };
     }
 }
@@ -83,25 +82,13 @@ export async function sendSMSConfirmation(
     appointmentId: string
 ) {
     try {
-        const calendarLink = generateGoogleCalendarLink(
-            `Dental Appointment`,
-            `Visit to Klinik Pergigian Setapak (Sri Rampai). ID: ${appointmentId}`,
-            "KPS (Sri Rampai)",
-            appointmentDate,
-            timeSlot
-        );
-        const client = getTwilioClient();
-        const from = process.env.TWILIO_PHONE_NUMBER;
-        const formattedPhone = sanitizePhone(to);
-
         const manageLink = `https://${process.env.VERCEL_URL || 'localhost:3000'}/appointments/${appointmentId}/manage`;
-        const message = await client.messages.create({
-            body: `✅ Confirmed: Dental appt with ${doctorName} on ${appointmentDate} @ ${timeSlot}. ID: ${appointmentId}. Manage: ${manageLink}`,
-            from: from,
-            to: formattedPhone
-        });
+        const formattedPhone = sanitizePhone(to);
+        const message = `✅ Confirmed: Dental appt with ${doctorName} on ${appointmentDate} @ ${timeSlot}. ID: ${appointmentId}. Manage: ${manageLink}`;
 
-        return { success: true, sid: message.sid };
+        const result = await mocean.sendSMS(formattedPhone, message);
+
+        return { success: result.success, sid: result.msgid, error: result.error };
     } catch (error: any) {
         console.error('SMS Confirmation Error:', error);
         return { success: false, error: error.message };
@@ -119,17 +106,12 @@ export async function sendSMSReminder(
     timeSlot: string
 ) {
     try {
-        const client = getTwilioClient();
-        const from = process.env.TWILIO_PHONE_NUMBER;
         const formattedPhone = sanitizePhone(to);
+        const message = `⏰ Reminder: You have a dental appointment with ${doctorName} on ${appointmentDate} at ${timeSlot}. - Klinik Pergigian Setapak (Sri Rampai)`;
 
-        const message = await client.messages.create({
-            body: `⏰ Reminder: You have a dental appointment with ${doctorName} on ${appointmentDate} at ${timeSlot}. - Klinik Pergigian Setapak (Sri Rampai)`,
-            from: from,
-            to: formattedPhone
-        });
+        const result = await mocean.sendSMS(formattedPhone, message);
 
-        return { success: true, sid: message.sid };
+        return { success: result.success, sid: result.msgid, error: result.error };
     } catch (error: any) {
         console.error('SMS Reminder Error:', error);
         return { success: false, error: error.message };
@@ -144,16 +126,11 @@ export async function sendSMSRescheduled(
     appointmentId: string
 ) {
     try {
-        const client = getTwilioClient();
-        const from = process.env.TWILIO_PHONE_NUMBER;
         const formattedPhone = sanitizePhone(to);
+        const message = `📅 Rescheduled: Your appt (ID: ${appointmentId}) with ${doctorName} is moved to ${newDate} @ ${newTime}. See you then!`;
 
-        await client.messages.create({
-            body: `📅 Rescheduled: Your appt (ID: ${appointmentId}) with ${doctorName} is moved to ${newDate} @ ${newTime}. See you then!`,
-            from: from,
-            to: formattedPhone
-        });
-        return { success: true };
+        const result = await mocean.sendSMS(formattedPhone, message);
+        return { success: result.success, error: result.error };
     } catch (error: any) {
         console.error('SMS Reschedule Error:', error);
         return { success: false, error: error.message };
@@ -166,16 +143,11 @@ export async function sendSMSCancelled(
     date: string
 ) {
     try {
-        const client = getTwilioClient();
-        const from = process.env.TWILIO_PHONE_NUMBER;
         const formattedPhone = sanitizePhone(to);
+        const message = `✕ Cancelled: Your dental appt on ${date} (ID: ${appointmentId}) has been cancelled. - Klinik Pergigian Setapak`;
 
-        await client.messages.create({
-            body: `✕ Cancelled: Your dental appt on ${date} (ID: ${appointmentId}) has been cancelled. - Klinik Pergigian Setapak`,
-            from: from,
-            to: formattedPhone
-        });
-        return { success: true };
+        const result = await mocean.sendSMS(formattedPhone, message);
+        return { success: result.success, error: result.error };
     } catch (error: any) {
         console.error('SMS Cancel Error:', error);
         return { success: false, error: error.message };

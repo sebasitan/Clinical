@@ -219,7 +219,7 @@ export default function DoctorsPage() {
                         </div>
                         <Button onClick={() => handleOpenDialog()} className="h-12 px-6 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white shadow-xl shadow-slate-200 gap-2">
                             <UserPlus className="w-4 h-4" />
-                            Add Provider
+                            Add Doctor
                         </Button>
                     </div>
                 </div>

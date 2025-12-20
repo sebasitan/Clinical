@@ -9,7 +9,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Phone number is required' }, { status: 400 });
         }
 
-        console.log(`[OTP API] Sending SMS OTP to ${phone} via Twilio Verify...`);
+        console.log(`[OTP API] Sending SMS OTP to ${phone} via Mocean...`);
 
         const result = await sendSMSOTP(phone);
 

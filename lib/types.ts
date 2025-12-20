@@ -95,7 +95,7 @@ export type Admin = {
     id: string
     username: string
     password?: string
-    role: "super-admin" | "admin"
+    role: "super-admin" | "admin" | "receptionist"
     lastLogin?: string
 }
 
@@ -136,6 +136,8 @@ export type AvailabilityBlock = {
 export type Receptionist = {
     id: string
     name: string
+    username: string
+    password?: string
     photo?: string
     phone: string
     email: string

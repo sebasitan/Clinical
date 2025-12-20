@@ -38,6 +38,7 @@ export async function sendAppointmentConfirmation(
                         .value { color: #111827; font-weight: 600; }
                         .footer { text-align: center; margin-top: 20px; color: #6b7280; font-size: 12px; }
                         .button { display: inline-block; background: #0284c7; color: white !important; padding: 12px 30px; text-decoration: none; border-radius: 50px; margin-top: 20px; font-weight: bold; }
+                        .secondary-button { display: inline-block; background: #f3f4f6; color: #374151 !important; padding: 12px 30px; text-decoration: none; border-radius: 50px; margin-top: 20px; font-weight: bold; margin-left: 10px; }
                         .cal-button { display: inline-block; background: #fff; color: #0284c7 !important; padding: 12px 30px; text-decoration: none; border-radius: 50px; margin-top: 10px; border: 2px solid #0284c7; font-weight: bold; }
                     </style>
                 </head>
@@ -84,6 +85,7 @@ export async function sendAppointmentConfirmation(
 
                             <div style="text-align: center; padding-top: 10px;">
                                 <a href="${calendarLink}" class="button">Add to Google Calendar</a>
+                                <a href="https://${process.env.VERCEL_URL || 'localhost:3000'}/appointments/${appointmentId}/manage" class="secondary-button">Manage Appointment</a>
                             </div>
 
                             <div class="footer">

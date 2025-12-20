@@ -94,8 +94,9 @@ export async function sendSMSConfirmation(
         const from = process.env.TWILIO_PHONE_NUMBER;
         const formattedPhone = sanitizePhone(to);
 
+        const manageLink = `https://${process.env.VERCEL_URL || 'localhost:3000'}/appointments/${appointmentId}/manage`;
         const message = await client.messages.create({
-            body: `✅ Confirmed: Dental appt with ${doctorName} on ${appointmentDate} @ ${timeSlot}. ID: ${appointmentId}. Add to cal: ${calendarLink}`,
+            body: `✅ Confirmed: Dental appt with ${doctorName} on ${appointmentDate} @ ${timeSlot}. ID: ${appointmentId}. Manage: ${manageLink}`,
             from: from,
             to: formattedPhone
         });

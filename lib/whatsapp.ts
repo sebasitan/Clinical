@@ -55,6 +55,9 @@ Your dental appointment has been successfully scheduled at *Klinik Pergigian Set
 🗓️ *Add to Calendar:*
 ${calendarLink}
 
+✍️ *Manage/Reschedule:*
+https://${process.env.VERCEL_URL || 'localhost:3000'}/appointments/${appointmentId}/manage
+
 ⚠️ *Important Reminders:*
 • Arrive 10 minutes early
 • Bring your IC

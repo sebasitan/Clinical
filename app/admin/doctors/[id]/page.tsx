@@ -136,6 +136,7 @@ export default function DoctorManagementPage() {
         if (!schedule || !doctor) return
         try {
             await saveDoctorScheduleAsync(schedule)
+            await regenerateDoctorSlotsAsync(doctor.id)
             toast({ title: "Weekly schedule saved" })
             const freshSlots = await getSlotsAsync(doctor.id)
             setSlots(freshSlots)

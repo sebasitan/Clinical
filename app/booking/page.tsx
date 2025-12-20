@@ -129,7 +129,7 @@ export default function BookingPage() {
     const dates: string[] = []
     const today = new Date()
 
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 60; i++) {
       const date = new Date(today)
       date.setDate(date.getDate() + i)
 

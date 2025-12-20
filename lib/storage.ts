@@ -97,6 +97,38 @@ export const getSlotsAsync = async (doctorId?: string, date?: string): Promise<S
     }
 }
 
+export const getDoctorScheduleAsync = async (doctorId: string): Promise<DoctorWeeklySchedule | null> => {
+    try {
+        const res = await fetch(`${API_BASE}/doctors/${doctorId}/schedule`, { cache: 'no-store' });
+        if (!res.ok) return null;
+        return await res.json();
+    } catch (e) {
+        console.error("Failed to fetch schedule", e);
+        return null;
+    }
+}
+
+export const saveDoctorScheduleAsync = async (schedule: DoctorWeeklySchedule) => {
+    const res = await fetch(`${API_BASE}/doctors/${schedule.doctorId}/schedule`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(schedule)
+    });
+    if (!res.ok) throw new Error('Failed to save schedule');
+
+    // Also trigger cloud regeneration
+    await regenerateDoctorSlotsAsync(schedule.doctorId);
+
+    return await res.json();
+}
+
+export const regenerateDoctorSlotsAsync = async (doctorId: string) => {
+    const res = await fetch(`${API_BASE}/doctors/${doctorId}/slots/regenerate`, {
+        method: 'POST'
+    });
+    if (!res.ok) throw new Error('Failed to regenerate slots');
+    return await res.json();
+}
 // --- END API CLIENT ---
 
 // Helper to handle window/localStorage in Next.js

@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
-import { getDoctorsAsync, addAppointmentAsync, getSlotsAsync, seedDatabaseAsync } from "@/lib/storage"
-import type { Doctor, TimeSlot, Slot } from "@/lib/types"
+import { getDoctorsAsync, addAppointmentAsync, getSlotsAsync, seedDatabaseAsync, getDoctorScheduleAsync } from "@/lib/storage"
+import type { Doctor, TimeSlot, Slot, DoctorWeeklySchedule, DayOfWeek } from "@/lib/types"
 import { CheckCircle2, User, Clock, Phone, Mail, Check, Sparkles, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Shield, ArrowRight, MapPin, Stethoscope, Smile } from "lucide-react"
 import { CalendarDatePickerContent } from "@/components/ui/calendar-date-picker"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -35,6 +35,7 @@ export default function BookingPage() {
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [availableDates, setAvailableDates] = useState<string[]>([])
   const [dailySlots, setDailySlots] = useState<Slot[]>([])
+  const [doctorSchedule, setDoctorSchedule] = useState<DoctorWeeklySchedule | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   // Form data
@@ -83,6 +84,19 @@ export default function BookingPage() {
     }
     fetchSlots()
   }, [selectedDoctorId, selectedDate])
+
+  // Fetch doctor's weekly schedule
+  useEffect(() => {
+    const fetchSchedule = async () => {
+      if (selectedDoctorId) {
+        const schedule = await getDoctorScheduleAsync(selectedDoctorId)
+        setDoctorSchedule(schedule)
+      } else {
+        setDoctorSchedule(null)
+      }
+    }
+    fetchSchedule()
+  }, [selectedDoctorId])
 
   // Auto-fetch patient details for existing patients
   useEffect(() => {
@@ -748,7 +762,18 @@ export default function BookingPage() {
                         disabled: (date: Date) => {
                           const today = new Date();
                           today.setHours(0, 0, 0, 0);
-                          return date < today || date.getDay() === 0;
+
+                          if (date < today) return true;
+
+                          if (doctorSchedule) {
+                            const dayNames: DayOfWeek[] = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+                            const dayName = dayNames[date.getDay()];
+                            const daySchedule = doctorSchedule.days[dayName];
+                            // Disable if no schedule for this day or empty schedule
+                            return !daySchedule || daySchedule.length === 0;
+                          }
+
+                          return date.getDay() === 0;
                         },
                         className: "p-0 border-0 shadow-none w-full max-w-full",
                         classNames: {

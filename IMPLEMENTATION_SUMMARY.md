@@ -93,41 +93,15 @@ Add these environment variables in Vercel:
 
 ## 🎯 Next Steps (To Complete)
 
-### 1. **Integrate Notifications in Booking Flow**
-The notification functions are ready but need to be called when appointments are created:
+### 1. **Integrate Notifications in Booking Flow** ✓
+- Notifications are correctly implemented in `/api/appointments/route.ts`
+- **Status**: Verified & Functional
 
-**File to update**: `app/api/appointments/route.ts`
-
-Add after appointment creation:
-```typescript
-// Send Email
-if (body.patientEmail) {
-    await sendAppointmentConfirmation(
-        body.patientEmail,
-        body.patientName,
-        doctorName,
-        body.appointmentDate,
-        body.timeSlot,
-        appointmentId
-    );
-}
-
-// Send WhatsApp
-if (body.patientPhone) {
-    await sendWhatsAppConfirmation(
-        body.patientPhone,
-        body.patientName,
-        doctorName,
-        body.appointmentDate,
-        body.timeSlot,
-        appointmentId
-    );
-}
-```
-
-### 2. **Schedule Page Enhancements** (Requested)
-- Make doctor names bigger
-- Add active status color indicators
+### 2. **Schedule Page Enhancements** (Requested) ✓
+- Increased doctor name size in Admin Schedule
+- Added active status color indicators
+- Calendar in Booking page now respects doctor's weekly schedule (Fixing availability discrepancy)
+- **Status**: Completed
 
 ### 3. **PDF Report Generation**
 - Install `jspdf` or `pdfkit`

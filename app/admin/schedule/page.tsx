@@ -203,13 +203,20 @@ export default function SchedulePage() {
                                     className="group relative cursor-pointer"
                                 >
                                     <div className="absolute inset-0 bg-blue-600 rounded-[2.5rem] translate-y-2 translate-x-1 opacity-0 group-hover:opacity-10 transition-all duration-300" />
-                                    <Card className="relative border-none shadow-sm shadow-slate-200/50 rounded-[2.5rem] overflow-hidden bg-white hover:shadow-2xl hover:-translate-y-1 transition-all duration-500">
+                                    <Card className={cn(
+                                        "relative border shadow-sm shadow-slate-200/50 rounded-[2.5rem] overflow-hidden bg-white hover:shadow-2xl hover:-translate-y-1 transition-all duration-500",
+                                        doctor.isAvailable ? "border-emerald-500/50" : "border-transparent"
+                                    )}>
                                         <div className="h-32 bg-slate-900 relative">
                                             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(37,99,235,0.2),transparent)]" />
-                                            {doctor.isAvailable && (
+                                            {doctor.isAvailable ? (
                                                 <div className="absolute top-4 right-4 px-3 py-1 bg-emerald-500/10 backdrop-blur-md border border-emerald-500/20 rounded-full flex items-center gap-1.5">
                                                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                                                     <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Active</span>
+                                                </div>
+                                            ) : (
+                                                <div className="absolute top-4 right-4 px-3 py-1 bg-slate-500/10 backdrop-blur-md border border-slate-500/20 rounded-full flex items-center gap-1.5">
+                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Inactive</span>
                                                 </div>
                                             )}
                                         </div>
@@ -220,7 +227,7 @@ export default function SchedulePage() {
                                             </Avatar>
 
                                             <div className="mt-6 space-y-1">
-                                                <h3 className="text-lg font-black text-slate-900 leading-tight group-hover:text-blue-600 transition-colors uppercase tracking-tight">{doctor.name}</h3>
+                                                <h3 className="text-2xl font-black text-slate-900 leading-tight group-hover:text-blue-600 transition-colors uppercase tracking-tight">{doctor.name}</h3>
                                                 <p className="text-[10px] font-black uppercase text-blue-500 tracking-widest">{doctor.specialization}</p>
                                             </div>
 

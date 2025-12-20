@@ -11,14 +11,14 @@ import { useAdminAuth } from "@/hooks/use-admin-auth"
 import {
     getDoctorsAsync,
     updateDoctorAsync,
-    getDoctorSchedule,
-    saveDoctorSchedule,
+    getDoctorScheduleAsync,
+    saveDoctorScheduleAsync,
     getDoctorLeaves,
     addDoctorLeave,
     deleteDoctorLeave,
     getAppointmentsAsync,
     getSlotsAsync,
-    regenerateDoctorSlots,
+    regenerateDoctorSlotsAsync,
     updateAppointmentStatusAsync
 } from "@/lib/storage"
 import type { Doctor, DoctorWeeklySchedule, DayOfWeek, ScheduleTimeRange, DoctorLeave, Appointment, Slot } from "@/lib/types"
@@ -95,10 +95,11 @@ export default function DoctorManagementPage() {
     }, [id])
 
     const loadDoctorData = async (docId: string) => {
-        const [docs, apts, drSlots] = await Promise.all([
+        const [docs, apts, drSlots, drSchedule] = await Promise.all([
             getDoctorsAsync(),
             getAppointmentsAsync(),
-            getSlotsAsync(docId)
+            getSlotsAsync(docId),
+            getDoctorScheduleAsync(docId)
         ])
 
         const doc = docs.find(d => d.id === docId)
@@ -107,7 +108,7 @@ export default function DoctorManagementPage() {
             return
         }
         setDoctor(doc)
-        setSchedule(getDoctorSchedule(docId) || { doctorId: docId, days: {} })
+        setSchedule(drSchedule || { doctorId: docId, days: {} })
         setLeaves(getDoctorLeaves(docId))
         setAppointments(apts.filter(a => a.doctorId === docId))
         setSlots(drSlots)
@@ -121,19 +122,25 @@ export default function DoctorManagementPage() {
             toast({ title: "Doctor updated successfully" })
             // If availability or slot duration changed, regenerate slots
             if ("isAvailable" in updates || "isActive" in updates || "slotDuration" in updates) {
-                regenerateDoctorSlots(doctor.id)
-                setSlots(getSlots(doctor.id))
+                await regenerateDoctorSlotsAsync(doctor.id)
+                const freshSlots = await getSlotsAsync(doctor.id)
+                setSlots(freshSlots)
             }
         } catch (error: any) {
             toast({ title: "Update failed", variant: "destructive" })
         }
     }
 
-    const handleSaveSchedule = () => {
-        if (!schedule) return
-        saveDoctorSchedule(schedule)
-        toast({ title: "Weekly schedule saved" })
-        setSlots(getSlots(doctor!.id))
+    const handleSaveSchedule = async () => {
+        if (!schedule || !doctor) return
+        try {
+            await saveDoctorScheduleAsync(schedule)
+            toast({ title: "Weekly schedule saved" })
+            const freshSlots = await getSlotsAsync(doctor.id)
+            setSlots(freshSlots)
+        } catch (error: any) {
+            toast({ title: "Failed to save schedule", variant: "destructive" })
+        }
     }
 
     const addTimeRange = (day: DayOfWeek) => {

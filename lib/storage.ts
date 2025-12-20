@@ -361,6 +361,14 @@ export const unblockSlot = (id: string) => {
     updateSlotStatus(id, "available")
 }
 
+export const regenerateDoctorSlotsAsync = async (doctorId: string) => {
+    const res = await fetch(`${API_BASE}/doctors/${doctorId}/slots/regenerate`, {
+        method: 'POST'
+    });
+    if (!res.ok) throw new Error('Failed to regenerate slots');
+    return await res.json();
+}
+
 // Regenerate slots for a specific doctor for the next 60 days
 export const regenerateDoctorSlots = (doctorId: string) => {
     const doctor = getDoctors().find(d => d.id === doctorId)

@@ -351,7 +351,7 @@ export default function BookingPage() {
         timeSlot: selectedTimeSlot as any,
         slotId: slot.id,
         doctorId: selectedDoctorId,
-        status: "pending",
+        status: "confirmed",
       })
 
       setConfirmationId(appointment.id)
@@ -514,7 +514,12 @@ export default function BookingPage() {
                     <span className="text-slate-400 font-bold">{selectedDate ? new Date(selectedDate).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : ''}</span>
                   </div>
                   <div className="p-6 flex-1">
-                    <CalendarDatePickerContent date={selectedDate ? new Date(selectedDate) : undefined} onDateSelect={(d) => d && setSelectedDate(d.toISOString().split('T')[0])} calendarProps={{ fromDate: new Date() }} />
+                    <CalendarDatePickerContent
+                      id="booking-calendar"
+                      date={selectedDate ? new Date(selectedDate) : undefined}
+                      onDateSelect={(d) => d && setSelectedDate(d.toISOString().split('T')[0])}
+                      calendarProps={{ fromDate: new Date() }}
+                    />
                   </div>
                 </div>
 
@@ -524,7 +529,7 @@ export default function BookingPage() {
                     <h3 className="font-bold text-4xl">{selectedTimeSlot ? selectedTimeSlot.split(' - ')[0] : '--:--'}</h3>
                   </div>
                   <div className="p-8 flex-1 overflow-y-auto">
-                    {!selectedDate ? <p className="text-center text-slate-400">Choose a date first</p> : (
+                    {!selectedDate ? <p className="col-span-full text-center py-10 text-slate-400">Choose a date first</p> : (
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                         {dailySlots.length === 0 ? <p className="col-span-full text-center py-10">No slots today</p> : dailySlots.map(slot => (
                           <button key={slot.id} disabled={slot.status !== 'available'} onClick={() => { setSelectedTimeSlot(slot.timeRange); setTimeout(() => handleNext(selectedDate, slot.timeRange), 300); }} className={`py-3 px-2 rounded-xl border-2 font-bold text-xs transition-all ${selectedTimeSlot === slot.timeRange ? "bg-blue-600 border-blue-600 text-white" : slot.status !== 'available' ? "bg-slate-50 text-slate-300 cursor-not-allowed opacity-50" : "bg-white text-slate-600 hover:border-blue-400"}`}>

@@ -30,16 +30,16 @@ export async function regenerateDoctorSlotsCloud(doctorId: string) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Fetch existing booked slots to preserve them
-    const existingBooked = await SlotModel.find({
+    // Fetch existing booked/blocked slots to preserve them
+    const existingProtected = await SlotModel.find({
         doctorId,
-        status: 'booked'
+        status: { $in: ['booked', 'blocked'] }
     });
 
-    // Delete existing available/blocked slots for this doctor
+    // Delete only available slots for this doctor
     await SlotModel.deleteMany({
         doctorId,
-        status: { $ne: 'booked' }
+        status: 'available'
     });
 
     const newSlots = [];
@@ -72,12 +72,12 @@ export async function regenerateDoctorSlotsCloud(doctorId: string) {
 
                     const timeRange = `${formatTime(startTimeStr)} - ${formatTime(endTimeStr)}`;
 
-                    // Check if already booked (any overlap with existing bookings)
-                    const alreadyBooked = existingBooked.some(s =>
+                    // Check if already protected (booked or manually blocked)
+                    const isProtected = existingProtected.some(s =>
                         s.date === dateStr && isOverlapping(startTimeStr, endTimeStr, s.startTime, s.endTime)
                     );
 
-                    if (!alreadyBooked) {
+                    if (!isProtected) {
                         // Check if on leave
                         const dayLeave = leaves.find(l => l.date === dateStr);
                         let status = 'available';

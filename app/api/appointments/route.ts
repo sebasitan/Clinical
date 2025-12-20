@@ -38,6 +38,7 @@ export async function POST(request: Request) {
             }
         }
 
+        /* Commented out during setup/testing phase
         // 1.5 Monthly Booking Limit Check (One per patient per month)
         const patientIdentifier = body.patientIC || body.patientPhone;
         if (patientIdentifier && patientIdentifier !== 'NEW_PATIENT') {
@@ -57,6 +58,7 @@ export async function POST(request: Request) {
                 }, { status: 429 });
             }
         }
+        */
 
         // 2. Handle Patient Record (Find or Create)
         const { PatientModel } = await import('@/lib/models');
@@ -91,6 +93,7 @@ export async function POST(request: Request) {
         const appointmentId = `APT-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
         const newAppointment = await AppointmentModel.create({
             ...body,
+            status: body.status || 'confirmed', // Auto-approve by default
             patientIC: patientIC, // Ensure generated IC is saved
             id: appointmentId
         });

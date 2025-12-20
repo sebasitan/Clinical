@@ -796,7 +796,7 @@ export default function DoctorManagementPage() {
                                         </div>
                                         <div className="flex gap-3">
                                             <Button variant="ghost" onClick={() => setIsCancelling(false)} className="flex-1 h-12 rounded-xl font-bold text-slate-500">Keep Booking</Button>
-                                            <Button onClick={() => handleCancelAppointment(selectedSlot?.appointmentId!, selectedSlot?.id!, cancelReason)} className="flex-2 h-12 rounded-xl bg-rose-600 hover:bg-rose-700 font-bold shadow-lg shadow-rose-100">Cancel Booking</Button>
+                                            <Button onClick={() => handleCancelAppointment(selectedSlot?.appointmentId!, selectedSlot?.id!, cancelReason)} className="flex-2 h-12 rounded-xl bg-rose-600 hover:bg-rose-700 font-bold shadow-lg shadow-rose-100">Confirm Cancellation / Delete</Button>
                                         </div>
                                     </div>
                                 </DialogContent>

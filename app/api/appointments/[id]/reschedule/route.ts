@@ -50,6 +50,49 @@ export async function PATCH(
 
         await appointment.save();
 
+        // 6. Send Notifications
+        try {
+            const doctor = await AppointmentModel.db.model('Doctor').findOne({ id: appointment.doctorId });
+            const doctorName = doctor?.name || 'Your Dentist';
+
+            // Send Email
+            if (appointment.patientEmail) {
+                const { sendAppointmentRescheduled } = await import('@/lib/email');
+                await sendAppointmentRescheduled(
+                    appointment.patientEmail,
+                    appointment.patientName,
+                    doctorName,
+                    newDate,
+                    newTimeSlot,
+                    params.id
+                );
+            }
+
+            // Send WhatsApp
+            const { sendWhatsAppRescheduled } = await import('@/lib/whatsapp');
+            await sendWhatsAppRescheduled(
+                appointment.patientPhone,
+                appointment.patientName,
+                doctorName,
+                newDate,
+                newTimeSlot,
+                params.id
+            );
+
+            // Send SMS
+            const { sendSMSRescheduled } = await import('@/lib/sms');
+            await sendSMSRescheduled(
+                appointment.patientPhone,
+                doctorName,
+                newDate,
+                newTimeSlot,
+                params.id
+            );
+        } catch (notifError) {
+            console.error('[Reschedule Notif] Failed to send notifications:', notifError);
+            // Don't fail the whole request if only notifications fail
+        }
+
         return NextResponse.json({
             success: true,
             appointment

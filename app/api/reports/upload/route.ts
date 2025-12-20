@@ -22,6 +22,15 @@ export async function POST(request: Request) {
         });
     } catch (error: any) {
         console.error('[Report API] Upload error:', error);
+
+        // Check for specific common error cases
+        if (error.message?.includes('Invalid Signature')) {
+            return NextResponse.json({
+                error: 'Cloudinary Signature Invalid. Please check your CLOUDINARY_API_SECRET in .env.local and ensure there are no placeholders or trailing spaces.',
+                details: error.message
+            }, { status: 500 });
+        }
+
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

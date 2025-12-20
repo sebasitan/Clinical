@@ -205,7 +205,14 @@ export default function ReportsPage() {
                 // Open PDF in new tab
                 window.open(data.url, '_blank')
             } else {
-                alert("Failed to upload report: " + data.error)
+                console.error("Cloudinary upload failed:", data.error)
+                // Fallback to local download
+                doc.save(`Report_${format(new Date(), "yyyy-MM-dd_HHmm")}.pdf`)
+                toast({
+                    title: "Cloud sync failed",
+                    description: "Your report was downloaded locally instead.",
+                    variant: "destructive"
+                })
             }
 
         } catch (error: any) {
@@ -289,7 +296,22 @@ export default function ReportsPage() {
                 // Open CSV in new tab (Cloudinary will serve it)
                 window.open(data.url, '_blank')
             } else {
-                alert("Failed to upload report: " + data.error)
+                console.error("CSV Cloud upload failed:", data.error)
+                // Fallback to local download
+                const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' })
+                const url = URL.createObjectURL(blob)
+                const link = document.createElement("a")
+                link.setAttribute("href", url)
+                link.setAttribute("download", `Report_${format(new Date(), "yyyy-MM-dd_HHmm")}.csv`)
+                document.body.appendChild(link)
+                link.click()
+                document.body.removeChild(link)
+
+                toast({
+                    title: "Cloud sync failed",
+                    description: "Your CSV was downloaded locally instead.",
+                    variant: "destructive"
+                })
             }
 
         } catch (error: any) {

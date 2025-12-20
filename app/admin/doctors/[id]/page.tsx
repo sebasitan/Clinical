@@ -13,9 +13,9 @@ import {
     updateDoctorAsync,
     getDoctorScheduleAsync,
     saveDoctorScheduleAsync,
-    getDoctorLeaves,
-    addDoctorLeave,
-    deleteDoctorLeave,
+    getDoctorLeavesAsync,
+    addDoctorLeaveAsync,
+    deleteDoctorLeaveAsync,
     getAppointmentsAsync,
     getSlotsAsync,
     regenerateDoctorSlotsAsync,
@@ -95,11 +95,12 @@ export default function DoctorManagementPage() {
     }, [id])
 
     const loadDoctorData = async (docId: string) => {
-        const [docs, apts, drSlots, drSchedule] = await Promise.all([
+        const [docs, apts, drSlots, drSchedule, drLeaves] = await Promise.all([
             getDoctorsAsync(),
             getAppointmentsAsync(),
             getSlotsAsync(docId),
-            getDoctorScheduleAsync(docId)
+            getDoctorScheduleAsync(docId),
+            getDoctorLeavesAsync(docId)
         ])
 
         const doc = docs.find(d => d.id === docId)
@@ -109,7 +110,7 @@ export default function DoctorManagementPage() {
         }
         setDoctor(doc)
         setSchedule(drSchedule || { doctorId: docId, days: {} })
-        setLeaves(getDoctorLeaves(docId))
+        setLeaves(drLeaves)
         setAppointments(apts.filter(a => a.doctorId === docId))
         setSlots(drSlots)
     }
@@ -169,27 +170,44 @@ export default function DoctorManagementPage() {
         setSchedule({ ...schedule, days: currentDays })
     }
 
-    const handleAddLeave = () => {
+    const handleAddLeave = async () => {
         if (!doctor || !newLeave.date) return
-        addDoctorLeave({
-            doctorId: doctor.id,
-            date: newLeave.date,
-            type: newLeave.type,
-            startTime: newLeave.type === "partial" ? newLeave.startTime : undefined,
-            endTime: newLeave.type === "partial" ? newLeave.endTime : undefined,
-            reason: newLeave.reason
-        })
-        setLeaves(getDoctorLeaves(doctor.id))
-        setSlots(getSlots(doctor.id))
-        setNewLeave({ date: "", type: "full", startTime: "09:00", endTime: "17:00", reason: "" })
-        toast({ title: "Leave recorded" })
+        try {
+            await addDoctorLeaveAsync({
+                doctorId: doctor.id,
+                date: newLeave.date,
+                type: newLeave.type,
+                startTime: newLeave.type === "partial" ? newLeave.startTime : undefined,
+                endTime: newLeave.type === "partial" ? newLeave.endTime : undefined,
+                reason: newLeave.reason
+            })
+            const [freshLeaves, freshSlots] = await Promise.all([
+                getDoctorLeavesAsync(doctor.id),
+                getSlotsAsync(doctor.id)
+            ])
+            setLeaves(freshLeaves)
+            setSlots(freshSlots)
+            setNewLeave({ date: "", type: "full", startTime: "09:00", endTime: "17:00", reason: "" })
+            toast({ title: "Leave recorded" })
+        } catch (e) {
+            toast({ title: "Failed to add leave", variant: "destructive" })
+        }
     }
 
-    const handleDeleteLeave = (leaveId: string) => {
-        deleteDoctorLeave(leaveId)
-        setLeaves(getDoctorLeaves(doctor!.id))
-        setSlots(getSlots(doctor!.id))
-        toast({ title: "Leave removed" })
+    const handleDeleteLeave = async (leaveId: string) => {
+        if (!doctor) return
+        try {
+            await deleteDoctorLeaveAsync(doctor.id, leaveId)
+            const [freshLeaves, freshSlots] = await Promise.all([
+                getDoctorLeavesAsync(doctor.id),
+                getSlotsAsync(doctor.id)
+            ])
+            setLeaves(freshLeaves)
+            setSlots(freshSlots)
+            toast({ title: "Leave removed" })
+        } catch (e) {
+            toast({ title: "Failed to remove leave", variant: "destructive" })
+        }
     }
 
     const handleViewHistory = (ic: string) => {

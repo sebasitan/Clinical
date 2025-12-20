@@ -5,10 +5,11 @@ import { regenerateDoctorSlotsCloud } from '@/lib/slots-engine';
 
 export async function GET(
     request: Request,
-    { params }: { params: { id: string } }
+    props: { params: Promise<{ id: string }> }
 ) {
     try {
         await dbConnect();
+        const params = await props.params;
         const leaves = await LeaveModel.find({ doctorId: params.id });
         return NextResponse.json(leaves);
     } catch (error: any) {
@@ -18,10 +19,11 @@ export async function GET(
 
 export async function POST(
     request: Request,
-    { params }: { params: { id: string } }
+    props: { params: Promise<{ id: string }> }
 ) {
     try {
         await dbConnect();
+        const params = await props.params;
         const body = await request.json();
 
         const newLeave = await LeaveModel.create({

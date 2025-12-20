@@ -3,9 +3,10 @@ import { regenerateDoctorSlotsCloud } from '@/lib/slots-engine';
 
 export async function POST(
     request: Request,
-    { params }: { params: { id: string } }
+    props: { params: Promise<{ id: string }> }
 ) {
     try {
+        const params = await props.params;
         const result = await regenerateDoctorSlotsCloud(params.id);
         return NextResponse.json({ success: true, ...result });
     } catch (error: any) {

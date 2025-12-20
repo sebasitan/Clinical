@@ -135,3 +135,49 @@ export async function sendSMSReminder(
         return { success: false, error: error.message };
     }
 }
+
+export async function sendSMSRescheduled(
+    to: string,
+    doctorName: string,
+    newDate: string,
+    newTime: string,
+    appointmentId: string
+) {
+    try {
+        const client = getTwilioClient();
+        const from = process.env.TWILIO_PHONE_NUMBER;
+        const formattedPhone = sanitizePhone(to);
+
+        await client.messages.create({
+            body: `📅 Rescheduled: Your appt (ID: ${appointmentId}) with ${doctorName} is moved to ${newDate} @ ${newTime}. See you then!`,
+            from: from,
+            to: formattedPhone
+        });
+        return { success: true };
+    } catch (error: any) {
+        console.error('SMS Reschedule Error:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+export async function sendSMSCancelled(
+    to: string,
+    appointmentId: string,
+    date: string
+) {
+    try {
+        const client = getTwilioClient();
+        const from = process.env.TWILIO_PHONE_NUMBER;
+        const formattedPhone = sanitizePhone(to);
+
+        await client.messages.create({
+            body: `✕ Cancelled: Your dental appt on ${date} (ID: ${appointmentId}) has been cancelled. - Klinik Pergigian Setapak`,
+            from: from,
+            to: formattedPhone
+        });
+        return { success: true };
+    } catch (error: any) {
+        console.error('SMS Cancel Error:', error);
+        return { success: false, error: error.message };
+    }
+}

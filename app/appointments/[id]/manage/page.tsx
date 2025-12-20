@@ -44,6 +44,7 @@ export default function ManageAppointmentPage({ params: paramsPromise }: { param
     const [dailySlots, setDailySlots] = useState<Slot[]>([])
     const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>("")
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [isSuccess, setIsSuccess] = useState<'rescheduled' | 'cancelled' | null>(null)
 
     const { toast } = useToast()
 
@@ -88,29 +89,6 @@ export default function ManageAppointmentPage({ params: paramsPromise }: { param
         }
     }
 
-    const handleCancel = async () => {
-        if (!confirm("Are you sure you want to cancel this appointment? This action cannot be undone.")) return
-
-        setIsSubmitting(true)
-        try {
-            const res = await fetch(`/api/appointments/${params.id}/status`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: 'cancelled' })
-            })
-
-            if (res.ok) {
-                toast({ title: "Appointment Cancelled", description: "Your appointment has been successfully cancelled and the time slot is now available." })
-                loadAppointment()
-            } else {
-                throw new Error("Cancellation failed")
-            }
-        } catch (e) {
-            toast({ title: "Error", description: "Failed to cancel appointment. Please contact the clinic.", variant: "destructive" })
-        } finally {
-            setIsSubmitting(false)
-        }
-    }
 
     // Fetch doctor schedule and slots when rescheduling
     useEffect(() => {
@@ -125,11 +103,49 @@ export default function ManageAppointmentPage({ params: paramsPromise }: { param
         }
     }, [isRescheduling, appointment?.doctorId, selectedDate])
 
+    const isTooClose = () => {
+        if (!appointment) return false
+        const apptDate = new Date(`${appointment.appointmentDate}T${appointment.timeSlot.split(' - ')[0].replace(/ (AM|PM)/, ':00 $1')}`)
+        const now = new Date()
+        const diff = apptDate.getTime() - now.getTime()
+        const hours = diff / (1000 * 60 * 60)
+        return hours < 24 // 24 hour policy
+    }
+
+    const handleCancel = async () => {
+        const warning = isTooClose() ? "\n\n⚠️ NOTE: This appointment is less than 24 hours away. Last-minute cancellations may affect your future booking priority." : ""
+        if (!confirm("Are you sure you want to cancel this appointment? This action cannot be undone." + warning)) return
+
+        setIsSubmitting(true)
+        try {
+            const res = await fetch(`/api/appointments/${params.id}/cancel`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+            })
+
+            if (res.ok) {
+                setIsSuccess('cancelled')
+                toast({ title: "Appointment Cancelled", description: "Your appointment has been successfully cancelled." })
+                loadAppointment()
+            } else {
+                const data = await res.json()
+                throw new Error(data.error || "Cancellation failed")
+            }
+        } catch (e: any) {
+            toast({ title: "Error", description: e.message, variant: "destructive" })
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
     const handleReschedule = async () => {
         if (!selectedTimeSlot || !selectedDate) return
 
         const slot = dailySlots.find(s => s.timeRange === selectedTimeSlot)
         if (!slot) return
+
+        const warning = isTooClose() ? "\n\n⚠️ NOTE: This appointment is less than 24 hours away. Last-minute rescheduling may affect your future booking priority." : ""
+        if (!confirm("Are you sure you want to reschedule this appointment?" + warning)) return
 
         setIsSubmitting(true)
         try {
@@ -144,6 +160,7 @@ export default function ManageAppointmentPage({ params: paramsPromise }: { param
             })
 
             if (res.ok) {
+                setIsSuccess('rescheduled')
                 toast({ title: "Appointment Rescheduled", description: "Your appointment has been moved to the new time slot." })
                 setIsRescheduling(false)
                 setSelectedDate("")
@@ -213,6 +230,50 @@ export default function ManageAppointmentPage({ params: paramsPromise }: { param
                             <p className="text-[10px] text-center text-slate-400 font-medium">Verified using the information provided during booking.</p>
                         </CardContent>
                     </Card>
+                </motion.div>
+            </div>
+        )
+    }
+
+    if (isSuccess) {
+        return (
+            <div className="min-h-screen bg-white flex items-center justify-center p-6">
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="w-full max-w-lg text-center"
+                >
+                    <div className={cn(
+                        "w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-2xl",
+                        isSuccess === 'rescheduled' ? "bg-emerald-500 text-white shadow-emerald-200" : "bg-rose-500 text-white shadow-rose-200"
+                    )}>
+                        {isSuccess === 'rescheduled' ? <CheckCircle2 className="w-12 h-12" /> : <XCircle className="w-12 h-12" />}
+                    </div>
+
+                    <h1 className="text-4xl font-black text-slate-900 tracking-tight">
+                        {isSuccess === 'rescheduled' ? "Time Slot Updated!" : "Appointment Cancelled"}
+                    </h1>
+                    <p className="text-slate-500 text-lg mt-4 max-w-md mx-auto">
+                        {isSuccess === 'rescheduled'
+                            ? "We've updated your booking. A confirmation message has been sent to your phone and email."
+                            : "Your appointment has been removed from our schedule. We hope to see you another time!"}
+                    </p>
+
+                    <div className="mt-12 flex flex-col sm:flex-row gap-4 justify-center">
+                        <Button
+                            onClick={() => setIsSuccess(null)}
+                            variant="outline"
+                            className="h-14 px-8 rounded-2xl font-bold border-slate-200 hover:bg-slate-50"
+                        >
+                            View Details
+                        </Button>
+                        <Button
+                            onClick={() => window.location.href = '/'}
+                            className="h-14 px-8 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold shadow-xl shadow-slate-200"
+                        >
+                            Back to Home
+                        </Button>
+                    </div>
                 </motion.div>
             </div>
         )

@@ -27,6 +27,41 @@ export async function PATCH(
                 { id: appointment.slotId },
                 { status: 'available', appointmentId: null }
             );
+
+            // Send Cancellation Notifications
+            if (status === "cancelled") {
+                try {
+                    // Send Email
+                    if (appointment.patientEmail) {
+                        const { sendAppointmentCancelled } = await import('@/lib/email');
+                        await sendAppointmentCancelled(
+                            appointment.patientEmail,
+                            appointment.patientName,
+                            params.id,
+                            appointment.appointmentDate
+                        );
+                    }
+
+                    // Send WhatsApp
+                    const { sendWhatsAppCancelled } = await import('@/lib/whatsapp');
+                    await sendWhatsAppCancelled(
+                        appointment.patientPhone,
+                        appointment.patientName,
+                        params.id,
+                        appointment.appointmentDate
+                    );
+
+                    // Send SMS
+                    const { sendSMSCancelled } = await import('@/lib/sms');
+                    await sendSMSCancelled(
+                        appointment.patientPhone,
+                        params.id,
+                        appointment.appointmentDate
+                    );
+                } catch (notifError) {
+                    console.error('[Cancel Notif] Failed to send notifications:', notifError);
+                }
+            }
         }
 
         return NextResponse.json(appointment);

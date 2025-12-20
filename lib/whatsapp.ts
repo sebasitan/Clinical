@@ -139,3 +139,75 @@ Do not share this code with anyone.
         return { success: false, error: error.message };
     }
 }
+
+export async function sendWhatsAppRescheduled(
+    to: string,
+    patientName: string,
+    doctorName: string,
+    newDate: string,
+    newTime: string,
+    appointmentId: string
+) {
+    try {
+        const client = getTwilioClient();
+        const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
+        const formattedPhone = to.startsWith('+') ? `whatsapp:${to}` : `whatsapp:${to.trim().startsWith('+') ? to.trim() : '+' + to.trim()}`;
+
+        await client.messages.create({
+            from: `whatsapp:${twilioPhone}`,
+            to: formattedPhone,
+            body: `📅 *Appointment Rescheduled*
+
+Dear ${patientName},
+
+Your appointment has been successfully *rescheduled*.
+
+📋 *Revised Details:*
+• ID: ${appointmentId}
+• Doctor: ${doctorName}
+• *New Date:* ${newDate}
+• *New Time:* ${newTime}
+
+📍 *Location:*
+Klinik Pergigian Setapak (Sri Rampai)
+
+We look forward to seeing you at your new time! 🦷`
+        });
+        return { success: true };
+    } catch (error: any) {
+        console.error('WhatsApp reschedule error:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+export async function sendWhatsAppCancelled(
+    to: string,
+    patientName: string,
+    appointmentId: string,
+    date: string
+) {
+    try {
+        const client = getTwilioClient();
+        const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
+        const formattedPhone = to.startsWith('+') ? `whatsapp:${to}` : `whatsapp:${to.trim().startsWith('+') ? to.trim() : '+' + to.trim()}`;
+
+        await client.messages.create({
+            from: `whatsapp:${twilioPhone}`,
+            to: formattedPhone,
+            body: `✕ *Appointment Cancelled*
+
+Dear ${patientName},
+
+This is to confirm that your appointment on *${date}* (ID: ${appointmentId}) has been *cancelled* as per your request.
+
+If this was a mistake, or you'd like to book a new slot, please visit:
+https://${process.env.VERCEL_URL || 'localhost:3000'}/booking
+
+- Klinik Pergigian Setapak (Sri Rampai)`
+        });
+        return { success: true };
+    } catch (error: any) {
+        console.error('WhatsApp cancel error:', error);
+        return { success: false, error: error.message };
+    }
+}

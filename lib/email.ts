@@ -171,3 +171,87 @@ export async function sendAppointmentReminder(
         return { success: false, error };
     }
 }
+
+export async function sendAppointmentRescheduled(
+    to: string,
+    patientName: string,
+    doctorName: string,
+    newDate: string,
+    newTime: string,
+    appointmentId: string
+) {
+    try {
+        const calendarLink = generateGoogleCalendarLink(
+            `Dental Appointment with ${doctorName}`,
+            `Rescheduled dental consultation at Klinik Pergigian Setapak (Sri Rampai). ID: ${appointmentId}`,
+            "Klinik Pergigian Setapak (Sri Rampai)",
+            newDate,
+            newTime
+        );
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        await resend.emails.send({
+            from: 'Klinik Pergigian Setapak (Sri Rampai) <onboarding@resend.dev>',
+            to: [to],
+            subject: 'Appointment Rescheduled - Klinik Pergigian Setapak (Sri Rampai)',
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+                    <div style="background: #0284c7; color: white; padding: 30px; text-align: center;">
+                        <h2 style="margin: 0;">📅 Appointment Rescheduled</h2>
+                    </div>
+                    <div style="padding: 30px; background: #fff;">
+                        <p>Dear <strong>${patientName}</strong>,</p>
+                        <p>Your appointment has been successfully moved to a new time slot.</p>
+                        <div style="background: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #0284c7;">
+                            <p style="margin: 5px 0;"><strong>New Date:</strong> ${newDate}</p>
+                            <p style="margin: 5px 0;"><strong>New Time:</strong> ${newTime}</p>
+                            <p style="margin: 5px 0;"><strong>Doctor:</strong> ${doctorName}</p>
+                        </div>
+                        <p>We've updated our records and look forward to seeing you then.</p>
+                        <div style="text-align: center; margin-top: 30px;">
+                            <a href="${calendarLink}" style="display: inline-block; background: #0284c7; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: bold;">Update Calendar</a>
+                        </div>
+                    </div>
+                </div>
+            `
+        });
+        return { success: true };
+    } catch (e) {
+        console.error("Reschedule email error:", e);
+        return { success: false, error: e };
+    }
+}
+
+export async function sendAppointmentCancelled(
+    to: string,
+    patientName: string,
+    appointmentId: string,
+    date: string
+) {
+    try {
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        await resend.emails.send({
+            from: 'Klinik Pergigian Setapak (Sri Rampai) <onboarding@resend.dev>',
+            to: [to],
+            subject: 'Appointment Cancelled - Klinik Pergigian Setapak (Sri Rampai)',
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #fee2e2; border-radius: 12px; overflow: hidden;">
+                    <div style="background: #ef4444; color: white; padding: 30px; text-align: center;">
+                        <h2 style="margin: 0;">✕ Appointment Cancelled</h2>
+                    </div>
+                    <div style="padding: 30px; background: #fff;">
+                        <p>Dear <strong>${patientName}</strong>,</p>
+                        <p>Your appointment on <strong>${date}</strong> (ID: ${appointmentId}) has been successfully cancelled as per your request.</p>
+                        <p>The time slot has been released. If this was a mistake or you'd like to book a new appointment, please visit our booking page.</p>
+                        <div style="text-align: center; margin-top: 30px;">
+                            <a href="https://${process.env.VERCEL_URL || 'localhost:3000'}/booking" style="display: inline-block; background: #ef4444; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: bold;">Book New Appointment</a>
+                        </div>
+                    </div>
+                </div>
+            `
+        });
+        return { success: true };
+    } catch (e) {
+        console.error("Cancel email error:", e);
+        return { success: false, error: e };
+    }
+}

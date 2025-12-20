@@ -4,10 +4,11 @@ import { ScheduleModel } from '@/lib/models';
 
 export async function GET(
     request: Request,
-    { params }: { params: { id: string } }
+    props: { params: Promise<{ id: string }> }
 ) {
     try {
         await dbConnect();
+        const params = await props.params;
         const schedule = await ScheduleModel.findOne({ doctorId: params.id });
         if (!schedule) {
             return NextResponse.json({ doctorId: params.id, days: {} });
@@ -20,10 +21,11 @@ export async function GET(
 
 export async function POST(
     request: Request,
-    { params }: { params: { id: string } }
+    props: { params: Promise<{ id: string }> }
 ) {
     try {
         await dbConnect();
+        const params = await props.params;
         const body = await request.json();
 
         const schedule = await ScheduleModel.findOneAndUpdate(

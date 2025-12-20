@@ -129,6 +129,35 @@ export const regenerateDoctorSlotsAsync = async (doctorId: string) => {
     if (!res.ok) throw new Error('Failed to regenerate slots');
     return await res.json();
 }
+
+export const getDoctorLeavesAsync = async (doctorId: string): Promise<DoctorLeave[]> => {
+    try {
+        const res = await fetch(`${API_BASE}/doctors/${doctorId}/leaves`, { cache: 'no-store' });
+        if (!res.ok) return [];
+        return await res.json();
+    } catch (e) {
+        console.error("Failed to fetch leaves", e);
+        return [];
+    }
+}
+
+export const addDoctorLeaveAsync = async (leave: Omit<DoctorLeave, "id">) => {
+    const res = await fetch(`${API_BASE}/doctors/${leave.doctorId}/leaves`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(leave)
+    });
+    if (!res.ok) throw new Error('Failed to record leave');
+    return await res.json();
+}
+
+export const deleteDoctorLeaveAsync = async (doctorId: string, leaveId: string) => {
+    const res = await fetch(`${API_BASE}/doctors/${doctorId}/leaves/${leaveId}`, {
+        method: 'DELETE'
+    });
+    if (!res.ok) throw new Error('Failed to delete leave');
+    return await res.json();
+}
 // --- END API CLIENT ---
 
 // Helper to handle window/localStorage in Next.js

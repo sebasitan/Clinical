@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
 import { getDoctorsAsync, addDoctorAsync, updateDoctorAsync, deleteDoctorAsync, getAppointments } from "@/lib/storage"
@@ -32,7 +33,7 @@ export default function DoctorsPage() {
         email: "",
         isActive: true,
         isAvailable: true,
-        slotDuration: 30 as 15 | 20 | 30,
+        slotDuration: 30 as 10 | 15 | 20 | 30,
         photo: ""
     })
     const [isUploading, setIsUploading] = useState(false)
@@ -408,6 +409,24 @@ export default function DoctorsPage() {
                                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                     className="h-12 px-4 rounded-xl bg-slate-50 border-slate-100 font-medium"
                                 />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Slot Duration</Label>
+                                <Select
+                                    value={formData.slotDuration.toString()}
+                                    onValueChange={v => setFormData({ ...formData, slotDuration: parseInt(v) as any })}
+                                >
+                                    <SelectTrigger className="h-12 px-4 rounded-xl bg-slate-50 border-slate-100 font-medium">
+                                        <SelectValue placeholder="Select duration" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="10">10 Minutes</SelectItem>
+                                        <SelectItem value="15">15 Minutes</SelectItem>
+                                        <SelectItem value="20">20 Minutes</SelectItem>
+                                        <SelectItem value="30">30 Minutes</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
                         </div>
 

@@ -211,7 +211,7 @@ export default function DoctorManagementPage() {
     }
 
     const handleViewHistory = (ic: string) => {
-        const history = getAppointments().filter(a => a.patientIC === ic)
+        const history = appointments.filter((a: Appointment) => a.patientIC === ic)
         setPatientHistory(history)
         setSelectedPatientIC(ic)
         setIsHistoryOpen(true)
@@ -306,12 +306,13 @@ export default function DoctorManagementPage() {
                                 <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Slot Duration</Label>
                                 <Select
                                     value={doctor.slotDuration.toString()}
-                                    onValueChange={(val) => handleUpdateDoctor({ slotDuration: parseInt(val) as 15 | 20 | 30 })}
+                                    onValueChange={(val) => handleUpdateDoctor({ slotDuration: parseInt(val) as 10 | 15 | 20 | 30 })}
                                 >
                                     <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-slate-100 focus:ring-blue-100">
                                         <SelectValue placeholder="Select duration" />
                                     </SelectTrigger>
                                     <SelectContent>
+                                        <SelectItem value="10">10 Minutes</SelectItem>
                                         <SelectItem value="15">15 Minutes</SelectItem>
                                         <SelectItem value="20">20 Minutes</SelectItem>
                                         <SelectItem value="30">30 Minutes</SelectItem>

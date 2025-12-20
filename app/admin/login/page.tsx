@@ -79,7 +79,7 @@ export default function AdminLoginPage() {
                     className="object-contain"
                   />
                 </div>
-                <span className="font-sans font-bold text-xl tracking-tight text-white uppercase italic">Pergigian Setapak Admin</span>
+                <span className="font-sans font-bold text-xl tracking-tight text-white uppercase italic">Pergigian Setapak (Sri Rampai) Admin</span>
               </div>
 
               <h1 className="text-5xl font-bold text-white leading-tight mb-6 font-sans">
@@ -116,7 +116,7 @@ export default function AdminLoginPage() {
                     className="object-contain"
                   />
                 </div>
-                <span className="font-bold text-xl text-slate-900 tracking-tight">Klinik Pergigian Setapak</span>
+                <span className="font-bold text-xl text-slate-900 tracking-tight">Klinik Pergigian Setapak (Sri Rampai)</span>
               </div>
 
               <div className="mb-10 text-center lg:text-left">

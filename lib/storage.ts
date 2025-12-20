@@ -599,10 +599,10 @@ export const deleteFacility = (id: string) => {
 
 // Settings
 export const getSettings = (): SystemSettings => getFromStorage(STORAGE_KEYS.SETTINGS) || {
-    clinicName: "Klinik Pergigian Setapak",
-    address: "Setapak, Kuala Lumpur",
-    phone: "+60 3-XXXX XXXX",
-    email: "ops@klinikpergigiansetapak.com",
+    clinicName: "Klinik Pergigian Setapak (Sri Rampai)",
+    address: "16-2, Jalan 46/26, Taman Sri Rampai, 53300 Kuala Lumpur, Wilayah Persekutuan Kuala Lumpur, Malaysia",
+    phone: "+60 17-510 1003",
+    email: "hello@kpsrirampai.com",
     defaultSlotDuration: 30,
     workingHours: { start: "09:00", end: "18:00" },
     notifications: { sms: true, whatsapp: true, emailReminders: true }

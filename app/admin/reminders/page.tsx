@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { LoadingScreen } from "@/components/ui/loading-screen"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -12,6 +13,7 @@ export default function OutreachSettingsPage() {
     const { isLoading } = useAdminAuth()
     const [isSaving, setIsSaving] = useState(false)
     const [isChecking, setIsChecking] = useState(false)
+    const [isDataLoading, setIsDataLoading] = useState(true)
 
     // Global Settings State
     const [settings, setSettings] = useState({
@@ -48,7 +50,19 @@ export default function OutreachSettingsPage() {
         }
     }
 
-    if (isLoading) return null
+    useEffect(() => {
+        // Just a small delay to show the nice animation for consistency
+        const timer = setTimeout(() => setIsDataLoading(false), 800)
+        return () => clearTimeout(timer)
+    }, [])
+
+    if (isLoading || isDataLoading) {
+        return (
+            <div className="flex-1 flex items-center justify-center bg-slate-50/50 min-h-screen">
+                <LoadingScreen message="Accessing Reminder Engine..." />
+            </div>
+        )
+    }
 
     return (
         <div className="flex-1 bg-slate-50/50 p-6 md:p-10">

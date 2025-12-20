@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { LoadingScreen } from "@/components/ui/loading-screen"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
@@ -19,10 +20,21 @@ export default function PatientsPage() {
     const [patients, setPatients] = useState<Patient[]>([])
     const [appointments, setAppointments] = useState<Appointment[]>([])
     const [doctors, setDoctors] = useState<Doctor[]>([])
+    const [isDataLoading, setIsDataLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState("")
     const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
     const [editingPatient, setEditingPatient] = useState<Patient | null>(null)
     const [isSaving, setIsSaving] = useState(false)
+    const [showBulkImport, setShowBulkImport] = useState(false)
+    const [showAddPatient, setShowAddPatient] = useState(false)
+    const [bulkData, setBulkData] = useState("")
+    const [newPatient, setNewPatient] = useState<Partial<Patient>>({
+        name: "",
+        ic: "",
+        phone: "",
+        email: "",
+        type: "existing"
+    })
 
     useEffect(() => {
         loadData()
@@ -37,6 +49,7 @@ export default function PatientsPage() {
         setPatients(pts.filter((p: Patient) => p.name))
         setAppointments(apts)
         setDoctors(docs)
+        setIsDataLoading(false)
     }
 
     const filteredPatients = patients.filter((p: Patient) =>
@@ -70,11 +83,93 @@ export default function PatientsPage() {
         }
     }
 
+    const handleAddPatient = async () => {
+        if (!newPatient.name || !newPatient.ic || !newPatient.phone) {
+            alert("Please fill in Name, IC, and Phone.");
+            return;
+        }
+        setIsSaving(true);
+        try {
+            const res = await fetch('/api/patients', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...newPatient, id: `PAT-${Math.random().toString(36).substr(2, 9).toUpperCase()}` })
+            });
+            if (res.ok) {
+                await loadData();
+                setShowAddPatient(false);
+                setNewPatient({ name: "", ic: "", phone: "", email: "", type: "existing" });
+                alert("Patient added successfully.");
+            } else {
+                const err = await res.json();
+                alert(`Failed to add patient: ${err.error || 'Check for duplicate IC'}`);
+            }
+        } catch (e) {
+            alert("Connection error.");
+        } finally {
+            setIsSaving(false);
+        }
+    }
+
+    const handleBulkImport = async () => {
+        if (!bulkData.trim()) return;
+        setIsSaving(true);
+        try {
+            // Expected Format: Name, IC, Phone, Email (one per line)
+            const lines = bulkData.split('\n');
+            const patientsToImport = lines.map(line => {
+                const [name, ic, phone, email] = line.split(',').map(s => s.trim());
+                if (!name || !ic) return null;
+                return {
+                    id: `PAT-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+                    name,
+                    ic,
+                    phone: phone || "",
+                    email: email || "",
+                    type: "existing" as const
+                };
+            }).filter(Boolean);
+
+            if (patientsToImport.length === 0) {
+                alert("No valid data found. Format: Name, IC, Phone, Email");
+                setIsSaving(false);
+                return;
+            }
+
+            let successCount = 0;
+            // We'll send them one by one for simplicity if the API doesn't support bulk
+            // In a real app, we'd use a bulk endpoint
+            for (const p of patientsToImport) {
+                const res = await fetch('/api/patients', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(p)
+                });
+                if (res.ok) successCount++;
+            }
+
+            await loadData();
+            setShowBulkImport(false);
+            setBulkData("");
+            alert(`Successfully imported ${successCount} out of ${patientsToImport.length} patients.`);
+        } catch (e) {
+            alert("Import failed.");
+        } finally {
+            setIsSaving(false);
+        }
+    }
+
     const patientHistory = selectedPatient
         ? appointments.filter((a: Appointment) => a.patientIC === selectedPatient.ic).sort((a: Appointment, b: Appointment) => new Date(b.appointmentDate).getTime() - new Date(a.appointmentDate).getTime())
         : []
 
-    if (isLoading) return null
+    if (isLoading || isDataLoading) {
+        return (
+            <div className="flex-1 flex items-center justify-center bg-slate-50/50 min-h-screen">
+                <LoadingScreen message="Accessing Patient Records..." />
+            </div>
+        )
+    }
 
     return (
         <div className="flex-1 bg-slate-50/50">
@@ -85,14 +180,31 @@ export default function PatientsPage() {
                         <h1 className="text-4xl font-sans font-bold text-slate-900 tracking-tight">Patient Registry</h1>
                         <p className="text-slate-500 mt-1">Cross-reference clinical records and visit history.</p>
                     </div>
-                    <div className="relative group max-w-sm w-full">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors w-4 h-4" />
-                        <Input
-                            placeholder="Search by name, IC, or phone..."
-                            value={searchQuery}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-                            className="h-12 pl-12 rounded-2xl bg-white border-slate-100 shadow-sm transition-all focus:ring-4 focus:ring-blue-100 font-medium"
-                        />
+                    <div className="flex items-center gap-4">
+                        <Button
+                            onClick={() => setShowAddPatient(true)}
+                            className="h-12 px-6 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all shadow-lg shadow-blue-200 gap-2"
+                        >
+                            <UserSearch className="w-5 h-5" />
+                            Add Patient
+                        </Button>
+                        <Button
+                            onClick={() => setShowBulkImport(true)}
+                            variant="outline"
+                            className="h-12 px-6 rounded-2xl border-slate-200 hover:bg-slate-50 text-slate-600 font-bold transition-all gap-2"
+                        >
+                            <Search className="w-5 h-5" />
+                            Bulk Import
+                        </Button>
+                        <div className="relative group max-w-sm w-full">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors w-4 h-4" />
+                            <Input
+                                placeholder="Search by name, IC, or phone..."
+                                value={searchQuery}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
+                                className="h-12 pl-12 rounded-2xl bg-white border-slate-100 shadow-sm transition-all focus:ring-4 focus:ring-blue-100 font-medium"
+                            />
+                        </div>
                     </div>
                 </div>
 
@@ -267,7 +379,7 @@ export default function PatientsPage() {
                                                 active: isActive,
                                                 status: prev.continuedTreatment?.status || 'in-progress',
                                                 notes: prev.continuedTreatment?.notes || "",
-                                                nextFollowUpDate: prev.continuedTreatment?.nextFollowUpDate || null,
+                                                nextFollowUpDate: prev.continuedTreatment?.nextFollowUpDate || undefined,
                                                 preferredChannels: prev.continuedTreatment?.preferredChannels || { sms: true, whatsapp: true, email: true }
                                             }
                                         }
@@ -340,6 +452,93 @@ export default function PatientsPage() {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* Add Patient Dialog */}
+            <Dialog open={showAddPatient} onOpenChange={setShowAddPatient}>
+                <DialogContent className="sm:max-w-[450px] p-0 overflow-hidden border-none rounded-[2.5rem] shadow-2xl">
+                    <div className="bg-blue-600 p-8 text-white">
+                        <DialogHeader>
+                            <DialogTitle className="text-2xl font-bold">Add New Patient</DialogTitle>
+                        </DialogHeader>
+                        <p className="text-blue-100 text-sm opacity-80 mt-1">Create a new clinical record manually.</p>
+                    </div>
+                    <div className="p-8 space-y-4 bg-white">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Full Name</label>
+                            <Input
+                                value={newPatient.name}
+                                onChange={(e) => setNewPatient({ ...newPatient, name: e.target.value })}
+                                className="h-12 rounded-2xl bg-slate-50 border-slate-100"
+                                placeholder="Patient Full Name"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">NRIC / IC Number</label>
+                            <Input
+                                value={newPatient.ic}
+                                onChange={(e) => setNewPatient({ ...newPatient, ic: e.target.value })}
+                                className="h-12 rounded-2xl bg-slate-50 border-slate-100"
+                                placeholder="e.g. 900101-01-1234"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Phone Number</label>
+                            <Input
+                                value={newPatient.phone}
+                                onChange={(e) => setNewPatient({ ...newPatient, phone: e.target.value })}
+                                className="h-12 rounded-2xl bg-slate-50 border-slate-100"
+                                placeholder="e.g. 0123456789"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email (Optional)</label>
+                            <Input
+                                value={newPatient.email}
+                                onChange={(e) => setNewPatient({ ...newPatient, email: e.target.value })}
+                                className="h-12 rounded-2xl bg-slate-50 border-slate-100"
+                                placeholder="patient@example.com"
+                            />
+                        </div>
+                        <div className="pt-4 flex gap-3">
+                            <Button onClick={() => setShowAddPatient(false)} variant="ghost" className="flex-1 h-12 rounded-2xl font-bold text-slate-500">Cancel</Button>
+                            <Button onClick={handleAddPatient} disabled={isSaving} className="flex-1 h-12 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold transition-all shadow-xl shadow-slate-200">
+                                {isSaving ? "Adding..." : "Add Patient"}
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Bulk Import Dialog */}
+            <Dialog open={showBulkImport} onOpenChange={setShowBulkImport}>
+                <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden border-none rounded-[2.5rem] shadow-2xl">
+                    <div className="bg-slate-900 p-8 text-white">
+                        <DialogHeader>
+                            <DialogTitle className="text-2xl font-bold italic">Bulk Patient Import</DialogTitle>
+                        </DialogHeader>
+                        <p className="text-slate-400 text-sm mt-1">Paste your patient list below (CSV format).</p>
+                    </div>
+                    <div className="p-8 space-y-6 bg-white">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">CSV Data (Format: Name, IC, Phone, Email)</label>
+                            <Textarea
+                                value={bulkData}
+                                onChange={(e) => setBulkData(e.target.value)}
+                                className="min-h-[250px] rounded-2xl bg-slate-50 border-slate-100 p-4 font-mono text-xs"
+                                placeholder="John Doe, 900101-01-1234, 0123456789, john@email.com&#10;Jane Smith, 910202-02-5678, 0198765432, jane@email.com"
+                            />
+                            <p className="text-[10px] text-slate-400 italic mt-2">Separate each patient with a new line. Name and IC are required.</p>
+                        </div>
+                        <div className="pt-2 flex gap-3">
+                            <Button onClick={() => setShowBulkImport(false)} variant="ghost" className="flex-1 h-12 rounded-2xl font-bold text-slate-500">Cancel</Button>
+                            <Button onClick={handleBulkImport} disabled={isSaving || !bulkData.trim()} className="flex-1 h-12 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all shadow-xl shadow-blue-100">
+                                {isSaving ? "Processing Import..." : "Import Patients"}
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }
+

@@ -393,8 +393,8 @@ export default function BookingPage() {
 
     const title = encodeURIComponent(`Dental Appointment with ${selectedDoctor.name}`);
     const details = encodeURIComponent(`Dental examination and consultation with ${selectedDoctor.name} (${selectedDoctor.specialization}).\n\nPatient: ${patientName}`);
-    const location = encodeURIComponent("Klinik Pergigian Setapak");
-    const dates = `${fmt(startDateTime)}/${fmt(endDateTime)}`;
+    const location = encodeURIComponent("Klinik Pergigian Setapak (Sri Rampai)");
+    const dates = `${fmt(startDateTime)}/` + fmt(endDateTime);
 
     const googleUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&details=${details}&location=${location}`;
 
@@ -497,7 +497,7 @@ export default function BookingPage() {
                   className="object-contain"
                 />
               </div>
-              <span className="font-sans font-bold text-xl tracking-tight text-slate-900">Pergigian Setapak</span>
+              <span className="font-sans font-bold text-xl tracking-tight text-slate-900">Pergigian Setapak (Sri Rampai)</span>
             </div>
 
             <div className="flex items-center gap-8">

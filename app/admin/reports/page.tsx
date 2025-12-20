@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { LoadingScreen } from "@/components/ui/loading-screen"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
 import { getAppointmentsAsync, getDoctorsAsync, getSlotsAsync, getPatientsAsync } from "@/lib/storage"
 import type { Appointment, Doctor, Slot, Patient } from "@/lib/types"
@@ -38,6 +39,7 @@ export default function ReportsPage() {
     const [appointments, setAppointments] = useState<Appointment[]>([])
     const [doctors, setDoctors] = useState<Doctor[]>([])
     const [patients, setPatients] = useState<Patient[]>([])
+    const [isDataLoading, setIsDataLoading] = useState(true)
 
     // Filters
     const [activeTab, setActiveTab] = useState("overview")
@@ -59,6 +61,7 @@ export default function ReportsPage() {
             setAppointments(apts)
             setDoctors(docs)
             setPatients(pts)
+            setIsDataLoading(false)
         }
         load()
     }, [])
@@ -118,7 +121,13 @@ export default function ReportsPage() {
         alert("Generating official clinic report PDF... (Simulation)")
     }
 
-    if (isLoading) return null
+    if (isLoading || isDataLoading) {
+        return (
+            <div className="flex-1 flex items-center justify-center bg-slate-50/50 min-h-screen">
+                <LoadingScreen message="Compiling Clinical Intelligence..." />
+            </div>
+        )
+    }
 
     return (
         <div className="min-h-screen bg-slate-50/50 pb-20">

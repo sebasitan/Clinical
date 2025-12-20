@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { generateGoogleCalendarLink } from './calendar-utils';
 
 export async function sendAppointmentConfirmation(
     to: string,
@@ -10,11 +11,18 @@ export async function sendAppointmentConfirmation(
     patientIC?: string
 ) {
     try {
+        const calendarLink = generateGoogleCalendarLink(
+            `Dental Appointment with ${doctorName}`,
+            `Dental consultation at Klinik Pergigian Setapak (Sri Rampai). ID: ${appointmentId}`,
+            "Klinik Pergigian Setapak (Sri Rampai)",
+            appointmentDate,
+            timeSlot
+        );
         const resend = new Resend(process.env.RESEND_API_KEY);
         const { data, error } = await resend.emails.send({
-            from: 'Klinik Pergigian Setapak <onboarding@resend.dev>',
+            from: 'Klinik Pergigian Setapak (Sri Rampai) <onboarding@resend.dev>',
             to: [to],
-            subject: 'Appointment Confirmation - Klinik Pergigian Setapak',
+            subject: 'Appointment Confirmation - Klinik Pergigian Setapak (Sri Rampai)',
             html: `
                 <!DOCTYPE html>
                 <html>
@@ -22,21 +30,22 @@ export async function sendAppointmentConfirmation(
                     <style>
                         body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
                         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                        .header { background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
                         .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
-                        .appointment-card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea; }
+                        .appointment-card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #0284c7; }
                         .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e5e7eb; }
                         .label { font-weight: bold; color: #6b7280; }
-                        .value { color: #111827; }
+                        .value { color: #111827; font-weight: 600; }
                         .footer { text-align: center; margin-top: 20px; color: #6b7280; font-size: 12px; }
-                        .button { display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; margin-top: 20px; }
+                        .button { display: inline-block; background: #0284c7; color: white !important; padding: 12px 30px; text-decoration: none; border-radius: 50px; margin-top: 20px; font-weight: bold; }
+                        .cal-button { display: inline-block; background: #fff; color: #0284c7 !important; padding: 12px 30px; text-decoration: none; border-radius: 50px; margin-top: 10px; border: 2px solid #0284c7; font-weight: bold; }
                     </style>
                 </head>
                 <body>
                     <div class="container">
                         <div class="header">
                             <h1>✓ Appointment Confirmed</h1>
-                            <p>Your appointment has been successfully scheduled</p>
+                            <p>Your visit to Klinik Pergigian Setapak (Sri Rampai) is scheduled.</p>
                         </div>
                         <div class="content">
                             <p>Dear <strong>${patientName}</strong>,</p>
@@ -67,21 +76,20 @@ export async function sendAppointmentConfirmation(
                                 </div>
                             </div>
 
-                            <p><strong>Important Reminders:</strong></p>
+                            <p><strong>Next Steps:</strong></p>
                             <ul>
-                                <li>Please arrive 10 minutes before your scheduled time</li>
-                                <li>Bring your IC and any relevant medical documents</li>
-                                <li>If you need to reschedule, please contact us at least 24 hours in advance</li>
+                                <li>Please arrive 10 minutes session for registration.</li>
+                                <li>Add this to your calendar using the link below to get a reminder.</li>
                             </ul>
 
-                            <div style="text-align: center;">
-                                <a href="http://localhost:3000" class="button">View Appointment</a>
+                            <div style="text-align: center; padding-top: 10px;">
+                                <a href="${calendarLink}" class="button">Add to Google Calendar</a>
                             </div>
 
                             <div class="footer">
-                                <p><strong>Klinik Pergigian Setapak</strong></p>
-                                <p>Jalan Genting Klang, Setapak, 53300 Kuala Lumpur</p>
-                                <p>Phone: +60 3-4142 1234 | Email: ops@klinikpergigiansetapak.com</p>
+                                <p><strong>Klinik Pergigian Setapak (Sri Rampai)</strong></p>
+                                <p>16-2, Jalan 46/26, Taman Sri Rampai, 53300 Kuala Lumpur</p>
+                                <p>Phone: +60 17-510 1003 | Email: hello@kpsrirampai.com</p>
                             </div>
                         </div>
                     </div>
@@ -112,7 +120,7 @@ export async function sendAppointmentReminder(
     try {
         const resend = new Resend(process.env.RESEND_API_KEY);
         const { data, error } = await resend.emails.send({
-            from: 'Klinik Pergigian Setapak <onboarding@resend.dev>',
+            from: 'Klinik Pergigian Setapak (Sri Rampai) <onboarding@resend.dev>',
             to: [to],
             subject: 'Appointment Reminder - Tomorrow',
             html: `

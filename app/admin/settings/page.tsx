@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { LoadingScreen } from "@/components/ui/loading-screen"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -31,10 +32,13 @@ export default function AdminSettingsPage() {
     const { toast } = useToast()
     const [settings, setSettings] = useState<SystemSettings | null>(null)
     const [isSaving, setIsSaving] = useState(false)
+    const [isDataLoading, setIsDataLoading] = useState(true)
     const admin = getCurrentAdmin()
 
     useEffect(() => {
         setSettings(getSettings())
+        const timer = setTimeout(() => setIsDataLoading(false), 500)
+        return () => clearTimeout(timer)
     }, [])
 
     const handleSave = async () => {
@@ -62,7 +66,13 @@ export default function AdminSettingsPage() {
         }
     }
 
-    if (isLoading || !settings) return null
+    if (isLoading || isDataLoading || !settings) {
+        return (
+            <div className="flex-1 flex items-center justify-center bg-slate-50/50 min-h-screen">
+                <LoadingScreen message="Loading System Preferences..." />
+            </div>
+        )
+    }
 
     return (
         <div className="min-h-screen bg-slate-50/50 pb-20">

@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
+import { LoadingScreen } from "@/components/ui/loading-screen"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,6 +21,7 @@ export default function DoctorsPage() {
     const { isLoading } = useAdminAuth()
     const [doctors, setDoctors] = useState<Doctor[]>([])
     const [appointments, setAppointments] = useState<any[]>([])
+    const [isDataLoading, setIsDataLoading] = useState(true)
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [editingDoctor, setEditingDoctor] = useState<Doctor | null>(null)
     const [searchQuery, setSearchQuery] = useState("")
@@ -44,6 +46,7 @@ export default function DoctorsPage() {
         const docs = await getDoctorsAsync()
         setDoctors(docs)
         setAppointments(getAppointments())
+        setIsDataLoading(false)
     }
 
     const handleOpenDialog = (doctor?: Doctor) => {
@@ -186,7 +189,13 @@ export default function DoctorsPage() {
         d.specialization.toLowerCase().includes(searchQuery.toLowerCase())
     )
 
-    if (isLoading) return null
+    if (isLoading || isDataLoading) {
+        return (
+            <div className="flex-1 flex items-center justify-center bg-slate-50/50 min-h-screen">
+                <LoadingScreen message="Syncing Provider Registry..." />
+            </div>
+        )
+    }
 
     return (
         <div className="flex-1 bg-slate-50/50">

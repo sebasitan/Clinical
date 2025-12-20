@@ -1,4 +1,5 @@
 import twilio from 'twilio';
+import { generateGoogleCalendarLink } from './calendar-utils';
 
 /**
  * Sanitizes phone number to E.164 format
@@ -71,6 +72,42 @@ export async function verifySMSOTP(to: string, code: string) {
 }
 
 /**
+ * Sends a confirmation SMS after booking
+ */
+export async function sendSMSConfirmation(
+    to: string,
+    patientName: string,
+    doctorName: string,
+    appointmentDate: string,
+    timeSlot: string,
+    appointmentId: string
+) {
+    try {
+        const calendarLink = generateGoogleCalendarLink(
+            `Dental Appointment`,
+            `Visit to Klinik Pergigian Setapak (Sri Rampai). ID: ${appointmentId}`,
+            "KPS (Sri Rampai)",
+            appointmentDate,
+            timeSlot
+        );
+        const client = getTwilioClient();
+        const from = process.env.TWILIO_PHONE_NUMBER;
+        const formattedPhone = sanitizePhone(to);
+
+        const message = await client.messages.create({
+            body: `✅ Confirmed: Dental appt with ${doctorName} on ${appointmentDate} @ ${timeSlot}. ID: ${appointmentId}. Add to cal: ${calendarLink}`,
+            from: from,
+            to: formattedPhone
+        });
+
+        return { success: true, sid: message.sid };
+    } catch (error: any) {
+        console.error('SMS Confirmation Error:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
  * Sends a generic appointment reminder via SMS
  */
 export async function sendSMSReminder(
@@ -86,7 +123,7 @@ export async function sendSMSReminder(
         const formattedPhone = sanitizePhone(to);
 
         const message = await client.messages.create({
-            body: `⏰ Reminder: You have a dental appointment with ${doctorName} on ${appointmentDate} at ${timeSlot}. - Klinik Pergigian Setapak`,
+            body: `⏰ Reminder: You have a dental appointment with ${doctorName} on ${appointmentDate} at ${timeSlot}. - Klinik Pergigian Setapak (Sri Rampai)`,
             from: from,
             to: formattedPhone
         });

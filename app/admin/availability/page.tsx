@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
+import { LoadingScreen } from "@/components/ui/loading-screen"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -59,6 +60,7 @@ export default function AvailabilityPage() {
     const { toast } = useToast()
     const [doctors, setDoctors] = useState<Doctor[]>([])
     const [blocks, setBlocks] = useState<AvailabilityBlock[]>([])
+    const [isDataLoading, setIsDataLoading] = useState(true)
 
     // Global filter
     const [dateFilter, setDateFilter] = useState<string | null>(null)
@@ -84,6 +86,7 @@ export default function AvailabilityPage() {
         const docs = await getDoctorsAsync()
         setDoctors(docs.filter(d => d.isActive))
         setBlocks(getAvailabilityBlocks())
+        setIsDataLoading(false)
     }
 
     const applyTemplate = (t: typeof SESSION_TEMPLATES[0]) => {
@@ -164,7 +167,13 @@ export default function AvailabilityPage() {
 
     const sortedDates = Object.keys(groupedBlocks).sort()
 
-    if (isLoading) return null
+    if (isLoading || isDataLoading) {
+        return (
+            <div className="flex-1 flex items-center justify-center bg-slate-50/50 min-h-screen">
+                <LoadingScreen message="Orchestrating Workforce Duty..." />
+            </div>
+        )
+    }
 
     return (
         <div className="flex-1 bg-slate-50/50 flex flex-col h-screen overflow-hidden">

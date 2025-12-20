@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { LoadingScreen } from "@/components/ui/loading-screen"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -20,6 +21,7 @@ export default function FollowUpsPage() {
     const [searchQuery, setSearchQuery] = useState("")
     const [editingFollowUp, setEditingFollowUp] = useState<any>(null)
     const [isSaving, setIsSaving] = useState(false)
+    const [isDataLoading, setIsDataLoading] = useState(true)
 
     useEffect(() => {
         loadData()
@@ -35,6 +37,8 @@ export default function FollowUpsPage() {
             }
         } catch (e) {
             console.error("Failed to load patients", e)
+        } finally {
+            setIsDataLoading(false)
         }
     }
 
@@ -68,7 +72,13 @@ export default function FollowUpsPage() {
         return dateA - dateB
     })
 
-    if (isLoading) return null
+    if (isLoading || isDataLoading) {
+        return (
+            <div className="flex-1 flex items-center justify-center bg-slate-50/50 min-h-screen">
+                <LoadingScreen message="Loading Treatment Plans..." />
+            </div>
+        )
+    }
 
     return (
         <div className="flex-1 bg-slate-50/50 p-6 md:p-10">
@@ -79,7 +89,7 @@ export default function FollowUpsPage() {
                             <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-200">
                                 <Activity className="w-5 h-5" />
                             </div>
-                            <h1 className="text-4xl font-sans font-bold text-slate-900 tracking-tight">Continued Care</h1>
+                            <h1 className="text-4xl font-sans font-bold text-slate-900 tracking-tight">Treatment Plans</h1>
                         </div>
                         <p className="text-slate-500">Managing patients with ongoing clinical treatment plans.</p>
                     </div>

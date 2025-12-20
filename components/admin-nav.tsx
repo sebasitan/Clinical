@@ -64,8 +64,8 @@ export function AdminNav() {
         },
         { href: "/admin/doctors", label: "Doctors", icon: Users },
         { href: "/admin/receptionists", label: "Receptionists", icon: UserCog },
-        { href: "/admin/patients", label: "Patients", icon: UserSearch },
-        { href: "/admin/care", label: "Care Plans", icon: ActivitySquare },
+        { href: "/admin/patients", label: "Patient Registry", icon: UserSearch },
+        { href: "/admin/care", label: "Treatment Plans", icon: ActivitySquare },
         { href: "/admin/reminders", label: "Reminders", icon: Clock },
         { href: "/admin/reports", label: "Reports", icon: FilePieChart },
         { href: "/admin/audit", label: "Audit Logs", icon: ActivitySquare },
@@ -116,7 +116,7 @@ export function AdminNav() {
                         {!isCollapsed && (
                             <div className="flex flex-col animate-in fade-in duration-500">
                                 <span className="font-sans font-black text-sm tracking-tighter text-slate-900 uppercase italic leading-none">Klinik Pergigian</span>
-                                <span className="text-[10px] font-bold text-blue-600 uppercase tracking-[0.2em] mt-1 leading-none">Setapak Admin</span>
+                                <span className="text-[10px] font-bold text-blue-600 uppercase tracking-[0.2em] mt-1 leading-none">Setapak (Sri Rampai) Admin</span>
                             </div>
                         )}
                     </div>

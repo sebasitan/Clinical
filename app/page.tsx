@@ -15,10 +15,10 @@ import {
   DialogContent,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { BookingWizard } from "@/components/booking-wizard"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Smile, Check, ArrowRight, ShieldCheck, Sparkles, Stethoscope, Monitor, Phone, Mail } from "lucide-react"
 import { Navbar } from "@/components/navbar"
+import { Footer } from "@/components/footer"
 
 export default function HomePage() {
   return (
@@ -51,7 +51,7 @@ export default function HomePage() {
               </div>
 
               <p className="font-sans text-slate-500 text-lg md:text-xl font-medium max-w-lg mx-auto lg:mx-0 leading-relaxed">
-                Expert dental care in the heart of Setapak. Professional consultation and modern treatments for your bright and healthy smile.
+                Expert dental care in the heart of Setapak (Sri Rampai). Professional consultation and modern treatments for your bright and healthy smile.
               </p>
 
               <div className="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start pt-4">
@@ -61,7 +61,7 @@ export default function HomePage() {
                   </Button>
                 </Link>
 
-                <Link href="#services">
+                <Link href="/services">
                   <Button variant="outline" size="lg" className="h-14 px-10 border-2 border-slate-200 text-slate-600 hover:border-slate-900 hover:text-slate-900 rounded-full text-sm font-bold uppercase tracking-widest transition-all">
                     Services
                   </Button>
@@ -96,7 +96,7 @@ export default function HomePage() {
       </section>
 
       {/* About Section */}
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-white" id="how-it-works">
         <div className="container mx-auto px-6">
           <div className="flex flex-col lg:flex-row items-center gap-16">
             <div className="lg:w-1/2 relative">
@@ -144,9 +144,11 @@ export default function HomePage() {
                 ))}
               </div>
 
-              <Button className="bg-blue-600 hover:bg-blue-700 h-12 px-8 rounded-lg shadow-lg shadow-blue-200">
-                More About Us
-              </Button>
+              <Link href="/about">
+                <Button className="bg-blue-600 hover:bg-blue-700 h-12 px-8 rounded-lg shadow-lg shadow-blue-200">
+                  More About Us
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
@@ -208,7 +210,7 @@ export default function HomePage() {
       </section>
 
       {/* Team Section */}
-      <section className="py-16 bg-blue-50/50">
+      <section className="py-16 bg-blue-50/50" id="doctors">
         <div className="container mx-auto px-6 text-center">
           <span className="text-blue-500 font-bold uppercase text-sm tracking-wider">Meet Our Special Team</span>
           <h2 className="font-sans font-bold text-5xl md:text-6xl text-slate-900 mt-3 mb-6">Committed to Your Smile</h2>
@@ -308,30 +310,11 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Video/Image Section */}
-      <section className="py-12">
-        <div className="container mx-auto px-6">
-          <div className="relative rounded-[2.5rem] overflow-hidden h-[500px] shadow-2xl">
-            <Image
-              src="/hero-dental.png"
-              alt="Clinic Interior"
-              fill
-              className="object-cover"
-            />
-            <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-              <div className="w-20 h-20 bg-white/30 backdrop-blur-md rounded-full flex items-center justify-center cursor-pointer hover:scale-110 transition-transform">
-                <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center">
-                  <div className="w-0 h-0 border-t-[8px] border-t-transparent border-l-[14px] border-l-blue-600 border-b-[8px] border-b-transparent ml-1"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
 
 
-      {/* Footer should go here - (kept minimal for now as requested focused on home page design) */}
+      {/* Footer */}
+      <Footer />
     </div>
   )
 }

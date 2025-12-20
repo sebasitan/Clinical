@@ -3,6 +3,7 @@ import dbConnect from '@/lib/db';
 import { AppointmentModel, SlotModel, DoctorModel } from '@/lib/models';
 import { sendAppointmentConfirmation } from '@/lib/email';
 import { sendWhatsAppConfirmation } from '@/lib/whatsapp';
+import { sendSMSConfirmation } from '@/lib/sms';
 
 // GET all appointments (with optional filters)
 export async function GET(request: Request) {
@@ -34,6 +35,26 @@ export async function POST(request: Request) {
             const slot = await SlotModel.findOne({ id: body.slotId });
             if (slot && slot.status !== 'available') {
                 return NextResponse.json({ error: 'Slot no longer available' }, { status: 409 });
+            }
+        }
+
+        // 1.5 Monthly Booking Limit Check (One per patient per month)
+        const patientIdentifier = body.patientIC || body.patientPhone;
+        if (patientIdentifier && patientIdentifier !== 'NEW_PATIENT') {
+            const appointmentMonth = body.appointmentDate.substring(0, 7); // "YYYY-MM"
+            const existingInMonth = await AppointmentModel.findOne({
+                $or: [
+                    { patientIC: patientIdentifier },
+                    { patientPhone: body.patientPhone }
+                ],
+                appointmentDate: { $regex: `^${appointmentMonth}` },
+                status: { $ne: 'cancelled' }
+            });
+
+            if (existingInMonth) {
+                return NextResponse.json({
+                    error: `Policy Limit: Only one booking allowed per month. You already have an appointment on ${existingInMonth.appointmentDate}.`
+                }, { status: 429 });
             }
         }
 
@@ -108,6 +129,7 @@ export async function POST(request: Request) {
                 }
             }
 
+
             // Send WhatsApp
             if (body.patientPhone) {
                 console.log(`[WhatsApp] Attempting to send to: ${body.patientPhone}`);
@@ -124,6 +146,20 @@ export async function POST(request: Request) {
                     console.log(`[WhatsApp] Successfully sent to ${body.patientPhone}. ID: ${waResult.messageId}`);
                 } else {
                     console.error(`[WhatsApp] Failed to send to ${body.patientPhone}:`, waResult.error);
+                }
+
+                // Send SMS Confirmation
+                console.log(`[SMS] Attempting confirmation for ${body.patientPhone}`);
+                const smsResult = await sendSMSConfirmation(
+                    body.patientPhone,
+                    body.patientName,
+                    doctorName,
+                    body.appointmentDate,
+                    body.timeSlot,
+                    appointmentId
+                );
+                if (smsResult.success) {
+                    console.log(`[SMS] Successfully sent. SID: ${smsResult.sid}`);
                 }
             }
         } catch (notifErr) {

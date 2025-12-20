@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { LoadingScreen } from "@/components/ui/loading-screen"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
@@ -35,6 +36,7 @@ export default function AdminDashboardPage() {
     const [doctors, setDoctors] = useState<Doctor[]>([])
     const [patients, setPatients] = useState<Patient[]>([])
     const [slots, setSlots] = useState<Slot[]>([])
+    const [isDataLoading, setIsDataLoading] = useState(true)
 
     const todayStr = new Date().toISOString().split('T')[0]
 
@@ -53,15 +55,13 @@ export default function AdminDashboardPage() {
         setDoctors(docs)
         setPatients(pts)
         setSlots(slts)
+        setIsDataLoading(false)
     }
 
-    if (isLoading) {
+    if (isLoading || isDataLoading) {
         return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-                <div className="flex flex-col items-center gap-4">
-                    <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                    <p className="text-slate-500 font-bold">Initializing Admin Session...</p>
-                </div>
+            <div className="flex-1 flex items-center justify-center bg-slate-50/50">
+                <LoadingScreen message={isLoading ? "Authenticating Session..." : "Syncing Clinical Database..."} />
             </div>
         )
     }
@@ -93,15 +93,7 @@ export default function AdminDashboardPage() {
                             <span className="text-[10px] font-black uppercase text-blue-600 tracking-[0.2em] bg-blue-50 px-3 py-1 rounded-full">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span>
                         </div>
                         <h1 className="text-4xl font-sans font-bold text-slate-900 tracking-tight">Clinical Overview</h1>
-                        <p className="text-slate-500 mt-1">Operational summary for <span className="text-slate-900 font-bold">Klinik Pergigian Setapak</span>.</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <Link href="/admin/schedule">
-                            <Button className="h-14 px-8 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold transition-all shadow-xl shadow-slate-200 gap-2 group">
-                                Live Operations
-                                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                            </Button>
-                        </Link>
+                        <p className="text-slate-500 mt-1">Operational summary for <span className="text-slate-900 font-bold">Klinik Pergigian Setapak (Sri Rampai)</span>.</p>
                     </div>
                 </div>
 

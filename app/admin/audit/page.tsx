@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { LoadingScreen } from "@/components/ui/loading-screen"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
 import { getAuditLogs } from "@/lib/storage"
 import type { AuditLog } from "@/lib/types"
@@ -27,12 +28,22 @@ export default function AuditLogsPage() {
     const { isLoading } = useAdminAuth()
     const [logs, setLogs] = useState<AuditLog[]>([])
     const [search, setSearch] = useState("")
+    const [isDataLoading, setIsDataLoading] = useState(true)
 
     useEffect(() => {
         setLogs(getAuditLogs())
+        // Visual delay for premium feel
+        const t = setTimeout(() => setIsDataLoading(false), 600)
+        return () => clearTimeout(t)
     }, [])
 
-    if (isLoading) return null
+    if (isLoading || isDataLoading) {
+        return (
+            <div className="flex-1 flex items-center justify-center bg-slate-50/50 min-h-screen">
+                <LoadingScreen message="Verifying Audit Trails..." />
+            </div>
+        )
+    }
 
     const filteredLogs = logs.filter(log =>
         log.adminUsername.toLowerCase().includes(search.toLowerCase()) ||

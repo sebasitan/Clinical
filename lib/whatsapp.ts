@@ -1,4 +1,5 @@
 import twilio from 'twilio';
+import { generateGoogleCalendarLink } from './calendar-utils';
 
 function getTwilioClient() {
     const accountSid = process.env.TWILIO_ACCOUNT_SID;
@@ -19,6 +20,13 @@ export async function sendWhatsAppConfirmation(
     patientIC?: string
 ) {
     try {
+        const calendarLink = generateGoogleCalendarLink(
+            `Dental Appointment with ${doctorName}`,
+            `Dental consultation at Klinik Pergigian Setapak (Sri Rampai). ID: ${appointmentId}`,
+            "Klinik Pergigian Setapak (Sri Rampai)",
+            appointmentDate,
+            timeSlot
+        );
         const client = getTwilioClient();
         const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
         // Format phone number for WhatsApp (must include country code)
@@ -31,7 +39,7 @@ export async function sendWhatsAppConfirmation(
 
 Dear ${patientName},
 
-Your dental appointment has been successfully scheduled at *Klinik Pergigian Setapak*.
+Your dental appointment has been successfully scheduled at *Klinik Pergigian Setapak (Sri Rampai)*.
 
 📋 *Appointment Details:*
 • ID: ${appointmentId}
@@ -41,8 +49,11 @@ Your dental appointment has been successfully scheduled at *Klinik Pergigian Set
 • Time: ${timeSlot}
 
 📍 *Location:*
-Jalan Genting Klang, Setapak
+16-2, Jalan 46/26, Taman Sri Rampai,
 53300 Kuala Lumpur
+
+🗓️ *Add to Calendar:*
+${calendarLink}
 
 ⚠️ *Important Reminders:*
 • Arrive 10 minutes early
@@ -88,7 +99,7 @@ This is a friendly reminder about your upcoming dental appointment:
 
 See you soon! 🦷
 
-- Klinik Pergigian Setapak`,
+- Klinik Pergigian Setapak (Sri Rampai)`,
         });
 
         return { success: true, messageId: message.sid };
@@ -116,7 +127,7 @@ Your OTP for appointment booking:
 This code will expire in 10 minutes.
 Do not share this code with anyone.
 
-- Klinik Pergigian Setapak`,
+- Klinik Pergigian Setapak (Sri Rampai)`,
         });
 
         return { success: true, messageId: message.sid };

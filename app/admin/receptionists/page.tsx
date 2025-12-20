@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { LoadingScreen } from "@/components/ui/loading-screen"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
@@ -20,6 +21,7 @@ import {
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { cn } from "@/lib/utils"
 import {
     Dialog,
     DialogContent,
@@ -40,6 +42,7 @@ export default function ReceptionistsPage() {
     const [isAddOpen, setIsAddOpen] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
+    const [isDataLoading, setIsDataLoading] = useState(true)
 
     // Form state
     const [name, setName] = useState("")
@@ -51,6 +54,7 @@ export default function ReceptionistsPage() {
     const loadData = async () => {
         const data = await getReceptionistsAsync()
         setReceptionists(data)
+        setIsDataLoading(false)
     }
 
     useEffect(() => {
@@ -139,7 +143,13 @@ export default function ReceptionistsPage() {
         setShift("full-day")
     }
 
-    if (authLoading) return null
+    if (authLoading || isDataLoading) {
+        return (
+            <div className="flex-1 flex items-center justify-center bg-slate-50/50 min-h-screen">
+                <LoadingScreen message="Loading Staff Directory..." />
+            </div>
+        )
+    }
 
     return (
         <div className="flex-1 bg-slate-50/50">

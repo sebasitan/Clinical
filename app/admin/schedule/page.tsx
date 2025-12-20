@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import { LoadingScreen } from "@/components/ui/loading-screen"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -49,6 +50,7 @@ export default function SchedulePage() {
     const [filter, setFilter] = useState<"all" | "booked" | "available">("all")
     const [currentTime, setCurrentTime] = useState(new Date())
     const scrollContainerRef = useRef<HTMLDivElement>(null)
+    const [isDataLoading, setIsDataLoading] = useState(true)
 
     const [viewMode, setViewMode] = useState<"board" | "list">("board")
 
@@ -70,6 +72,7 @@ export default function SchedulePage() {
         setSlots(allSlots)
         setDoctors(docs.filter(d => d.isActive))
         setAppointments(apts)
+        setIsDataLoading(false)
     }
 
     const resetToToday = () => {
@@ -140,7 +143,13 @@ export default function SchedulePage() {
         return "bg-white border-slate-100 ring-1 ring-slate-50 hover:border-blue-300 hover:shadow-xl hover:scale-[1.02] transition-all cursor-pointer"
     }
 
-    if (isLoading) return null
+    if (isLoading || isDataLoading) {
+        return (
+            <div className="flex-1 flex items-center justify-center bg-slate-50/50 min-h-screen">
+                <LoadingScreen message="Accessing Provider Directory..." />
+            </div>
+        )
+    }
 
     const totalSlots = slots.length
     const bookedCount = slots.filter(s => s.status === 'booked').length
@@ -156,10 +165,6 @@ export default function SchedulePage() {
                 <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
                     <div>
                         <div className="flex items-center gap-3 mb-1">
-                            <span className="flex items-center gap-1.5 text-[10px] font-black uppercase text-blue-600 tracking-widest bg-blue-50 px-3 py-1 rounded-full">
-                                <Activity className="w-3 h-3" />
-                                Live Operations Center
-                            </span>
                             {isToday && (
                                 <span className="flex items-center gap-1.5 text-[10px] font-black uppercase text-emerald-600 tracking-widest bg-emerald-50 px-3 py-1 rounded-full animate-pulse">
                                     <Clock className="w-3 h-3" />

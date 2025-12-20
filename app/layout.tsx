@@ -12,7 +12,7 @@ const roboto = Roboto({
 })
 
 export const metadata: Metadata = {
-  title: "Dental Clinic Singapore | Book Your Appointment",
+  title: "Klinik Pergigian Setapak (Sri Rampai) | Professional Dental Care",
   description:
     "Professional dental care in Singapore. Book your appointment online for general dentistry, cosmetic procedures, and emergency dental services.",
   generator: "v0.app",

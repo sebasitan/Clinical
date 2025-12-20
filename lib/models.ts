@@ -38,10 +38,10 @@ export const AppointmentModel = models.Appointment || model('Appointment', Appoi
 
 // --- Settings Schema ---
 const SettingsSchema = new Schema({
-    clinicName: { type: String, default: "Klinik Pergigian Setapak" },
-    address: { type: String, default: "Setapak, Kuala Lumpur" },
-    phone: { type: String, default: "+60 3-XXXX XXXX" },
-    email: { type: String, default: "ops@klinikpergigiansetapak.com" },
+    clinicName: { type: String, default: "Klinik Pergigian Setapak (Sri Rampai)" },
+    address: { type: String, default: "16-2, Jalan 46/26, Taman Sri Rampai, 53300 Kuala Lumpur, Wilayah Persekutuan Kuala Lumpur, Malaysia" },
+    phone: { type: String, default: "+60 17-510 1003" },
+    email: { type: String, default: "hello@kpsrirampai.com" },
     defaultSlotDuration: { type: Number, default: 30 },
     workingHours: {
         start: { type: String, default: "09:00" },

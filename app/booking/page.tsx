@@ -509,9 +509,9 @@ export default function BookingPage() {
 
           {step === 3 && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="flex flex-col lg:flex-row gap-8 items-stretch justify-center max-w-7xl mx-auto lg:h-[600px]">
+              <div className="flex flex-col lg:flex-row gap-8 items-stretch justify-center max-w-7xl mx-auto lg:h-[720px]">
                 <div className="w-full lg:w-1/2 bg-white rounded-[3rem] shadow-2xl overflow-hidden flex flex-col border border-slate-100">
-                  <div className="bg-slate-900 p-8 text-white h-[180px] flex flex-col justify-center items-center">
+                  <div className="bg-slate-900 p-8 text-white h-[150px] flex flex-col justify-center items-center">
                     <span className="text-blue-300 font-bold text-xs uppercase tracking-widest mb-2">Selected Date</span>
                     {(() => {
                       if (!selectedDate) {
@@ -553,7 +553,7 @@ export default function BookingPage() {
                 </div>
 
                 <div className="w-full lg:w-1/2 bg-white rounded-[3rem] shadow-2xl overflow-hidden flex flex-col border border-slate-100">
-                  <div className="bg-slate-900 p-8 text-white h-[180px] flex flex-col justify-center items-center">
+                  <div className="bg-slate-900 p-8 text-white h-[150px] flex flex-col justify-center items-center">
                     <span className="text-blue-300 font-bold text-xs uppercase tracking-widest mb-2">Available Slots</span>
                     <h3 className="font-bold text-4xl">{selectedTimeSlot ? selectedTimeSlot.split(' - ')[0] : '--:--'}</h3>
                   </div>

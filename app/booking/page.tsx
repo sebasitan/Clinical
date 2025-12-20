@@ -660,13 +660,71 @@ export default function BookingPage() {
           )}
 
           {step === 6 && (
-            <div className="flex flex-col items-center justify-center text-center py-20">
-              <div className="w-20 h-20 bg-green-500 text-white rounded-full flex items-center justify-center mb-6 shadow-xl"><Check className="w-10 h-10" /></div>
-              <h1 className="text-4xl font-bold mb-4">Confirmed!</h1>
-              <p className="text-slate-500 mb-10">Your appointment with {selectedDoctor?.name} is set for {selectedDate} at {selectedTimeSlot}.</p>
-              <div className="flex gap-4">
-                <Button onClick={() => window.location.href = "/"} className="rounded-full px-10 h-14 bg-slate-900">Home</Button>
-                <Button onClick={addToCalendar} variant="outline" className="rounded-full px-10 h-14">Add to Calendar</Button>
+            <div className="flex flex-col items-center justify-center text-center py-12 max-w-2xl mx-auto px-6">
+              <div className="w-24 h-24 bg-emerald-500 text-white rounded-full flex items-center justify-center mb-8 shadow-2xl shadow-emerald-200 animate-in zoom-in duration-500">
+                <Check className="w-12 h-12" />
+              </div>
+
+              <h1 className="text-4xl font-black text-slate-900 mb-2 mt-2 tracking-tight">Confirmed!</h1>
+              <p className="text-slate-500 mb-10 text-lg">Your appointment has been successfully scheduled.</p>
+
+              <div className="w-full bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden mb-12 text-left">
+                <div className="bg-slate-50 px-8 py-5 border-b border-slate-100 flex justify-between items-center" id="summary-header">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Appointment Summary</span>
+                  <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-bold uppercase">
+                    <CheckCircle2 className="w-3 h-3" />
+                    Verified
+                  </div>
+                </div>
+
+                <div className="p-8 space-y-6">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center shrink-0">
+                      <CalendarIcon className="w-6 h-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Date & Time</p>
+                      <p className="font-bold text-slate-900 text-lg">
+                        {(() => {
+                          const [y, m, d] = selectedDate.split('-').map(Number);
+                          return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+                        })()}
+                      </p>
+                      <p className="text-slate-500 font-medium">{selectedTimeSlot}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center shrink-0">
+                      <Stethoscope className="w-6 h-6 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Specialist</p>
+                      <p className="font-bold text-slate-900 text-lg">{selectedDoctor?.name}</p>
+                      <p className="text-slate-500 font-medium">{selectedDoctor?.specialization}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4 border-t border-slate-50 pt-6">
+                    <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center shrink-0">
+                      <User className="w-6 h-6 text-slate-600" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Patient Details</p>
+                      <p className="font-bold text-slate-900">{patientName}</p>
+                      <p className="text-slate-500 font-medium">{patientPhone}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-4 w-full">
+                <Button onClick={() => window.location.href = "/"} className="flex-1 rounded-2xl h-14 bg-slate-900 text-white font-bold text-lg shadow-xl shadow-slate-200">
+                  Return Home
+                </Button>
+                <Button onClick={addToCalendar} variant="outline" className="flex-1 rounded-2xl h-14 border-slate-200 font-bold text-lg">
+                  Add to Calendar
+                </Button>
               </div>
             </div>
           )}

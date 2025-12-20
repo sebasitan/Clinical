@@ -437,15 +437,33 @@ export default function ManageAppointmentPage({ params: paramsPromise }: { param
                                 </Button>
                             </div>
 
-                            <div className="flex flex-col mb-8">
-                                <h1 className="text-4xl font-black text-slate-900 tracking-tighter">Choose New Time</h1>
-                                <p className="text-slate-500 text-lg mt-2">Select an alternative slot for your treatment.</p>
+                            <div className="flex flex-col mb-12">
+                                <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter">Reschedule</h1>
+                                <p className="text-slate-500 text-lg mt-2">Select a new date and time for your specialist visit.</p>
                             </div>
 
-                            <div className="grid lg:grid-cols-2 gap-8 items-start">
+                            <div className="flex flex-col lg:flex-row gap-8 items-stretch justify-center lg:h-[700px]">
                                 {/* Date Selection */}
-                                <Card className="border-none shadow-xl rounded-[2.5rem] overflow-hidden bg-white border border-slate-100">
-                                    <CardContent className="p-6">
+                                <div className="w-full lg:w-1/2 bg-white rounded-[3rem] shadow-2xl overflow-hidden flex flex-col border border-slate-100">
+                                    <div className="bg-slate-900 p-8 text-white h-[150px] flex flex-col justify-center items-center">
+                                        <span className="text-blue-300 font-bold text-[10px] uppercase tracking-widest mb-2">Selected Date</span>
+                                        {selectedDate ? (
+                                            <>
+                                                <h3 className="font-bold text-6xl">
+                                                    {selectedDate.split('-')[2]}
+                                                </h3>
+                                                <span className="text-slate-400 font-bold text-sm">
+                                                    {new Date(selectedDate).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
+                                                </span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <h3 className="font-bold text-6xl">--</h3>
+                                                <span className="text-slate-400 font-bold">Pick a date</span>
+                                            </>
+                                        )}
+                                    </div>
+                                    <div className="p-8 flex-1">
                                         <CalendarDatePickerContent
                                             date={selectedDate ? new Date(selectedDate) : undefined}
                                             onDateSelect={(date) => {
@@ -473,57 +491,66 @@ export default function ManageAppointmentPage({ params: paramsPromise }: { param
                                                 }
                                             }}
                                         />
-                                    </CardContent>
-                                </Card>
+                                    </div>
+                                </div>
 
                                 {/* Time Selection */}
-                                <div className="space-y-6">
-                                    {!selectedDate ? (
-                                        <div className="h-[400px] border-2 border-dashed border-slate-200 rounded-[2.5rem] flex flex-col items-center justify-center text-center p-10 bg-slate-50/50">
-                                            <Calendar className="w-12 h-12 text-slate-300 mb-4" />
-                                            <p className="text-slate-400 font-bold">Please select a date first</p>
-                                        </div>
-                                    ) : (
-                                        <Card className="border-none shadow-xl rounded-[2.5rem] overflow-hidden bg-white">
-                                            <CardContent className="p-8">
-                                                <div className="flex items-center gap-3 mb-6">
-                                                    <Clock className="w-5 h-5 text-blue-600" />
-                                                    <h3 className="font-bold text-slate-900">Available Slots</h3>
+                                <div className="w-full lg:w-1/2 bg-white rounded-[3rem] shadow-2xl overflow-hidden flex flex-col border border-slate-100">
+                                    <div className="bg-slate-900 p-8 text-white h-[150px] flex flex-col justify-center items-center text-center">
+                                        <span className="text-blue-300 font-bold text-[10px] uppercase tracking-widest mb-2">New Time</span>
+                                        <h3 className="font-bold text-4xl">{selectedTimeSlot ? selectedTimeSlot.split(' - ')[0] : '--:--'}</h3>
+                                    </div>
+
+                                    <div className="p-8 flex-1 flex flex-col overflow-hidden">
+                                        {!selectedDate ? (
+                                            <div className="flex-1 flex flex-col items-center justify-center text-center p-10">
+                                                <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 mb-4 transition-colors">
+                                                    <CalendarIcon className="w-8 h-8" />
+                                                </div>
+                                                <p className="text-slate-400 font-bold">Choose a date first</p>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                                                    <div className="grid grid-cols-2 gap-3 pb-4">
+                                                        {dailySlots.length === 0 ? (
+                                                            <div className="col-span-2 text-center py-20">
+                                                                <Clock className="w-12 h-12 mx-auto mb-4 text-slate-100" />
+                                                                <p className="font-bold text-slate-300">No slots available</p>
+                                                            </div>
+                                                        ) : (
+                                                            dailySlots.map((slot) => (
+                                                                <button
+                                                                    key={slot.id}
+                                                                    disabled={slot.status !== 'available'}
+                                                                    onClick={() => setSelectedTimeSlot(slot.timeRange)}
+                                                                    className={cn(
+                                                                        "h-14 rounded-2xl flex items-center justify-center text-sm font-bold transition-all border",
+                                                                        slot.status !== 'available' ? "bg-slate-50 text-slate-200 border-slate-50 cursor-not-allowed" :
+                                                                            selectedTimeSlot === slot.timeRange ? "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-100 scale-105" :
+                                                                                "bg-white border-slate-100 text-slate-600 hover:border-blue-200 hover:bg-blue-50"
+                                                                    )}
+                                                                >
+                                                                    {slot.timeRange.split(' - ')[0]}
+                                                                </button>
+                                                            ))
+                                                        )}
+                                                    </div>
                                                 </div>
 
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    {dailySlots.length === 0 ? (
-                                                        <p className="col-span-2 text-center py-10 text-slate-400 italic">No slots available for this day.</p>
-                                                    ) : (
-                                                        dailySlots.map((slot) => (
-                                                            <button
-                                                                key={slot.id}
-                                                                disabled={slot.status !== 'available'}
-                                                                onClick={() => setSelectedTimeSlot(slot.timeRange)}
-                                                                className={cn(
-                                                                    "h-14 rounded-2xl flex items-center justify-center text-sm font-bold transition-all border",
-                                                                    slot.status !== 'available' ? "bg-slate-50 text-slate-300 border-none cursor-not-allowed opacity-50" :
-                                                                        selectedTimeSlot === slot.timeRange ? "bg-slate-900 text-white border-slate-900 shadow-xl shadow-slate-200 scale-105" :
-                                                                            "bg-white border-slate-100 text-slate-700 hover:border-blue-200 hover:bg-blue-50"
-                                                                )}
-                                                            >
-                                                                {slot.timeRange.split(' - ')[0]}
-                                                            </button>
-                                                        ))
-                                                    )}
+                                                <div className="pt-6 mt-auto border-t border-slate-50">
+                                                    <Button
+                                                        onClick={handleReschedule}
+                                                        disabled={!selectedTimeSlot || isSubmitting}
+                                                        className="w-full h-16 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-lg shadow-xl shadow-slate-200 transition-all flex items-center justify-center gap-3 active:scale-95"
+                                                    >
+                                                        {isSubmitting ? "Updating..." : "Confirm Reschedule"}
+                                                        {!isSubmitting && <ArrowRight className="w-5 h-5" />}
+                                                    </Button>
                                                 </div>
-
-                                                <Button
-                                                    onClick={handleReschedule}
-                                                    disabled={!selectedTimeSlot || isSubmitting}
-                                                    className="w-full h-16 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold mt-8 text-lg shadow-xl shadow-blue-100 gap-3"
-                                                >
-                                                    {isSubmitting ? "Updating Appointment..." : "Confirm New Time"}
-                                                    <ArrowRight className="w-5 h-5" />
-                                                </Button>
-                                            </CardContent>
-                                        </Card>
-                                    )}
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </motion.div>

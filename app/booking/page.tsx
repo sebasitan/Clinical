@@ -135,7 +135,10 @@ export default function BookingPage() {
 
       // Skip Sundays (0)
       if (date.getDay() !== 0) {
-        dates.push(date.toISOString().split("T")[0])
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        dates.push(`${year}-${month}-${day}`);
       }
     }
 
@@ -510,14 +513,40 @@ export default function BookingPage() {
                 <div className="w-full lg:w-1/2 bg-white rounded-[3rem] shadow-2xl overflow-hidden flex flex-col border border-slate-100">
                   <div className="bg-slate-900 p-8 text-white h-[180px] flex flex-col justify-center items-center">
                     <span className="text-blue-300 font-bold text-xs uppercase tracking-widest mb-2">Selected Date</span>
-                    <h3 className="font-bold text-7xl">{selectedDate ? new Date(selectedDate).getDate() : '--'}</h3>
-                    <span className="text-slate-400 font-bold">{selectedDate ? new Date(selectedDate).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : ''}</span>
+                    {(() => {
+                      if (!selectedDate) {
+                        return (
+                          <>
+                            <h3 className="font-bold text-7xl">--</h3>
+                            <span className="text-slate-400 font-bold"></span>
+                          </>
+                        );
+                      }
+                      const [y, m, d] = selectedDate.split('-').map(Number);
+                      const displayDate = new Date(y, m - 1, d);
+                      return (
+                        <>
+                          <h3 className="font-bold text-7xl">{d}</h3>
+                          <span className="text-slate-400 font-bold">{displayDate.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}</span>
+                        </>
+                      );
+                    })()}
                   </div>
                   <div className="p-6 flex-1">
                     <CalendarDatePickerContent
                       id="booking-calendar"
-                      date={selectedDate ? new Date(selectedDate) : undefined}
-                      onDateSelect={(d) => d && setSelectedDate(d.toISOString().split('T')[0])}
+                      date={selectedDate ? (() => {
+                        const [y, m, d] = selectedDate.split('-').map(Number);
+                        return new Date(y, m - 1, d);
+                      })() : undefined}
+                      onDateSelect={(d) => {
+                        if (d) {
+                          const year = d.getFullYear();
+                          const month = String(d.getMonth() + 1).padStart(2, '0');
+                          const day = String(d.getDate()).padStart(2, '0');
+                          setSelectedDate(`${year}-${month}-${day}`);
+                        }
+                      }}
                       calendarProps={{ fromDate: new Date() }}
                     />
                   </div>
@@ -531,11 +560,28 @@ export default function BookingPage() {
                   <div className="p-8 flex-1 overflow-y-auto">
                     {!selectedDate ? <p className="col-span-full text-center py-10 text-slate-400">Choose a date first</p> : (
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        {dailySlots.length === 0 ? <p className="col-span-full text-center py-10">No slots today</p> : dailySlots.map(slot => (
-                          <button key={slot.id} disabled={slot.status !== 'available'} onClick={() => { setSelectedTimeSlot(slot.timeRange); setTimeout(() => handleNext(selectedDate, slot.timeRange), 300); }} className={`py-3 px-2 rounded-xl border-2 font-bold text-xs transition-all ${selectedTimeSlot === slot.timeRange ? "bg-blue-600 border-blue-600 text-white" : slot.status !== 'available' ? "bg-slate-50 text-slate-300 cursor-not-allowed opacity-50" : "bg-white text-slate-600 hover:border-blue-400"}`}>
-                            {slot.timeRange.split(' - ')[0]}
-                          </button>
-                        ))}
+                        {dailySlots.length === 0 ? (
+                          <div className="col-span-full text-center py-10">
+                            <Clock className="w-12 h-12 mx-auto mb-4 text-slate-200" />
+                            <p className="font-bold text-slate-400">No slots today</p>
+                          </div>
+                        ) : (
+                          [...dailySlots]
+                            .sort((a, b) => a.startTime.localeCompare(b.startTime))
+                            .map(slot => (
+                              <button
+                                key={slot.id}
+                                disabled={slot.status !== 'available'}
+                                onClick={() => {
+                                  setSelectedTimeSlot(slot.timeRange);
+                                  setTimeout(() => handleNext(selectedDate, slot.timeRange), 300);
+                                }}
+                                className={`py-3 px-2 rounded-xl border-2 font-bold text-xs transition-all ${selectedTimeSlot === slot.timeRange ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-100 scale-[1.02]" : slot.status !== 'available' ? "bg-slate-50 text-slate-300 cursor-not-allowed opacity-50 border-transparent" : "bg-white text-slate-600 border-slate-100 hover:border-blue-200 hover:bg-slate-50/50"}`}
+                              >
+                                {slot.timeRange.split(' - ')[0]}
+                              </button>
+                            ))
+                        )}
                       </div>
                     )}
                   </div>

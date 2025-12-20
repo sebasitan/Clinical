@@ -289,17 +289,6 @@ export default function DoctorManagementPage() {
         setIsHistoryOpen(true)
     }
 
-    const [patientSearch, setPatientSearch] = useState("")
-
-    // ... handleViewHistory ...
-
-    const filteredPatients = Array.from(new Set(appointments.map(a => a.patientIC)))
-        .filter(ic => {
-            const apt = appointments.find(a => a.patientIC === ic)
-            if (!apt) return false
-            return apt.patientName.toLowerCase().includes(patientSearch.toLowerCase()) ||
-                apt.patientIC.toLowerCase().includes(patientSearch.toLowerCase())
-        })
     if (authLoading || !doctor) return null
 
     return (

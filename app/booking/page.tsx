@@ -55,7 +55,7 @@ export default function BookingPage() {
       await seedDatabaseAsync()
       const loadedDoctors = await getDoctorsAsync()
       console.log("[Cloud] Loaded doctors:", loadedDoctors)
-      setDoctors(loadedDoctors)
+      setDoctors(loadedDoctors.filter(d => d.isActive))
       generateAvailableDates()
       setIsLoading(false)
     }

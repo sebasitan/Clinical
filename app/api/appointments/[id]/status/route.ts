@@ -4,10 +4,11 @@ import { AppointmentModel, SlotModel } from '@/lib/models';
 
 export async function PATCH(
     request: Request,
-    { params }: { params: { id: string } }
+    props: { params: Promise<{ id: string }> }
 ) {
     try {
         await dbConnect();
+        const params = await props.params;
         const { status } = await request.json();
 
         // Find appointment first to get slotId

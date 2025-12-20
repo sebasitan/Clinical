@@ -4,10 +4,11 @@ import { DoctorModel } from '@/lib/models';
 
 export async function GET(
     request: Request,
-    { params }: { params: { id: string } }
+    props: { params: Promise<{ id: string }> }
 ) {
     try {
         await dbConnect();
+        const params = await props.params;
         const doctor = await DoctorModel.findOne({ id: params.id });
         if (!doctor) {
             return NextResponse.json({ error: 'Doctor not found' }, { status: 404 });
@@ -20,10 +21,11 @@ export async function GET(
 
 export async function PATCH(
     request: Request,
-    { params }: { params: { id: string } }
+    props: { params: Promise<{ id: string }> }
 ) {
     try {
         await dbConnect();
+        const params = await props.params;
         const body = await request.json();
         const doctor = await DoctorModel.findOneAndUpdate(
             { id: params.id },
@@ -41,10 +43,11 @@ export async function PATCH(
 
 export async function DELETE(
     request: Request,
-    { params }: { params: { id: string } }
+    props: { params: Promise<{ id: string }> }
 ) {
     try {
         await dbConnect();
+        const params = await props.params;
         const doctor = await DoctorModel.findOneAndDelete({ id: params.id });
         if (!doctor) {
             return NextResponse.json({ error: 'Doctor not found' }, { status: 404 });

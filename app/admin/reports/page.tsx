@@ -5,34 +5,26 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button"
 import { LoadingScreen } from "@/components/ui/loading-screen"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
-import { getAppointmentsAsync, getDoctorsAsync, getSlotsAsync, getPatientsAsync } from "@/lib/storage"
-import type { Appointment, Doctor, Slot, Patient } from "@/lib/types"
+import { getAppointmentsAsync, getDoctorsAsync, getPatientsAsync } from "@/lib/storage"
+import type { Appointment, Doctor, Patient } from "@/lib/types"
 import {
     BarChart3,
     PieChart,
-    TrendingUp,
-    Calendar,
-    Users,
     Activity,
-    Download,
-    Filter,
-    Stethoscope,
     CheckCircle2,
     XCircle,
-    Clock,
-    UserMinus,
-    ArrowUpRight,
-    FileText,
-    ChevronDown,
-    Search,
+    Users,
     Printer,
-    ArrowRight
+    FileSpreadsheet,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
+import jsPDF from "jspdf"
+import autoTable from "jspdf-autotable"
+import { format } from "date-fns"
 
 export default function ReportsPage() {
     const { isLoading } = useAdminAuth()
@@ -40,9 +32,9 @@ export default function ReportsPage() {
     const [doctors, setDoctors] = useState<Doctor[]>([])
     const [patients, setPatients] = useState<Patient[]>([])
     const [isDataLoading, setIsDataLoading] = useState(true)
+    const [isGenerating, setIsGenerating] = useState(false)
 
     // Filters
-    const [activeTab, setActiveTab] = useState("overview")
     const [selectedDoctorId, setSelectedDoctorId] = useState<string>("all")
     const [selectedStatus, setSelectedStatus] = useState<string>("all")
     const [patientType, setPatientType] = useState<string>("all")
@@ -117,8 +109,195 @@ export default function ReportsPage() {
         }).sort((a, b) => b.total - a.total)
     }, [doctors, filteredAppointments])
 
-    const handleExportPDF = () => {
-        alert("Generating official clinic report PDF... (Simulation)")
+    const handleExportPDF = async () => {
+        setIsGenerating(true)
+        try {
+            const doc = new jsPDF()
+            const today = format(new Date(), "dd MMM yyyy, HH:mm")
+
+            // Header
+            doc.setFillColor(15, 23, 42) // Slate 900
+            doc.rect(0, 0, 210, 40, "F")
+
+            doc.setTextColor(255, 255, 255)
+            doc.setFontSize(22)
+            doc.setFont("helvetica", "bold")
+            doc.text("CLINIC REPORT", 105, 20, { align: "center" })
+
+            doc.setFontSize(10)
+            doc.setFont("helvetica", "normal")
+            doc.text(`Generated: ${today}`, 105, 30, { align: "center" })
+
+            // Summary Stats Section
+            doc.setTextColor(15, 23, 42)
+            doc.setFontSize(14)
+            doc.setFont("helvetica", "bold")
+            doc.text("Executive Summary", 14, 55)
+
+            // Draw Summary Boxes
+            const drawMetric = (x: number, label: string, value: string | number, color: [number, number, number]) => {
+                doc.setDrawColor(226, 232, 240)
+                doc.setFillColor(255, 255, 255)
+                doc.roundedRect(x, 60, 40, 30, 3, 3, "FD")
+
+                doc.setFontSize(8)
+                doc.setTextColor(100, 116, 139)
+                doc.text(label, x + 20, 70, { align: "center" })
+
+                doc.setFontSize(14)
+                doc.setTextColor(color[0], color[1], color[2])
+                doc.setFont("helvetica", "bold")
+                doc.text(String(value), x + 20, 80, { align: "center" })
+            }
+
+            drawMetric(14, "TOTAL APTS", stats.total, [15, 23, 42])
+            drawMetric(60, "COMPLETED", stats.completed, [16, 185, 129]) // Emerald
+            drawMetric(106, "NEW PATIENTS", stats.newPatients, [245, 158, 11]) // Amber
+            drawMetric(152, "ATTRITION", stats.noShow + stats.cancelled, [244, 63, 94]) // Rose
+
+            // Doctor Performance Table
+            doc.setFontSize(14)
+            doc.setTextColor(15, 23, 42)
+            doc.text("Practitioner Breakdown", 14, 105)
+
+            const tableBody = doctorStatsBreakdown.map(d => [
+                d.name,
+                d.total.toString(),
+                d.completed.toString(),
+                d.cancelled.toString(),
+                `${d.total > 0 ? Math.round((d.completed / d.total) * 100) : 0}%`
+            ])
+
+            autoTable(doc, {
+                startY: 110,
+                head: [['Doctor Name', 'Total', 'Completed', 'Cancelled', 'Efficiency']],
+                body: tableBody,
+                theme: 'grid',
+                headStyles: { fillColor: [15, 23, 42] },
+                alternateRowStyles: { fillColor: [248, 250, 252] }
+            })
+
+            // Footer
+            const pageCount = doc.getNumberOfPages()
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i)
+                doc.setFontSize(8)
+                doc.setTextColor(150)
+                doc.text(`Page ${i} of ${pageCount} - Confidential Report`, 105, 290, { align: "center" })
+            }
+
+            // Convert to Base64
+            const pdfOutput = doc.output('datauristring')
+
+            // Upload to Cloudinary
+            const res = await fetch('/api/reports/upload', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    file: pdfOutput,
+                    fileName: `Report_${format(new Date(), "yyyy-MM-dd_HHmm")}.pdf`
+                })
+            })
+
+            const data = await res.json()
+
+            if (data.success) {
+                // Open PDF in new tab
+                window.open(data.url, '_blank')
+            } else {
+                alert("Failed to upload report: " + data.error)
+            }
+
+        } catch (error: any) {
+            console.error(error)
+            alert("Error generating PDF: " + error.message)
+        } finally {
+            setIsGenerating(false)
+        }
+    }
+
+    const handleExportCSV = async () => {
+        setIsGenerating(true)
+        try {
+            // 1. Prepare CSV Content
+            let csvRows = []
+
+            // Header Section
+            csvRows.push(["CLINIC PERFORMANCE REPORT"])
+            csvRows.push([`Generated: ${format(new Date(), "yyyy-MM-dd HH:mm")}`])
+            csvRows.push([])
+
+            // Executive Summary
+            csvRows.push(["EXECUTIVE SUMMARY"])
+            csvRows.push(["Metric", "Value"])
+            csvRows.push(["Total Appointments", stats.total])
+            csvRows.push(["Completed Visits", stats.completed])
+            csvRows.push(["New Patients", stats.newPatients])
+            csvRows.push(["Attrition (No-Show + Cancelled)", stats.noShow + stats.cancelled])
+            csvRows.push(["Recovery Rate", `${stats.recoveryRate}%`])
+            csvRows.push([])
+
+            // Practitioner Breakdown
+            csvRows.push(["PRACTITIONER BREAKDOWN"])
+            csvRows.push(["Doctor Name", "Total", "Completed", "Cancelled", "No-Show", "Efficiency"])
+            doctorStatsBreakdown.forEach(d => {
+                csvRows.push([
+                    d.name,
+                    d.total,
+                    d.completed,
+                    d.cancelled,
+                    d.noShow,
+                    `${d.total > 0 ? Math.round((d.completed / d.total) * 100) : 0}%`
+                ])
+            })
+            csvRows.push([])
+
+            // Appointment Logs
+            csvRows.push(["APPOINTMENT LOGS (Filtered)"])
+            csvRows.push(["Date", "Time", "Doctor", "Patient", "Type", "Status"])
+            filteredAppointments.forEach(a => {
+                const docName = doctors.find(d => d.id === a.doctorId)?.name || "Unassigned"
+                csvRows.push([
+                    a.appointmentDate,
+                    a.timeSlot,
+                    docName,
+                    a.patientName,
+                    a.patientType,
+                    a.status
+                ])
+            })
+
+            // Convert to CSV string
+            const csvString = csvRows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n")
+
+            // Convert to Base64 (Cloudinary expects this for data URIs)
+            const base64CSV = `data:text/csv;base64,${Buffer.from(csvString).toString('base64')}`
+
+            // Upload to Cloudinary
+            const res = await fetch('/api/reports/upload', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    file: base64CSV,
+                    fileName: `Report_${format(new Date(), "yyyy-MM-dd_HHmm")}.csv`
+                })
+            })
+
+            const data = await res.json()
+
+            if (data.success) {
+                // Open CSV in new tab (Cloudinary will serve it)
+                window.open(data.url, '_blank')
+            } else {
+                alert("Failed to upload report: " + data.error)
+            }
+
+        } catch (error: any) {
+            console.error(error)
+            alert("Error generating CSV: " + error.message)
+        } finally {
+            setIsGenerating(false)
+        }
     }
 
     if (isLoading || isDataLoading) {
@@ -141,9 +320,28 @@ export default function ReportsPage() {
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Clinic Performance & Patient Flow Analysis</p>
                     </div>
                     <div className="flex items-center gap-4">
-                        <Button onClick={handleExportPDF} className="bg-slate-900 hover:bg-slate-800 text-white rounded-xl gap-2 font-bold px-6 shadow-lg shadow-slate-100">
-                            <Printer className="w-4 h-4" />
-                            Download Official Report
+                        <Button
+                            variant="outline"
+                            onClick={handleExportCSV}
+                            disabled={isGenerating}
+                            className="border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl gap-2 font-bold px-6"
+                        >
+                            <FileSpreadsheet className="w-4 h-4" />
+                            Export CSV
+                        </Button>
+                        <Button
+                            onClick={handleExportPDF}
+                            disabled={isGenerating}
+                            className="bg-slate-900 hover:bg-slate-800 text-white rounded-xl gap-2 font-bold px-6 shadow-lg shadow-slate-100"
+                        >
+                            {isGenerating ? (
+                                <>Processing...</>
+                            ) : (
+                                <>
+                                    <Printer className="w-4 h-4" />
+                                    Download Official Report
+                                </>
+                            )}
                         </Button>
                     </div>
                 </div>

@@ -30,6 +30,7 @@ export async function uploadBase64Image(base64String: string, folder: string = '
     try {
         const result = await cloudinary.uploader.upload(base64String, {
             folder: folder,
+            resource_type: 'auto',
         });
         return result;
     } catch (error) {

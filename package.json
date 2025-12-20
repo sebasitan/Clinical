@@ -64,7 +64,9 @@
     "tailwindcss-animate": "^1.0.7",
     "twilio": "^5.11.1",
     "vaul": "^1.1.2",
-    "zod": "3.25.76"
+    "zod": "3.25.76",
+    "jspdf": "^2.5.1",
+    "jspdf-autotable": "^3.8.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.9",

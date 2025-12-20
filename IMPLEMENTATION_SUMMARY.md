@@ -103,14 +103,16 @@ Add these environment variables in Vercel:
 - Calendar in Booking page now respects doctor's weekly schedule (Fixing availability discrepancy)
 - **Status**: Completed
 
-### 3. **PDF Report Generation**
-- Install `jspdf` or `pdfkit`
-- Create report generation functions
-- Upload PDFs to Cloudinary
+### 3. **PDF Report Generation** ✓
+- Integrated `jspdf` and `autoTable` for PDF creation
+- Server-side upload to Cloudinary implemented (`/api/reports/upload`)
+- Downloads triggered via Cloudinary URL
+- **Status**: Fully functional (PDF & CSV)
 
-### 4. **CSV Export**
+### 4. **CSV Export** ✓
 - Implement CSV generation for reports
 - Upload to Cloudinary for storage
+- **Status**: Fully functional
 
 ---
 

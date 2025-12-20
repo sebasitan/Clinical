@@ -76,7 +76,13 @@ export default function DoctorManagementPage() {
     const [selectedPatientIC, setSelectedPatientIC] = useState<string | null>(null)
     const [patientHistory, setPatientHistory] = useState<Appointment[]>([])
     const [isHistoryOpen, setIsHistoryOpen] = useState(false)
-    const [viewDate, setViewDate] = useState(new Date().toISOString().split('T')[0])
+    const [viewDate, setViewDate] = useState(() => {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    })
     const [isBlocking, setIsBlocking] = useState(false)
     const [isCancelling, setIsCancelling] = useState(false)
     const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null)

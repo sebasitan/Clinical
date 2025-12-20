@@ -680,23 +680,26 @@ export default function DoctorManagementPage() {
                                         {slots.length === 0 ? (
                                             <div className="col-span-full py-20 text-center text-slate-400 italic font-medium">No slots generated for this provider.</div>
                                         ) : (
-                                            slots.slice(0, 50).map(slot => (
-                                                <div key={slot.id} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between group">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="p-2 bg-slate-50 rounded-lg">
-                                                            <Clock className="w-4 h-4 text-slate-400" />
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-xs font-bold text-slate-900">{slot.timeRange}</p>
-                                                            <Badge className={`text-[8px] font-black uppercase tracking-widest px-1.5 mt-1 border-none ${slot.status === 'available' ? 'bg-emerald-50 text-emerald-600' :
-                                                                slot.status === 'booked' ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-400'
-                                                                }`}>
-                                                                {slot.status}
-                                                            </Badge>
+                                            [...slots]
+                                                .filter(s => s.date === new Date().toISOString().split('T')[0])
+                                                .sort((a, b) => a.startTime.localeCompare(b.startTime))
+                                                .map(slot => (
+                                                    <div key={slot.id} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between group">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="p-2 bg-slate-50 rounded-lg">
+                                                                <Clock className="w-4 h-4 text-slate-400" />
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-xs font-bold text-slate-900">{slot.timeRange}</p>
+                                                                <Badge className={`text-[8px] font-black uppercase tracking-widest px-1.5 mt-1 border-none ${slot.status === 'available' ? 'bg-emerald-50 text-emerald-600' :
+                                                                    slot.status === 'booked' ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-400'
+                                                                    }`}>
+                                                                    {slot.status}
+                                                                </Badge>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            ))
+                                                ))
                                         )}
                                         {slots.length > 50 && (
                                             <div className="col-span-full py-4 text-center text-[10px] font-black uppercase text-slate-400 tracking-widest">+{slots.length - 50} more slots available</div>

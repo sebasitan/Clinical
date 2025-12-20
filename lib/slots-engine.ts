@@ -72,9 +72,9 @@ export async function regenerateDoctorSlotsCloud(doctorId: string) {
 
                     const timeRange = `${formatTime(startTimeStr)} - ${formatTime(endTimeStr)}`;
 
-                    // Check if already booked
-                    const alreadyBooked = existingBooked.find(s =>
-                        s.date === dateStr && s.startTime === startTimeStr
+                    // Check if already booked (any overlap with existing bookings)
+                    const alreadyBooked = existingBooked.some(s =>
+                        s.date === dateStr && isOverlapping(startTimeStr, endTimeStr, s.startTime, s.endTime)
                     );
 
                     if (!alreadyBooked) {

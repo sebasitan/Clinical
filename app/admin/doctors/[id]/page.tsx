@@ -593,8 +593,16 @@ export default function DoctorManagementPage() {
                                             <div key={leave.id} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center justify-between group">
                                                 <div className="flex items-center gap-6">
                                                     <div className="flex flex-col items-center justify-center w-14 h-14 bg-slate-50 rounded-2xl border border-slate-100">
-                                                        <p className="text-[10px] font-black uppercase text-slate-400">{new Date(leave.date).toLocaleString('default', { month: 'short' })}</p>
-                                                        <p className="text-lg font-bold text-slate-900">{new Date(leave.date).getDate()}</p>
+                                                        {(() => {
+                                                            const [y, m, d] = leave.date.split('-').map(Number);
+                                                            const lDate = new Date(y, m - 1, d);
+                                                            return (
+                                                                <>
+                                                                    <p className="text-[10px] font-black uppercase text-slate-400">{lDate.toLocaleString('default', { month: 'short' })}</p>
+                                                                    <p className="text-lg font-bold text-slate-900">{d}</p>
+                                                                </>
+                                                            );
+                                                        })()}
                                                     </div>
                                                     <div>
                                                         <div className="flex items-center gap-2">
@@ -640,6 +648,35 @@ export default function DoctorManagementPage() {
                                                 className="pl-10 h-10 rounded-xl bg-slate-50 border-slate-100 font-bold text-xs"
                                             />
                                         </div>
+                                        {leaves.find(l => l.date === viewDate) ? (
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => handleDeleteLeave(leaves.find(l => l.date === viewDate)!.id)}
+                                                className="h-10 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white border-none"
+                                            >
+                                                <ShieldCheck className="w-3 h-3 mr-2" />
+                                                Remove Block
+                                            </Button>
+                                        ) : (
+                                            <Button
+                                                size="sm"
+                                                variant="destructive"
+                                                onClick={() => {
+                                                    setNewLeave({
+                                                        ...newLeave,
+                                                        date: viewDate,
+                                                        type: 'full',
+                                                        reason: 'Emergency Closure'
+                                                    });
+                                                    setActiveTab('leaves');
+                                                }}
+                                                className="h-10 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white border-none shadow-none"
+                                            >
+                                                <ShieldAlert className="w-3 h-3 mr-2" />
+                                                Emergency Block
+                                            </Button>
+                                        )}
                                     </div>
                                 </CardHeader>
                                 <CardContent className="p-0">

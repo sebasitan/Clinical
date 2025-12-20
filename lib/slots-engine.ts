@@ -30,17 +30,14 @@ export async function regenerateDoctorSlotsCloud(doctorId: string) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Fetch existing booked/blocked slots to preserve them
-    const existingProtected = await SlotModel.find({
-        doctorId,
-        status: { $in: ['booked', 'blocked'] }
-    });
-
-    // Delete only available slots for this doctor
+    // 4. Delete only available slots for this doctor
     await SlotModel.deleteMany({
         doctorId,
         status: 'available'
     });
+
+    // 5. Fetch all remaining slots (booked/blocked) to avoid overlaps
+    const existingSlots = await SlotModel.find({ doctorId });
 
     const newSlots = [];
 
@@ -50,10 +47,13 @@ export async function regenerateDoctorSlotsCloud(doctorId: string) {
         const dateStr = date.toISOString().split('T')[0];
         const dayName = date.toLocaleDateString('en-US', { weekday: 'long' }) as DayOfWeek;
 
-        // Get daily ranges from weekly schedule
-        const dayRanges = schedule?.days?.[dayName] || [];
+        // Get and sort daily ranges from weekly schedule
+        const dayRanges = [...(schedule?.days?.[dayName] || [])].sort((a, b) => a.start.localeCompare(b.start));
 
         if (dayRanges.length > 0 && doctor.isActive && doctor.isAvailable) {
+            // Check if on leave
+            const dayLeave = leaves.find(l => l.date === dateStr);
+
             for (const range of dayRanges) {
                 const startTimeParts = range.start.split(':').map(Number);
                 const endTimeParts = range.end.split(':').map(Number);
@@ -69,17 +69,17 @@ export async function regenerateDoctorSlotsCloud(doctorId: string) {
 
                     const startTimeStr = `${sH.toString().padStart(2, '0')}:${sM.toString().padStart(2, '0')}`;
                     const endTimeStr = `${eH.toString().padStart(2, '0')}:${eM.toString().padStart(2, '0')}`;
-
                     const timeRange = `${formatTime(startTimeStr)} - ${formatTime(endTimeStr)}`;
 
-                    // Check if already protected (booked or manually blocked)
-                    const isProtected = existingProtected.some(s =>
+                    // Check if this time slot overlaps with ANY existing slot (booked/blocked)
+                    const hasConflict = existingSlots.some(s =>
                         s.date === dateStr && isOverlapping(startTimeStr, endTimeStr, s.startTime, s.endTime)
                     );
 
-                    if (!isProtected) {
-                        // Check if on leave
-                        const dayLeave = leaves.find(l => l.date === dateStr);
+                    // Check if this time slot is already being added in this run (duplicate prevention)
+                    const isQueued = newSlots.some(s => s.date === dateStr && s.startTime === startTimeStr);
+
+                    if (!hasConflict && !isQueued) {
                         let status = 'available';
                         let blockReason = '';
 

@@ -29,7 +29,7 @@ const AppointmentSchema = new Schema({
     doctorId: { type: String, required: true },
     status: {
         type: String,
-        enum: ['pending', 'confirmed', 'completed', 'cancelled', 'no-show'],
+        enum: ['pending', 'confirmed', 'arrived', 'completed', 'cancelled', 'no-show'],
         default: 'pending'
     },
 }, { timestamps: true });
@@ -180,6 +180,24 @@ const ReminderScheduleSchema = new Schema({
 }, { timestamps: true });
 
 export const ReminderModel = models.Reminder || model('Reminder', ReminderScheduleSchema);
+
+// --- Consultation Schema (Doctor-wise Patient Data) ---
+const ConsultationSchema = new Schema({
+    id: { type: String, required: true, unique: true },
+    doctorId: { type: String, required: true },
+    patientName: { type: String, required: true },
+    patientIC: { type: String, required: true },
+    handphoneNo: { type: String, required: true },
+    cardNo: String,
+    totalFee: { type: Number, default: 0 },
+    consultationFee: { type: Number, default: 0 },
+    consultationDate: { type: String, required: true }, // ISO Date YYYY-MM-DD
+    fixDate: String, // ISO Date YYYY-MM-DD (Next Appointment)
+    remark: String,
+    updates: String // History/Notes
+}, { timestamps: true });
+
+export const ConsultationModel = models.Consultation || model('Consultation', ConsultationSchema);
 
 // --- OTP Schema (Temporary) ---
 const OTPSchema = new Schema({

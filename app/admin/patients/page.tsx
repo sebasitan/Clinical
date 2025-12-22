@@ -13,7 +13,7 @@ import { getPatientsAsync, getAppointmentsAsync, getDoctorsAsync } from "@/lib/s
 import { formatDate } from "@/lib/date-utils"
 import { cn } from "@/lib/utils"
 import type { Patient, Appointment, Doctor } from "@/lib/types"
-import { Search, UserSearch, History, Mail, Phone, ExternalLink, Activity, Calendar, Edit3 } from "lucide-react"
+import { Search, UserSearch, History, Mail, Phone, ExternalLink, Activity, Calendar, Edit3, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
 
 export default function PatientsPage() {
     const { isLoading } = useAdminAuth()
@@ -35,6 +35,14 @@ export default function PatientsPage() {
         email: "",
         type: "existing"
     })
+    const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' })
+
+    const handleSort = (key: string) => {
+        setSortConfig(current => ({
+            key,
+            direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc'
+        }))
+    }
 
     useEffect(() => {
         loadData()
@@ -56,7 +64,24 @@ export default function PatientsPage() {
         p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.ic?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.phone?.includes(searchQuery)
-    )
+    ).sort((a, b) => {
+        const { key, direction } = sortConfig
+        let aValue: any = a[key as keyof Patient]
+        let bValue: any = b[key as keyof Patient]
+
+        // Handle nested or specific fields
+        if (key === 'careStatus') {
+            aValue = a.continuedTreatment?.active ? 1 : 0
+            bValue = b.continuedTreatment?.active ? 1 : 0
+        } else if (key === 'lastVisit') {
+            aValue = a.lastVisit ? new Date(a.lastVisit).getTime() : 0
+            bValue = b.lastVisit ? new Date(b.lastVisit).getTime() : 0
+        }
+
+        if (aValue < bValue) return direction === 'asc' ? -1 : 1
+        if (aValue > bValue) return direction === 'asc' ? 1 : -1
+        return 0
+    })
 
     const handleUpdatePatient = async () => {
         if (!editingPatient) return
@@ -188,14 +213,6 @@ export default function PatientsPage() {
                             <UserSearch className="w-5 h-5" />
                             Add Patient
                         </Button>
-                        <Button
-                            onClick={() => setShowBulkImport(true)}
-                            variant="outline"
-                            className="h-12 px-6 rounded-2xl border-slate-200 hover:bg-slate-50 text-slate-600 font-bold transition-all gap-2"
-                        >
-                            <Search className="w-5 h-5" />
-                            Bulk Import
-                        </Button>
                         <div className="relative group max-w-sm w-full">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors w-4 h-4" />
                             <Input
@@ -219,10 +236,42 @@ export default function PatientsPage() {
                             <Table>
                                 <TableHeader className="bg-slate-50/50">
                                     <TableRow className="border-slate-50">
-                                        <TableHead className="px-8 h-16 text-[10px] font-black uppercase text-slate-400">Identification</TableHead>
-                                        <TableHead className="px-8 h-16 text-[10px] font-black uppercase text-slate-400">Care Status</TableHead>
-                                        <TableHead className="px-8 h-16 text-[10px] font-black uppercase text-slate-400">Last Clinical Visit</TableHead>
-                                        <TableHead className="px-8 h-16 text-[10px] font-black uppercase text-slate-400">Registry Type</TableHead>
+                                        <TableHead
+                                            className="px-8 h-16 text-[10px] font-black uppercase text-slate-400 cursor-pointer hover:bg-slate-100 transition-colors"
+                                            onClick={() => handleSort('name')}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                Identification
+                                                {sortConfig.key === 'name' && (sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
+                                            </div>
+                                        </TableHead>
+                                        <TableHead
+                                            className="px-8 h-16 text-[10px] font-black uppercase text-slate-400 cursor-pointer hover:bg-slate-100 transition-colors"
+                                            onClick={() => handleSort('careStatus')}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                Care Status
+                                                {sortConfig.key === 'careStatus' && (sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
+                                            </div>
+                                        </TableHead>
+                                        <TableHead
+                                            className="px-8 h-16 text-[10px] font-black uppercase text-slate-400 cursor-pointer hover:bg-slate-100 transition-colors"
+                                            onClick={() => handleSort('lastVisit')}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                Last Clinical Visit
+                                                {sortConfig.key === 'lastVisit' && (sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
+                                            </div>
+                                        </TableHead>
+                                        <TableHead
+                                            className="px-8 h-16 text-[10px] font-black uppercase text-slate-400 cursor-pointer hover:bg-slate-100 transition-colors"
+                                            onClick={() => handleSort('type')}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                Registry Type
+                                                {sortConfig.key === 'type' && (sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
+                                            </div>
+                                        </TableHead>
                                         <TableHead className="px-8 h-16 text-right text-[10px] font-black uppercase text-slate-400">Operations</TableHead>
                                     </TableRow>
                                 </TableHeader>

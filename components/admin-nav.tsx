@@ -20,7 +20,8 @@ import {
     UserCog,
     ChevronLeft,
     ChevronRight,
-    Stethoscope
+    Stethoscope,
+    MapPin
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
@@ -62,6 +63,7 @@ export function AdminNav() {
                 icon: Stethoscope
             }))
         },
+        { href: "/admin/arrivals", label: "Patient Arrivals", icon: MapPin },
         { href: "/admin/doctors", label: "Doctors", icon: Users },
         { href: "/admin/receptionists", label: "Receptionists", icon: UserCog },
         { href: "/admin/patients", label: "Patient Registry", icon: UserSearch },
@@ -163,14 +165,14 @@ export function AdminNav() {
                                                         <Button
                                                             variant="ghost"
                                                             className={cn(
-                                                                "w-full h-9 rounded-xl px-3 justify-start gap-3 transition-all",
+                                                                "w-full h-10 rounded-xl px-3 justify-start gap-3 transition-all", // Increased height to h-10
                                                                 isSubActive
-                                                                    ? "bg-blue-50 text-blue-700 font-bold"
-                                                                    : "text-slate-400 hover:bg-slate-50 hover:text-slate-600"
+                                                                    ? "bg-blue-100 text-blue-800 font-bold shadow-sm" // Darker text, stronger background
+                                                                    : "text-slate-500 font-medium hover:bg-blue-50 hover:text-blue-600" // Darker base text, blue hover
                                                             )}
                                                         >
-                                                            <SubIcon className={cn("w-3.5 h-3.5", isSubActive ? "text-blue-600" : "text-slate-300")} />
-                                                            <span className="text-[11px] truncate">{sub.label}</span>
+                                                            <SubIcon className={cn("w-4 h-4", isSubActive ? "text-blue-700" : "text-slate-400 group-hover:text-blue-500")} />
+                                                            <span className="text-xs truncate">{sub.label}</span> {/* Increased from text-[11px] to text-xs (12px) */}
                                                         </Button>
                                                     </Link>
                                                 )

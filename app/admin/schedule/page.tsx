@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
-import { getSlotsAsync, getDoctorsAsync, updateSlotStatus, getAppointmentsAsync, updateAppointmentStatusAsync, addAppointment } from "@/lib/storage"
+import { getSlotsAsync, getDoctorsAsync, updateSlotStatus, getAppointmentsAsync, updateAppointmentStatusAsync, addAppointment, rescheduleAppointmentAsync } from "@/lib/storage"
 import type { Slot, Doctor, Appointment } from "@/lib/types"
 import {
     Clock,
@@ -52,8 +52,15 @@ export default function SchedulePage() {
     const scrollContainerRef = useRef<HTMLDivElement>(null)
     const [isDataLoading, setIsDataLoading] = useState(true)
 
-    const [viewMode, setViewMode] = useState<"board" | "list">("board")
+    const [viewMode, setViewMode] = useState<"board" | "list">("list")
 
+    const totalSlots = slots.length
+    const bookedCount = slots.filter(s => s.status === 'booked').length
+    const availableCount = slots.filter(s => s.status === 'available').length
+    const occupancy = totalSlots > 0 ? Math.round((bookedCount / totalSlots) * 100) : 0
+    const isToday = selectedDate === new Date().toISOString().split('T')[0]
+
+    const todaysAppointments = appointments.filter(a => a.appointmentDate === selectedDate)
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 60000)
         return () => clearInterval(timer)
@@ -137,6 +144,56 @@ export default function SchedulePage() {
         loadData()
     }
 
+    // --- Reschedule Logic ---
+    const [isRescheduleDialogOpen, setIsRescheduleDialogOpen] = useState(false)
+    const [reschedulingAppointment, setReschedulingAppointment] = useState<Appointment | null>(null)
+    const [rescheduleDate, setRescheduleDate] = useState("")
+    const [rescheduleSlots, setRescheduleSlots] = useState<Slot[]>([])
+    const [selectedRescheduleSlotId, setSelectedRescheduleSlotId] = useState("")
+    const [isRescheduling, setIsRescheduling] = useState(false)
+
+    const openRescheduleDialog = (apt: Appointment) => {
+        setReschedulingAppointment(apt)
+        setRescheduleDate(apt.appointmentDate) // Default to current date
+        setSelectedRescheduleSlotId("")
+        setRescheduleSlots([])
+        setIsRescheduleDialogOpen(true)
+    }
+
+    useEffect(() => {
+        const fetchRescheduleSlots = async () => {
+            if (reschedulingAppointment && rescheduleDate) {
+                const slots = await getSlotsAsync(reschedulingAppointment.doctorId, rescheduleDate)
+                setRescheduleSlots(slots.filter(s => s.status === 'available'))
+            }
+        }
+        if (isRescheduleDialogOpen) fetchRescheduleSlots()
+    }, [rescheduleDate, reschedulingAppointment, isRescheduleDialogOpen])
+
+    const handleRescheduleSubmit = async () => {
+        if (!reschedulingAppointment || !selectedRescheduleSlotId) return
+
+        const slot = rescheduleSlots.find(s => s.id === selectedRescheduleSlotId)
+        if (!slot) return
+
+        setIsRescheduling(true)
+        try {
+            await rescheduleAppointmentAsync(
+                reschedulingAppointment.id,
+                slot.id,
+                slot.date,
+                slot.timeRange
+            )
+            toast({ title: "Appointment Rescheduled", description: `Moved to ${slot.date} at ${slot.timeRange}` })
+            setIsRescheduleDialogOpen(false)
+            loadData()
+        } catch (e: any) {
+            toast({ title: "Reschedule Failed", description: e.message, variant: "destructive" })
+        } finally {
+            setIsRescheduling(false)
+        }
+    }
+
     const getStatusStyle = (slot: Slot) => {
         if (slot.status === "booked") return "bg-white border-blue-200 ring-2 ring-blue-50 shadow-blue-100"
         if (slot.status === "blocked") return "bg-slate-50 border-slate-200 opacity-75"
@@ -150,14 +207,6 @@ export default function SchedulePage() {
             </div>
         )
     }
-
-    const totalSlots = slots.length
-    const bookedCount = slots.filter(s => s.status === 'booked').length
-    const availableCount = slots.filter(s => s.status === 'available').length
-    const occupancy = totalSlots > 0 ? Math.round((bookedCount / totalSlots) * 100) : 0
-    const isToday = selectedDate === new Date().toISOString().split('T')[0]
-
-    const todaysAppointments = appointments.filter(a => a.appointmentDate === selectedDate)
 
     return (
         <div className="flex-1 bg-slate-50/50 flex flex-col h-screen overflow-hidden text-slate-900">
@@ -173,11 +222,35 @@ export default function SchedulePage() {
                             )}
                         </div>
                         <h1 className="text-3xl font-sans font-bold text-slate-900 tracking-tight flex items-center gap-3">
-                            Provider Directory
+                            {viewMode === 'board' ? 'Provider Directory' : 'Daily Schedule'}
                         </h1>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl">
+                        <Button
+                            onClick={() => setViewMode('list')}
+                            variant={viewMode === 'list' ? 'default' : 'ghost'}
+                            size="sm"
+                            className={cn(
+                                "rounded-lg text-xs font-bold transition-all",
+                                viewMode === 'list' ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-900"
+                            )}
+                        >
+                            <LayoutDashboard className="w-4 h-4 mr-2" />
+                            Overview
+                        </Button>
+                        <Button
+                            onClick={() => setViewMode('board')}
+                            variant={viewMode === 'board' ? 'default' : 'ghost'}
+                            size="sm"
+                            className={cn(
+                                "rounded-lg text-xs font-bold transition-all",
+                                viewMode === 'board' ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-900"
+                            )}
+                        >
+                            <Users className="w-4 h-4 mr-2" />
+                            Providers
+                        </Button>
                     </div>
                 </div>
             </header>
@@ -318,30 +391,44 @@ export default function SchedulePage() {
                                                         <Badge className={cn(
                                                             "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border-none",
                                                             apt.status === 'confirmed' ? "bg-blue-100 text-blue-600" :
-                                                                apt.status === 'completed' ? "bg-emerald-100 text-emerald-600" :
-                                                                    "bg-rose-100 text-rose-600"
+                                                                apt.status === 'arrived' ? "bg-purple-100 text-purple-600" :
+                                                                    apt.status === 'completed' ? "bg-emerald-100 text-emerald-600" :
+                                                                        "bg-rose-100 text-rose-600"
                                                         )}>
                                                             {apt.status}
                                                         </Badge>
                                                     </td>
                                                     <td className="px-8 py-6 text-right">
-                                                        {apt.status === 'confirmed' ? (
-                                                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                                                        {['confirmed', 'arrived', 'pending'].includes(apt.status) ? (
+                                                            <div className="flex items-center justify-end gap-2">
                                                                 <Button
                                                                     size="sm"
                                                                     onClick={() => handleAppointmentAction(apt.id, 'completed')}
-                                                                    className="h-8 rounded-lg text-[9px] font-black uppercase bg-emerald-600 hover:bg-emerald-700 text-white"
+                                                                    className="h-8 rounded-lg text-[9px] font-black uppercase bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-200"
                                                                 >
                                                                     Complete
                                                                 </Button>
+
                                                                 <Button
                                                                     variant="ghost"
                                                                     size="icon"
                                                                     onClick={() => handleAppointmentAction(apt.id, 'no-show')}
-                                                                    className="h-8 w-8 rounded-lg text-rose-500 hover:bg-rose-50"
+                                                                    className="h-8 w-8 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 border border-rose-100"
+                                                                    title="Mark No Show"
                                                                 >
                                                                     <UserMinus className="w-4 h-4" />
                                                                 </Button>
+                                                                {['confirmed', 'pending'].includes(apt.status) && (
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        onClick={() => openRescheduleDialog(apt)}
+                                                                        className="h-8 w-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 border border-blue-100"
+                                                                        title="Reschedule"
+                                                                    >
+                                                                        <RefreshCcw className="w-4 h-4" />
+                                                                    </Button>
+                                                                )}
                                                             </div>
                                                         ) : (
                                                             <span className="text-[10px] font-bold text-slate-300 italic">No actions</span>
@@ -437,6 +524,83 @@ export default function SchedulePage() {
                                 >Confirm Booking</Button>
                             </div>
                         </form>
+                    </Card>
+                </div>
+            )}
+
+            {/* Reschedule Dialog */}
+            {isRescheduleDialogOpen && reschedulingAppointment && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-sm">
+                    <Card className="w-full max-w-lg border-none rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-8 bg-blue-600 text-white flex justify-between items-center">
+                            <div>
+                                <h3 className="text-2xl font-black tracking-tight">Reschedule</h3>
+                                <p className="text-blue-200 text-xs font-bold uppercase tracking-widest mt-1">Change Appointment Time</p>
+                            </div>
+                            <RefreshCcw className="w-6 h-6 text-blue-200" />
+                        </div>
+                        <div className="p-8 space-y-6 bg-white">
+                            <div className="space-y-4">
+                                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Current Appointment</p>
+                                    <p className="font-bold text-slate-900">{reschedulingAppointment.patientName}</p>
+                                    <p className="text-sm text-slate-500">{reschedulingAppointment.appointmentDate} at {reschedulingAppointment.timeSlot}</p>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">New Date</Label>
+                                    <Input
+                                        type="date"
+                                        value={rescheduleDate}
+                                        onChange={e => setRescheduleDate(e.target.value)}
+                                        className="h-12 rounded-2xl bg-slate-50 border-slate-100 font-bold"
+                                        min={new Date().toISOString().split('T')[0]}
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">New Time Slot</Label>
+                                    <div className="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto p-1">
+                                        {rescheduleSlots.length === 0 ? (
+                                            <p className="col-span-3 text-center text-sm text-slate-400 py-4 italic">No available slots for this date</p>
+                                        ) : (
+                                            rescheduleSlots.map(slot => (
+                                                <button
+                                                    key={slot.id}
+                                                    type="button"
+                                                    onClick={() => setSelectedRescheduleSlotId(slot.id)}
+                                                    className={cn(
+                                                        "py-2 px-1 rounded-lg text-xs font-bold border transition-all",
+                                                        selectedRescheduleSlotId === slot.id
+                                                            ? "bg-blue-600 text-white border-blue-600 shadow-md transform scale-105"
+                                                            : "bg-white text-slate-600 border-slate-100 hover:border-blue-300"
+                                                    )}
+                                                >
+                                                    {slot.timeRange.split(' - ')[0]}
+                                                </button>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4 pt-4">
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    onClick={() => setIsRescheduleDialogOpen(false)}
+                                    disabled={isRescheduling}
+                                    className="flex-1 h-12 rounded-2xl font-black text-slate-400"
+                                >Cancel</Button>
+                                <Button
+                                    onClick={handleRescheduleSubmit}
+                                    disabled={!selectedRescheduleSlotId || isRescheduling}
+                                    className="flex-1 h-12 rounded-2xl bg-blue-600 hover:bg-blue-700 font-black shadow-xl shadow-blue-100"
+                                >
+                                    {isRescheduling ? "Updating..." : "Confirm Move"}
+                                </Button>
+                            </div>
+                        </div>
                     </Card>
                 </div>
             )}

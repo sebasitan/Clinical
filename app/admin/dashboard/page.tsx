@@ -10,6 +10,7 @@ import {
     getDoctorsAsync,
     getPatientsAsync,
     getSlotsAsync,
+    getDoctorConsultationsAsync,
 } from "@/lib/storage"
 import { formatDate } from "@/lib/date-utils"
 import type { Appointment, Doctor, Patient, Slot } from "@/lib/types"
@@ -36,6 +37,7 @@ export default function AdminDashboardPage() {
     const [doctors, setDoctors] = useState<Doctor[]>([])
     const [patients, setPatients] = useState<Patient[]>([])
     const [slots, setSlots] = useState<Slot[]>([])
+    const [doctorPatientCounts, setDoctorPatientCounts] = useState<Record<string, number>>({})
     const [isDataLoading, setIsDataLoading] = useState(true)
 
     const todayStr = new Date().toISOString().split('T')[0]
@@ -55,6 +57,15 @@ export default function AdminDashboardPage() {
         setDoctors(docs)
         setPatients(pts)
         setSlots(slts)
+
+        // Fetch patient counts for each doctor
+        const counts: Record<string, number> = {}
+        for (const doc of docs) {
+            const consultations = await getDoctorConsultationsAsync(doc.id)
+            counts[doc.id] = consultations.length
+        }
+        setDoctorPatientCounts(counts)
+
         setIsDataLoading(false)
     }
 
@@ -198,7 +209,7 @@ export default function AdminDashboardPage() {
                                                         <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{doctor.specialization}</p>
                                                     </div>
                                                 </div>
-                                                <div className="grid grid-cols-2 gap-4">
+                                                <div className="grid grid-cols-3 gap-4">
                                                     <div className="bg-white p-3 rounded-2xl border border-slate-50">
                                                         <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Booked</p>
                                                         <p className="text-xl font-bold text-blue-600">{doctorApps.length}</p>
@@ -207,6 +218,10 @@ export default function AdminDashboardPage() {
                                                         <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Available</p>
                                                         <p className="text-xl font-bold text-emerald-600">{doctorSlots.filter(s => s.status === 'available').length}</p>
                                                     </div>
+                                                    {/* <div className="bg-white p-3 rounded-2xl border border-slate-50">
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Patients</p>
+                                                        <p className="text-xl font-bold text-purple-600">{doctorPatientCounts[doctor.id] || 0}</p>
+                                                    </div> */}
                                                 </div>
                                             </div>
                                         )

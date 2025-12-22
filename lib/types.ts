@@ -87,7 +87,7 @@ export type Appointment = {
     timeSlot: string
     slotId: string
     doctorId: string
-    status: "pending" | "confirmed" | "completed" | "cancelled" | "no-show"
+    status: "pending" | "confirmed" | "arrived" | "completed" | "cancelled" | "no-show"
     createdAt: string
 }
 
@@ -150,5 +150,21 @@ export type Facility = {
     name: string
     description: string
     status: "operational" | "maintenance" | "closed"
+}
+
+export type ConsultationRecord = {
+    id: string
+    doctorId: string
+    patientName: string
+    patientIC: string
+    handphoneNo: string
+    cardNo?: string
+    totalFee: number
+    consultationFee: number
+    consultationDate: string
+    fixDate?: string
+    remark?: string
+    updates?: string
+    createdAt?: string
 }
 

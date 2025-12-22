@@ -246,41 +246,6 @@ export default function AdminSettingsPage() {
                             </CardContent>
                         </Card>
 
-                        <Card className="border-none shadow-sm rounded-3xl bg-rose-50 overflow-hidden">
-                            <CardHeader className="p-8 border-b border-rose-100">
-                                <CardTitle className="text-lg font-black text-rose-900 flex items-center gap-2">
-                                    <ShieldAlert className="w-5 h-5 text-rose-600" />
-                                    Security & Maintenance
-                                </CardTitle>
-                                <CardDescription className="text-xs font-medium text-rose-600/70">Irreversible system-wide operations</CardDescription>
-                            </CardHeader>
-                            <CardContent className="p-8 space-y-6">
-                                <div>
-                                    <p className="text-sm font-bold text-rose-900">Purge Clinical Data clusters</p>
-                                    <p className="text-[10px] text-rose-600/70 font-medium mb-4">This will clear all time slots, appointments, and leave records. Process cannot be undone.</p>
-                                    <Button
-                                        onClick={async () => {
-                                            if (confirm("CRITICAL: Are you sure you want to PURGE all appointments and slots? This action is IRREVERSIBLE.")) {
-                                                try {
-                                                    const res = await fetch('/api/reset', { method: 'POST' });
-                                                    if (res.ok) {
-                                                        toast({ title: "Database Purged", description: "Successfully cleared all slots and bookings." });
-                                                        if (admin) addAuditLog(admin.id, admin.username, "Data Purge", "Executed full database reset");
-                                                    }
-                                                } catch (e) {
-                                                    toast({ title: "Purge Failed", variant: "destructive" });
-                                                }
-                                            }
-                                        }}
-                                        className="w-full h-12 bg-rose-600 hover:bg-rose-700 text-white rounded-xl gap-2 font-bold shadow-xl shadow-rose-200"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                        Clean All Bookings & Slots
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
-
                         <div className="bg-slate-900 rounded-[2rem] p-8 text-white relative overflow-hidden">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/20 blur-3xl rounded-full -mr-10 -mt-10" />
                             <ShieldCheck className="w-10 h-10 text-blue-400 mb-6" />

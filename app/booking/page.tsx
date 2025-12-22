@@ -129,7 +129,7 @@ export default function BookingPage() {
     const dates: string[] = []
     const today = new Date()
 
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 30; i++) {
       const date = new Date(today)
       date.setDate(date.getDate() + i)
 
@@ -415,11 +415,16 @@ export default function BookingPage() {
       <div className="flex-1 flex flex-col min-h-screen bg-slate-50/50">
         <div className="hidden lg:block pt-10 pb-6 container mx-auto px-6 max-w-5xl">
           <div className="flex items-center justify-between mb-12">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 relative">
-                <Image src="/logo.png" alt="Logo" fill className="object-contain" />
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 relative">
+                  <Image src="/logo.png" alt="Logo" fill className="object-contain" />
+                </div>
+                <span className="font-sans font-bold text-xl tracking-tight text-slate-900">Pergigian Setapak (Sri Rampai)</span>
               </div>
-              <span className="font-sans font-bold text-xl tracking-tight text-slate-900">Pergigian Setapak (Sri Rampai)</span>
+              <a href="/booking/manage" className="text-xs font-bold bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg hover:border-blue-400 hover:text-blue-600 transition-all">
+                Manage Bookings
+              </a>
             </div>
             <div className="flex items-center gap-8">
               {[

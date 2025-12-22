@@ -12,10 +12,12 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url);
         const doctorId = searchParams.get('doctorId');
         const date = searchParams.get('date');
+        const patientIC = searchParams.get('patientIC');
 
         const query: any = {};
         if (doctorId) query.doctorId = doctorId;
         if (date) query.appointmentDate = date;
+        if (patientIC) query.patientIC = patientIC;
 
         const appointments = await AppointmentModel.find(query).sort({ createdAt: -1 });
         return NextResponse.json(appointments);

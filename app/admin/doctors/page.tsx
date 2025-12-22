@@ -311,7 +311,7 @@ export default function DoctorsPage() {
 
             {/* Add/Edit Doctor Dialog */}
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="sm:max-w-[450px] p-0 overflow-hidden border-none rounded-[2rem] shadow-2xl">
+                <DialogContent className="sm:max-w-[450px] max-h-[90vh] overflow-y-auto p-0 border-none rounded-[2rem] shadow-2xl">
                     <div className="bg-slate-900 p-8 text-white relative">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
                         <DialogHeader>

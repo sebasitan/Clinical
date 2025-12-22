@@ -36,6 +36,7 @@ async function dbConnect() {
     if (!cached.promise) {
         const opts = {
             bufferCommands: false,
+            serverSelectionTimeoutMS: 5000, // Fail fast if can't connect
         };
 
         cached.promise = mongoose.connect(MONGODB_URI!, opts).then((mongoose) => {

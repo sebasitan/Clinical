@@ -1,4 +1,4 @@
-import type { Admin, Appointment, Doctor, Patient, Slot, SystemSettings, AuditLog, Receptionist, Facility, DoctorWeeklySchedule, DoctorLeave, DayOfWeek, ScheduleTimeRange, AvailabilityBlock } from "./types"
+import type { Admin, Appointment, Doctor, Patient, Slot, SystemSettings, AuditLog, Receptionist, Facility, DoctorWeeklySchedule, DoctorLeave, DayOfWeek, ScheduleTimeRange, AvailabilityBlock, ConsultationRecord } from "./types"
 
 const STORAGE_KEYS = {
     ADMINS: "dental_admins",
@@ -526,6 +526,69 @@ export const getAppointmentsAsync = async (): Promise<Appointment[]> => {
     }
 }
 
+export const getPatientAppointmentsAsync = async (patientIC: string): Promise<Appointment[]> => {
+    try {
+        const res = await fetch(`${API_BASE}/appointments?patientIC=${patientIC}`, { cache: 'no-store' });
+        if (!res.ok) return [];
+        return await res.json();
+    } catch (e) {
+        console.error("Failed to fetch patient appointments", e);
+        return [];
+    }
+}
+
+// --- Consultation Records (Patient Data) ---
+export const getDoctorConsultationsAsync = async (doctorId: string): Promise<ConsultationRecord[]> => {
+    try {
+        const res = await fetch(`${API_BASE}/consultations?doctorId=${doctorId}`, { cache: 'no-store' });
+        if (!res.ok) throw new Error("Failed to fetch consultation records");
+        return await res.json();
+    } catch (e) {
+        console.error(e);
+        return [];
+    }
+}
+
+export const addConsultationRecordAsync = async (data: Partial<ConsultationRecord>): Promise<ConsultationRecord> => {
+    const res = await fetch(`${API_BASE}/consultations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error("Failed to add record");
+    return await res.json();
+}
+
+export const bulkAddConsultationRecordsAsync = async (data: Partial<ConsultationRecord>[]): Promise<any> => {
+    const res = await fetch(`${API_BASE}/consultations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+    });
+    if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to bulk upload");
+    }
+    return await res.json();
+}
+
+export const updateConsultationRecordAsync = async (id: string, data: Partial<ConsultationRecord>): Promise<ConsultationRecord> => {
+    const res = await fetch(`${API_BASE}/consultations/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error("Failed to update record");
+    return await res.json();
+}
+
+export const deleteConsultationRecordAsync = async (id: string): Promise<void> => {
+    const res = await fetch(`${API_BASE}/consultations/${id}`, {
+        method: "DELETE"
+    });
+    if (!res.ok) throw new Error("Failed to delete record");
+}
+
 export const updateAppointmentStatusAsync = async (id: string, status: Appointment["status"]) => {
     const res = await fetch(`${API_BASE}/appointments/${id}/status`, {
         method: 'PATCH',
@@ -533,6 +596,19 @@ export const updateAppointmentStatusAsync = async (id: string, status: Appointme
         body: JSON.stringify({ status })
     });
     if (!res.ok) throw new Error('Failed to update appointment status');
+    return await res.json();
+}
+
+export const rescheduleAppointmentAsync = async (id: string, newSlotId: string, newDate: string, newTimeSlot: string) => {
+    const res = await fetch(`${API_BASE}/appointments/${id}/reschedule`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newSlotId, newDate, newTimeSlot })
+    });
+    if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to reschedule appointment');
+    }
     return await res.json();
 }
 

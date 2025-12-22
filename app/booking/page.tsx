@@ -475,16 +475,28 @@ export default function BookingPage() {
                 </div>
               </div>
               <div className="md:w-1/2 p-10 bg-white flex flex-col justify-center gap-6">
-                <button onClick={() => { setPatientType("new"); setStep(2); }} className="group p-6 rounded-3xl border border-slate-100 hover:border-blue-500 hover:bg-blue-50/50 transition-all text-left flex items-center gap-6">
-                  <div className="w-16 h-16 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-sm"><Sparkles className="w-7 h-7" /></div>
-                  <div className="flex-1 text-slate-900 font-bold text-xl">I'm a New Patient</div>
-                  <ArrowRight className="w-5 h-5 text-slate-300 group-hover:text-blue-600" />
-                </button>
-                <button onClick={() => { setPatientType("existing"); setStep(2); }} className="group p-6 rounded-3xl border border-slate-100 hover:border-slate-300 hover:bg-slate-50 transition-all text-left flex items-center gap-6">
-                  <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600 group-hover:bg-slate-800 group-hover:text-white transition-all shadow-sm"><User className="w-7 h-7" /></div>
-                  <div className="flex-1 text-slate-900 font-bold text-xl">Returning Patient</div>
-                  <ArrowRight className="w-5 h-5 text-slate-300 group-hover:text-slate-800" />
-                </button>
+                <div className="space-y-4">
+                  <h3 className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] ml-1">Appointment Selection</h3>
+                  <button
+                    onClick={() => { setPatientType("existing"); setStep(2); }}
+                    className="group w-full p-8 rounded-[2.5rem] bg-slate-900 hover:bg-blue-600 transition-all duration-500 text-left flex items-center gap-8 shadow-2xl shadow-slate-200"
+                  >
+                    <div className="w-20 h-20 rounded-3xl bg-white/10 flex items-center justify-center text-white group-hover:scale-110 transition-transform duration-500">
+                      <CalendarIcon className="w-8 h-8" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-white font-bold text-2xl mb-1">Book Appointment</div>
+                      <p className="text-slate-400 group-hover:text-blue-50 text-sm font-medium">Quick schedule for clinical visit.</p>
+                    </div>
+                    <div className="w-12 h-12 rounded-full border border-white/20 flex items-center justify-center group-hover:bg-white group-hover:border-transparent transition-all">
+                      <ArrowRight className="w-6 h-6 text-white group-hover:text-blue-600 font-bold" />
+                    </div>
+                  </button>
+
+                  <p className="text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest pt-4">
+                    New patients registration is temporarily paused
+                  </p>
+                </div>
               </div>
             </div>
           )}

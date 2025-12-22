@@ -61,9 +61,9 @@ export default function HomePage() {
                   </Button>
                 </Link>
 
-                <Link href="/services">
+                <Link href="/booking/manage">
                   <Button variant="outline" size="lg" className="h-14 px-10 border-2 border-slate-200 text-slate-600 hover:border-slate-900 hover:text-slate-900 rounded-full text-sm font-bold uppercase tracking-widest transition-all">
-                    Services
+                    Manage Booking
                   </Button>
                 </Link>
               </div>

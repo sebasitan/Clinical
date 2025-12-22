@@ -537,6 +537,17 @@ export const getPatientAppointmentsAsync = async (patientIC: string): Promise<Ap
     }
 }
 
+export const getPatientAppointmentsByPhoneAsync = async (patientPhone: string): Promise<Appointment[]> => {
+    try {
+        const res = await fetch(`${API_BASE}/appointments?patientPhone=${encodeURIComponent(patientPhone)}`, { cache: 'no-store' });
+        if (!res.ok) return [];
+        return await res.json();
+    } catch (e) {
+        console.error("Failed to fetch patient appointments by phone", e);
+        return [];
+    }
+}
+
 // --- Consultation Records (Patient Data) ---
 export const getDoctorConsultationsAsync = async (doctorId: string): Promise<ConsultationRecord[]> => {
     try {

@@ -13,11 +13,13 @@ export async function GET(request: Request) {
         const doctorId = searchParams.get('doctorId');
         const date = searchParams.get('date');
         const patientIC = searchParams.get('patientIC');
+        const patientPhone = searchParams.get('patientPhone');
 
         const query: any = {};
         if (doctorId) query.doctorId = doctorId;
         if (date) query.appointmentDate = date;
         if (patientIC) query.patientIC = patientIC;
+        if (patientPhone) query.patientPhone = patientPhone;
 
         const appointments = await AppointmentModel.find(query).sort({ createdAt: -1 });
         return NextResponse.json(appointments);

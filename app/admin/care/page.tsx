@@ -89,9 +89,9 @@ export default function FollowUpsPage() {
                             <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-200">
                                 <Activity className="w-5 h-5" />
                             </div>
-                            <h1 className="text-4xl font-sans font-bold text-slate-900 tracking-tight">Treatment Plans</h1>
+                            <h1 className="text-4xl font-sans font-bold text-slate-900 tracking-tight">Clinical Follow-ups</h1>
                         </div>
-                        <p className="text-slate-500">Managing patients with ongoing clinical treatment plans.</p>
+                        <p className="text-slate-500">Managing patients with scheduled clinical follow-up visits.</p>
                     </div>
                     <div className="flex items-center gap-3">
                         <Button
@@ -115,7 +115,7 @@ export default function FollowUpsPage() {
 
                 <div className="grid md:grid-cols-4 gap-6 mb-10">
                     {[
-                        { label: "Active Follow-ups", value: patients.length, icon: Activity, color: "text-blue-600", bg: "bg-blue-50" },
+                        { label: "Scheduled Follow-ups", value: patients.length, icon: Activity, color: "text-blue-600", bg: "bg-blue-50" },
                         {
                             label: "Due This Week", value: patients.filter((p: Patient) => {
                                 const date = new Date(p.continuedTreatment?.nextFollowUpDate || "")
@@ -146,8 +146,8 @@ export default function FollowUpsPage() {
                         {filteredPatients.length === 0 ? (
                             <div className="py-24 text-center opacity-40">
                                 <Activity className="w-16 h-16 mx-auto mb-4 text-slate-400" />
-                                <p className="text-xl font-bold text-slate-900">No Patients in Care</p>
-                                <p className="text-sm">Patients marked for 'Continued Treatment' will appear here.</p>
+                                <p className="text-xl font-bold text-slate-900">No Periodic Follow-ups</p>
+                                <p className="text-sm">Patients with a 'Next Clinical Visit' date will appear here.</p>
                             </div>
                         ) : (
                             <Table>
@@ -155,7 +155,7 @@ export default function FollowUpsPage() {
                                     <TableRow className="border-slate-50">
                                         <TableHead className="px-8 h-16 text-[10px] font-black uppercase text-slate-400">Patient</TableHead>
                                         <TableHead className="px-8 h-16 text-[10px] font-black uppercase text-slate-400">Treatment Status</TableHead>
-                                        <TableHead className="px-8 h-16 text-[10px] font-black uppercase text-slate-400">Clinical Notes</TableHead>
+                                        <TableHead className="px-8 h-16 text-[10px] font-black uppercase text-slate-400">Diagnosis / Notes</TableHead>
                                         <TableHead className="px-8 h-16 text-[10px] font-black uppercase text-slate-400">Next Follow-up</TableHead>
                                         <TableHead className="px-8 h-16 text-[10px] font-black uppercase text-slate-400">Notifications</TableHead>
                                         <TableHead className="px-8 h-16 text-right text-[10px] font-black uppercase text-slate-400">Action</TableHead>
@@ -180,7 +180,7 @@ export default function FollowUpsPage() {
                                             </TableCell>
                                             <TableCell className="px-8 py-6 max-w-[200px]">
                                                 <p className="text-[11px] text-slate-500 italic line-clamp-1">
-                                                    {patient.continuedTreatment?.notes || 'No clinical notes'}
+                                                    {patient.continuedTreatment?.notes || 'No visit notes'}
                                                 </p>
                                             </TableCell>
                                             <TableCell className="px-8 py-6">
@@ -227,9 +227,9 @@ export default function FollowUpsPage() {
                     <div className="bg-slate-900 p-10 text-white relative">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/20 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
                         <DialogHeader>
-                            <DialogTitle className="text-2xl font-bold mb-2">Reschedule Care</DialogTitle>
+                            <DialogTitle className="text-2xl font-bold mb-2">Schedule Next Visit</DialogTitle>
                         </DialogHeader>
-                        <p className="text-slate-400 text-sm">Update treatment follow-up for {editingFollowUp?.name}</p>
+                        <p className="text-slate-400 text-sm">Update next clinical visit for {editingFollowUp?.name}</p>
                     </div>
                     <div className="p-8 space-y-6 bg-white">
                         <div className="space-y-2">
@@ -249,8 +249,8 @@ export default function FollowUpsPage() {
                         </div>
                         <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100">
                             <div>
-                                <p className="text-xs font-bold text-slate-900">Treatment Completed</p>
-                                <p className="text-[10px] text-slate-500">Enable this to stop further reminders</p>
+                                <p className="text-xs font-bold text-slate-900">Follow-up Completed</p>
+                                <p className="text-[10px] text-slate-500">Patient has completed this visit cycle</p>
                             </div>
                             <button
                                 onClick={() => setEditingFollowUp((prev: any) => ({

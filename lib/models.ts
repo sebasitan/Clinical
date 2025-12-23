@@ -137,6 +137,7 @@ const PatientSchema = new Schema({
     phone: { type: String, required: true },
     email: String,
     type: { type: String, enum: ['new', 'existing'], default: 'new' },
+    medicalAlerts: String,
     lastVisit: String,
     continuedTreatment: {
         active: { type: Boolean, default: false },

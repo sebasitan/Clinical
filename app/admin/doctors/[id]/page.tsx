@@ -702,10 +702,10 @@ export default function DoctorManagementPage() {
                                     <User className="w-4 h-4 mr-2" />
                                     Registry
                                 </TabsTrigger>
-                                {/* <TabsTrigger value="consultations" className="px-5 py-2 rounded-xl data-[state=active]:bg-slate-900 data-[state=active]:text-white font-bold flex-1 max-w-[150px]">
+                                <TabsTrigger value="consultations" className="px-5 py-2 rounded-xl data-[state=active]:bg-slate-900 data-[state=active]:text-white font-bold flex-1 max-w-[150px]">
                                     <Briefcase className="w-4 h-4 mr-2" />
-                                    Data
-                                </TabsTrigger> */}
+                                    Patient
+                                </TabsTrigger>
                             </TabsList>
 
                             <TabsContent value="schedule" className="space-y-6 outline-none">
@@ -1381,7 +1381,7 @@ export default function DoctorManagementPage() {
                                 </Card>
                             </TabsContent>
 
-                            {/* <TabsContent value="consultations" className="space-y-6 outline-none">
+                            <TabsContent value="consultations" className="space-y-6 outline-none">
                                 <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
                                     <div className="p-8 border-b border-slate-100 flex items-center justify-between">
                                         <div>
@@ -1444,7 +1444,7 @@ export default function DoctorManagementPage() {
                                         </table>
                                     </div>
                                 </Card>
-                            </TabsContent> */}
+                            </TabsContent>
                         </div>
                     </div>
                 </Tabs>

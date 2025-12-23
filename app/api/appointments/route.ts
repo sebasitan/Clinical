@@ -64,34 +64,28 @@ export async function POST(request: Request) {
         }
         */
 
-        // 2. Handle Patient Record (Find or Create)
+        // 2. Handle Patient Record (Enforce Existing Only)
         const { PatientModel } = await import('@/lib/models');
-        let patientIC = body.patientIC;
+        const patientIC = body.patientIC;
 
-        if (body.patientType === 'new' && (!patientIC || patientIC === 'NEW_PATIENT')) {
-            // Generate a readable, easy-to-type ID for new patients (e.g., KPS-123456)
-            patientIC = `KPS-${Math.floor(100000 + Math.random() * 900000)}`;
+        if (!patientIC) {
+            return NextResponse.json({ error: 'Patient IC is required' }, { status: 400 });
         }
 
         let patient = await PatientModel.findOne({ ic: patientIC });
-        if (patient) {
-            patient.name = body.patientName;
-            patient.phone = body.patientPhone;
-            if (body.patientEmail) patient.email = body.patientEmail;
-            patient.type = 'existing'; // Once visited, they are existing
-            patient.lastVisit = body.appointmentDate;
-            await patient.save();
-        } else {
-            await PatientModel.create({
-                id: `PAT-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
-                name: body.patientName,
-                ic: patientIC,
-                phone: body.patientPhone,
-                email: body.patientEmail,
-                type: 'existing',
-                lastVisit: body.appointmentDate
-            });
+
+        if (!patient) {
+            return NextResponse.json({
+                error: 'Registration Required: We could not find a patient record with this IC. Please contact Klinik Pergigian Setapak at +60 17-510 1003 to register before booking online.'
+            }, { status: 404 });
         }
+
+        // Update existing patient record with latest contact info from booking form
+        patient.name = body.patientName;
+        patient.phone = body.patientPhone;
+        if (body.patientEmail) patient.email = body.patientEmail;
+        patient.lastVisit = body.appointmentDate;
+        await patient.save();
 
         // 3. Create Appointment
         const appointmentId = `APT-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;

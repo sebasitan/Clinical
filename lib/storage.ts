@@ -560,6 +560,17 @@ export const getDoctorConsultationsAsync = async (doctorId: string): Promise<Con
     }
 }
 
+export const getAllConsultationsAsync = async (): Promise<ConsultationRecord[]> => {
+    try {
+        const res = await fetch(`${API_BASE}/consultations`, { cache: 'no-store' });
+        if (!res.ok) throw new Error("Failed to fetch all consultation records");
+        return await res.json();
+    } catch (e) {
+        console.error(e);
+        return [];
+    }
+}
+
 export const addConsultationRecordAsync = async (data: Partial<ConsultationRecord>): Promise<ConsultationRecord> => {
     const res = await fetch(`${API_BASE}/consultations`, {
         method: "POST",

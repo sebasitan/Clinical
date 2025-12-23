@@ -67,7 +67,7 @@ export function AdminNav() {
         { href: "/admin/doctors", label: "Doctors", icon: Users },
         { href: "/admin/receptionists", label: "Receptionists", icon: UserCog },
         { href: "/admin/patients", label: "Patient Registry", icon: UserSearch },
-        { href: "/admin/care", label: "Treatment Plans", icon: ActivitySquare },
+        { href: "/admin/care", label: "Clinical Follow-ups", icon: ActivitySquare },
         { href: "/admin/reminders", label: "Reminders", icon: Clock },
         { href: "/admin/reports", label: "Reports", icon: FilePieChart },
         { href: "/admin/audit", label: "Audit Logs", icon: ActivitySquare },

@@ -13,8 +13,49 @@ export async function GET(req: Request) {
             return NextResponse.json(patient);
         }
 
+        // --- NEW: Sync Logic ---
+        try {
+            const { ConsultationModel } = await import('@/lib/models');
+            // Get all unique ICs from both collections
+            const uniqueConsultationICs = await ConsultationModel.distinct('patientIC');
+            const existingPatientICs = await PatientModel.distinct('ic');
+
+            // Filter out nulls/falsy values from consultation ICs
+            const validConsultationICs = uniqueConsultationICs.filter(Boolean);
+
+            const missingICs = validConsultationICs.filter((ic: string) => !existingPatientICs.includes(ic));
+
+            if (missingICs.length > 0) {
+                console.log(`[Sync] Found ${missingICs.length} missing patients in Registry. Syncing...`);
+                for (const mic of missingICs) {
+                    try {
+                        // Find any consultation record to get basic info
+                        const latestConsultation = await ConsultationModel.findOne({ patientIC: mic }).sort({ consultationDate: -1, createdAt: -1 });
+                        if (latestConsultation && latestConsultation.patientName) {
+                            await PatientModel.create({
+                                id: `PAT-${Math.random().toString(36).substring(2, 11).toUpperCase()}`,
+                                name: latestConsultation.patientName,
+                                ic: mic,
+                                phone: latestConsultation.handphoneNo || "N/A",
+                                type: 'existing',
+                                lastVisit: latestConsultation.consultationDate
+                            });
+                            console.log(`[Sync] Created patient profile for IC: ${mic}`);
+                        }
+                    } catch (loopErr) {
+                        console.error(`[Sync] Failed to sync IC ${mic}:`, loopErr);
+                    }
+                }
+            }
+        } catch (syncErr) {
+            console.error("[Sync] Critical error in patient synchronization:", syncErr);
+        }
+        // --- END Sync Logic ---
+
         const patients = await PatientModel.find({}).sort({ updatedAt: -1 });
-        return NextResponse.json(patients);
+        const res = NextResponse.json(patients);
+        res.headers.set('x-patient-count', patients.length.toString());
+        return res;
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
@@ -41,6 +82,24 @@ export async function POST(req: Request) {
             });
         }
         return NextResponse.json(patient);
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
+export async function DELETE(req: Request) {
+    try {
+        await dbConnect();
+        const { searchParams } = new URL(req.url);
+        const ic = searchParams.get('ic');
+
+        if (!ic) return NextResponse.json({ error: "IC is required" }, { status: 400 });
+
+        const result = await PatientModel.findOneAndDelete({ ic });
+        if (!result) {
+            return NextResponse.json({ error: "Patient not found" }, { status: 404 });
+        }
+
+        return NextResponse.json({ message: "Patient deleted successfully" });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }

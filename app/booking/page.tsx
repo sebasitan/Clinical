@@ -45,6 +45,9 @@ export default function BookingPage() {
   const [showOtpVerification, setShowOtpVerification] = useState(false)
   const [generatedOtp, setGeneratedOtp] = useState("")
   const [otp, setOtp] = useState("")
+  const [isPatientValidated, setIsPatientValidated] = useState(false)
+  const [isValidatingPatient, setIsValidatingPatient] = useState(false)
+  const [patientLookupError, setPatientLookupError] = useState(false)
   const timeSlotsRef = useRef<HTMLDivElement>(null)
 
   const { toast } = useToast()
@@ -95,7 +98,9 @@ export default function BookingPage() {
   // Auto-fetch patient details for existing patients
   useEffect(() => {
     const fetchPatientDetails = async () => {
-      if (patientType === "existing" && patientIC.length >= 5) {
+      if (patientIC.length >= 5) {
+        setIsValidatingPatient(true);
+        setPatientLookupError(false);
         try {
           const res = await fetch(`${API_BASE}/patients?ic=${patientIC}`);
           if (res.ok) {
@@ -104,16 +109,30 @@ export default function BookingPage() {
               setPatientName(patient.name);
               setPatientPhone(patient.phone);
               if (patient.email) setPatientEmail(patient.email);
+              setIsPatientValidated(true);
+              setPatientLookupError(false);
 
               toast({
                 title: "Profile Found",
                 description: `Welcome back, ${patient.name}! We've filled in your details.`,
               });
+            } else {
+              setIsPatientValidated(false);
+              setPatientLookupError(true);
             }
+          } else {
+            setIsPatientValidated(false);
+            setPatientLookupError(true);
           }
         } catch (e) {
           console.error("Failed to fetch patient", e);
+          setPatientLookupError(true);
+        } finally {
+          setIsValidatingPatient(false);
         }
+      } else {
+        setIsPatientValidated(false);
+        setPatientLookupError(false);
       }
     };
 
@@ -208,10 +227,19 @@ export default function BookingPage() {
         return
       }
 
-      if (patientType === "existing" && !patientIC) {
+      if (!patientName || !patientPhone || !patientIC) {
         toast({
-          title: "Identification required",
-          description: "Patient ID (IC) is required for returning patients",
+          title: "Information required",
+          description: "Please fill in Name, IC Number and Phone Number",
+          variant: "destructive",
+        })
+        return
+      }
+
+      if (!isPatientValidated) {
+        toast({
+          title: "Registry Required",
+          description: "Your IC was not found in our registry. Please contact the clinic.",
           variant: "destructive",
         })
         return
@@ -224,25 +252,6 @@ export default function BookingPage() {
           variant: "destructive",
         })
         return
-      }
-
-      if (patientType === "new") {
-        if (!patientEmail) {
-          toast({
-            title: "Email required",
-            description: "Email is required for new patients",
-            variant: "destructive",
-          })
-          return
-        }
-        if (!validateEmail(patientEmail)) {
-          toast({
-            title: "Invalid Email",
-            description: "Please enter a valid email address",
-            variant: "destructive",
-          })
-          return
-        }
       }
     }
 
@@ -493,6 +502,20 @@ export default function BookingPage() {
                     </div>
                   </button>
 
+                  <button
+                    onClick={() => window.location.href = "/booking/manage"}
+                    className="group w-full p-6 rounded-[2rem] bg-white border-2 border-slate-100 hover:border-blue-400 hover:bg-blue-50 transition-all duration-300 text-left flex items-center gap-6"
+                  >
+                    <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
+                      <Clock className="w-6 h-6" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-slate-900 font-bold text-lg">Reschedule Appointment</div>
+                      <p className="text-slate-500 text-xs font-medium">Modify your existing booking.</p>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500 transition-colors" />
+                  </button>
+
                   <p className="text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest pt-4">
                     New patients registration is temporarily paused
                   </p>
@@ -614,29 +637,69 @@ export default function BookingPage() {
                 <p className="text-slate-400 text-sm">Fill in your information accurately.</p>
               </div>
               <div className="md:w-2/3 p-8 space-y-6">
-                <div className="space-y-2">
-                  <Label>Full Name</Label>
-                  <Input value={patientName} onChange={e => setPatientName(e.target.value)} placeholder="John Doe" />
-                </div>
-                {patientType === 'existing' && (
+                <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Patient ID (IC)</Label>
-                    <Input value={patientIC} onChange={e => setPatientIC(e.target.value.toUpperCase())} placeholder="KPS-123456" />
+                    <Label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Patient IC / ID Number</Label>
+                    <div className="relative">
+                      <Input
+                        value={patientIC}
+                        onChange={e => setPatientIC(e.target.value.toUpperCase())}
+                        placeholder="e.g. 900101-14-5566"
+                        className={cn(
+                          "h-12 rounded-2xl bg-slate-50 border-slate-200 focus:ring-4 transition-all font-bold",
+                          isPatientValidated ? "border-emerald-200 focus:ring-emerald-100 bg-emerald-50/30" :
+                            patientLookupError ? "border-rose-200 focus:ring-rose-100 bg-rose-50/30" : ""
+                        )}
+                      />
+                      {isValidatingPatient && (
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                          <RefreshCcw className="w-4 h-4 animate-spin text-blue-500" />
+                        </div>
+                      )}
+                    </div>
+                    {patientLookupError && (
+                      <motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="text-[10px] font-bold text-rose-600 bg-rose-50 p-3 rounded-xl border border-rose-100 flex items-center gap-2">
+                        <ShieldX className="w-3.5 h-3.5" />
+                        Registry Not Found. Please contact Klinik Pergigian Setapak at <strong>+60 17-510 1003</strong> to register first.
+                      </motion.p>
+                    )}
+                    {isPatientValidated && (
+                      <motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="text-[10px] font-bold text-emerald-600 bg-emerald-50 p-2 rounded-xl flex items-center gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Patient Profile Found
+                      </motion.p>
+                    )}
                   </div>
-                )}
-                <div className="space-y-2">
-                  <Label>Phone Number</Label>
-                  <Input value={patientPhone} onChange={e => setPatientPhone(e.target.value)} placeholder="+65 9123 4567" />
-                </div>
-                {patientType === 'new' && (
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Full Name</Label>
+                      <Input value={patientName} onChange={e => setPatientName(e.target.value)} placeholder="Full Name" className="h-12 rounded-2xl bg-slate-50 border-slate-200 transition-all font-medium" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Phone Number</Label>
+                      <Input value={patientPhone} onChange={e => setPatientPhone(e.target.value)} placeholder="012-3456789" className="h-12 rounded-2xl bg-slate-50 border-slate-200 transition-all font-medium" />
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
-                    <Label>Email Address</Label>
-                    <Input value={patientEmail} onChange={e => setPatientEmail(e.target.value)} placeholder="john@example.com" />
+                    <Label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Email Address (Optional)</Label>
+                    <Input value={patientEmail} onChange={e => setPatientEmail(e.target.value)} placeholder="email@example.com" className="h-12 rounded-2xl bg-slate-50 border-slate-200 transition-all font-medium" />
                   </div>
-                )}
-                <div className="pt-10 flex justify-between">
-                  <Button onClick={handleBack} variant="outline">Back</Button>
-                  <Button onClick={() => handleNext()}>Continue</Button>
+                </div>
+
+                <div className="pt-6 flex justify-between gap-4">
+                  <Button onClick={handleBack} variant="ghost" className="h-12 rounded-2xl flex-1 font-bold text-slate-500">Back</Button>
+                  <Button
+                    onClick={() => handleNext()}
+                    disabled={!isPatientValidated || isValidatingPatient}
+                    className={cn(
+                      "h-12 rounded-2xl flex-1 font-bold shadow-lg transition-all",
+                      isPatientValidated ? "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-100" : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                    )}
+                  >
+                    Confirm Identity
+                  </Button>
                 </div>
               </div>
             </div>

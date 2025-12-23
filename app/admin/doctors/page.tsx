@@ -14,9 +14,10 @@ import { useToast } from "@/hooks/use-toast"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
 import { getDoctorsAsync, addDoctorAsync, updateDoctorAsync, deleteDoctorAsync, getAppointments } from "@/lib/storage"
 import type { Doctor } from "@/lib/types"
-import { Plus, Edit, Trash2, Users, Stethoscope, Phone, Mail, MoreHorizontal, UserPlus, Search, TrendingUp, ShieldCheck, Upload, Image as ImageIcon } from "lucide-react"
+import { Plus, Edit, Trash2, Users, Stethoscope, Phone, Mail, MoreHorizontal, UserPlus, Search, TrendingUp, ShieldCheck, Upload, Image as ImageIcon, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Switch } from "@/components/ui/switch"
+import { cn } from "@/lib/utils"
 
 export default function DoctorsPage() {
     const { isLoading } = useAdminAuth()
@@ -39,6 +40,10 @@ export default function DoctorsPage() {
     const [isUploading, setIsUploading] = useState(false)
     const { toast } = useToast()
 
+    const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' })
+    const [currentPage, setCurrentPage] = useState(1)
+    const itemsPerPage = 25
+
     useEffect(() => {
         loadData()
     }, [])
@@ -48,6 +53,14 @@ export default function DoctorsPage() {
         setDoctors(docs)
         setAppointments(getAppointments())
         setIsDataLoading(false)
+    }
+
+    const handleSort = (key: string) => {
+        setSortConfig(current => ({
+            key,
+            direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc'
+        }))
+        setCurrentPage(1)
     }
 
     const handleOpenDialog = (doctor?: Doctor) => {
@@ -188,7 +201,30 @@ export default function DoctorsPage() {
     const filteredDoctors = doctors.filter(d =>
         d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         d.specialization.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    ).sort((a, b) => {
+        const { key, direction } = sortConfig
+        let aValue: any = a[key as keyof Doctor]
+        let bValue: any = b[key as keyof Doctor]
+
+        // Custom sorts
+        if (key === 'status') {
+            aValue = a.isActive ? 1 : 0
+            bValue = b.isActive ? 1 : 0
+        } else if (key === 'bookings') {
+            aValue = appointments.filter(apt => apt.doctorId === a.id).length
+            bValue = appointments.filter(apt => apt.doctorId === b.id).length
+        }
+
+        if (typeof aValue === 'string') aValue = aValue.toLowerCase()
+        if (typeof bValue === 'string') bValue = bValue.toLowerCase()
+
+        if (aValue < bValue) return direction === 'asc' ? -1 : 1
+        if (aValue > bValue) return direction === 'asc' ? 1 : -1
+        return 0
+    })
+
+    const totalPages = Math.ceil(filteredDoctors.length / itemsPerPage)
+    const paginatedDoctors = filteredDoctors.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
     if (isLoading || isDataLoading) {
         return (
@@ -213,7 +249,10 @@ export default function DoctorsPage() {
                             <Input
                                 placeholder="Search by name..."
                                 value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onChange={(e) => {
+                                    setSearchQuery(e.target.value)
+                                    setCurrentPage(1)
+                                }}
                                 className="h-12 pl-11 rounded-2xl bg-white border-slate-100 shadow-sm focus:ring-4 focus:ring-blue-100 transition-all font-medium"
                             />
                         </div>
@@ -233,77 +272,162 @@ export default function DoctorsPage() {
                                 <p className="text-slate-500">Try adjusting your search criteria or register a new doctor.</p>
                             </div>
                         ) : (
-                            <Table>
-                                <TableHeader className="bg-slate-50/50">
-                                    <TableRow className="border-slate-50 hover:bg-transparent">
-                                        <TableHead className="h-16 px-8 text-[10px] font-black uppercase text-slate-400 tracking-widest">Medical Doctor</TableHead>
-                                        <TableHead className="h-16 px-8 text-[10px] font-black uppercase text-slate-400 tracking-widest">Clinical Data</TableHead>
-                                        <TableHead className="h-16 px-8 text-[10px] font-black uppercase text-slate-400 tracking-widest">Status</TableHead>
-                                        <TableHead className="h-16 px-8 text-right text-[10px] font-black uppercase text-slate-400 tracking-widest">Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filteredDoctors.map((doctor) => {
-                                        const drApps = appointments.filter(a => a.doctorId === doctor.id)
-                                        return (
-                                            <TableRow key={doctor.id} className="group border-slate-50 hover:bg-slate-50/50 transition-colors">
-                                                <TableCell className="px-8 py-6">
-                                                    <div className="flex items-center gap-4">
-                                                        <Avatar className={`w-14 h-14 rounded-2xl shadow-sm border-2 border-white transition-all ${!doctor.isActive && 'grayscale'}`}>
-                                                            <AvatarImage src={doctor.photo} className="object-cover" />
-                                                            <AvatarFallback className="bg-slate-50 text-slate-900 font-bold text-lg">{doctor.name.charAt(0)}</AvatarFallback>
-                                                        </Avatar>
-                                                        <div>
-                                                            <p className={`font-bold text-lg ${!doctor.isActive ? 'text-slate-400' : 'text-slate-900'}`}>{doctor.name}</p>
-                                                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{doctor.specialization}</p>
-                                                        </div>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="px-8 py-6">
-                                                    <div className="space-y-1">
-                                                        <p className="text-xs font-bold text-slate-900 flex items-center gap-2">
-                                                            <TrendingUp className="w-3.5 h-3.5 text-blue-500" />
-                                                            {drApps.length} Bookings
-                                                        </p>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="px-8 py-6">
+                            <>
+                                <div className="overflow-x-auto">
+                                    <Table>
+                                        <TableHeader className="bg-slate-50/50">
+                                            <TableRow className="border-slate-50 hover:bg-transparent">
+                                                <TableHead
+                                                    className="h-16 px-8 text-[10px] font-black uppercase text-slate-400 tracking-widest cursor-pointer hover:bg-slate-100 transition-colors"
+                                                    onClick={() => handleSort('name')}
+                                                >
                                                     <div className="flex items-center gap-2">
-                                                        <Switch checked={doctor.isActive} onCheckedChange={() => toggleStatus(doctor)} />
-                                                        <span className={`text-[10px] font-black uppercase tracking-widest ${doctor.isActive ? 'text-emerald-600' : 'text-slate-400'}`}>
-                                                            {doctor.isActive ? 'Online' : 'Disabled'}
-                                                        </span>
+                                                        Medical Doctor
+                                                        {sortConfig.key === 'name' && (sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
                                                     </div>
-                                                </TableCell>
-                                                <TableCell className="px-8 py-6 text-right">
-                                                    <div className="flex items-center justify-end gap-2">
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            asChild
-                                                            className="h-10 rounded-xl hover:bg-slate-50 border-slate-200 transition-all text-slate-900 font-bold px-4"
-                                                        >
-                                                            <a href={`/admin/doctors/${doctor.id}`}>Manage</a>
-                                                        </Button>
-                                                        <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(doctor)} className="h-10 w-10 rounded-xl hover:bg-white hover:shadow-md border border-transparent hover:border-slate-100 transition-all text-slate-400 hover:text-blue-600">
-                                                            <Edit className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={() => handleDelete(doctor.id)}
-                                                            className="h-10 w-10 rounded-xl hover:bg-red-50 hover:shadow-md border border-transparent hover:border-red-100 transition-all text-slate-400 hover:text-red-600"
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
+                                                </TableHead>
+                                                <TableHead
+                                                    className="h-16 px-8 text-[10px] font-black uppercase text-slate-400 tracking-widest cursor-pointer hover:bg-slate-100 transition-colors"
+                                                    onClick={() => handleSort('bookings')}
+                                                >
+                                                    <div className="flex items-center gap-2">
+                                                        Clinical Data
+                                                        {sortConfig.key === 'bookings' && (sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
                                                     </div>
-                                                </TableCell>
-
+                                                </TableHead>
+                                                <TableHead
+                                                    className="h-16 px-8 text-[10px] font-black uppercase text-slate-400 tracking-widest cursor-pointer hover:bg-slate-100 transition-colors"
+                                                    onClick={() => handleSort('status')}
+                                                >
+                                                    <div className="flex items-center gap-2">
+                                                        Status
+                                                        {sortConfig.key === 'status' && (sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
+                                                    </div>
+                                                </TableHead>
+                                                <TableHead className="h-16 px-8 text-right text-[10px] font-black uppercase text-slate-400 tracking-widest">Actions</TableHead>
                                             </TableRow>
-                                        )
-                                    })}
-                                </TableBody>
-                            </Table>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {paginatedDoctors.map((doctor) => {
+                                                const drApps = appointments.filter(a => a.doctorId === doctor.id)
+                                                return (
+                                                    <TableRow key={doctor.id} className="group border-slate-50 hover:bg-slate-50/50 transition-colors">
+                                                        <TableCell className="px-8 py-6">
+                                                            <div className="flex items-center gap-4">
+                                                                <Avatar className={`w-14 h-14 rounded-2xl shadow-sm border-2 border-white transition-all ${!doctor.isActive && 'grayscale'}`}>
+                                                                    <AvatarImage src={doctor.photo} className="object-cover" />
+                                                                    <AvatarFallback className="bg-slate-50 text-slate-900 font-bold text-lg">{doctor.name.charAt(0)}</AvatarFallback>
+                                                                </Avatar>
+                                                                <div>
+                                                                    <p className={`font-bold text-lg ${!doctor.isActive ? 'text-slate-400' : 'text-slate-900'}`}>{doctor.name}</p>
+                                                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{doctor.specialization}</p>
+                                                                </div>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="px-8 py-6">
+                                                            <div className="space-y-1">
+                                                                <p className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                                                                    <TrendingUp className="w-3.5 h-3.5 text-blue-500" />
+                                                                    {drApps.length} Bookings
+                                                                </p>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="px-8 py-6">
+                                                            <div className="flex items-center gap-2">
+                                                                <Switch checked={doctor.isActive} onCheckedChange={() => toggleStatus(doctor)} />
+                                                                <span className={`text-[10px] font-black uppercase tracking-widest ${doctor.isActive ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                                                    {doctor.isActive ? 'Online' : 'Disabled'}
+                                                                </span>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="px-8 py-6 text-right">
+                                                            <div className="flex items-center justify-end gap-2">
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    asChild
+                                                                    className="h-10 rounded-xl hover:bg-slate-50 border-slate-200 transition-all text-slate-900 font-bold px-4"
+                                                                >
+                                                                    <a href={`/admin/doctors/${doctor.id}`}>Manage</a>
+                                                                </Button>
+                                                                <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(doctor)} className="h-10 w-10 rounded-xl hover:bg-white hover:shadow-md border border-transparent hover:border-slate-100 transition-all text-slate-400 hover:text-blue-600">
+                                                                    <Edit className="h-4 w-4" />
+                                                                </Button>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={() => handleDelete(doctor.id)}
+                                                                    className="h-10 w-10 rounded-xl hover:bg-red-50 hover:shadow-md border border-transparent hover:border-red-100 transition-all text-slate-400 hover:text-red-600"
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            </div>
+                                                        </TableCell>
+
+                                                    </TableRow>
+                                                )
+                                            })}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+
+                                {/* Pagination Controls */}
+                                {filteredDoctors.length > itemsPerPage && (
+                                    <div className="mt-8 flex items-center justify-between bg-white px-8 py-4 rounded-[1.5rem] shadow-sm shadow-slate-200/50">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm font-medium text-slate-500">
+                                                Showing <span className="text-slate-900 font-bold">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="text-slate-900 font-bold">{Math.min(currentPage * itemsPerPage, filteredDoctors.length)}</span> of <span className="text-slate-900 font-bold">{filteredDoctors.length}</span> doctors
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                                disabled={currentPage === 1}
+                                                className="h-10 rounded-xl hover:bg-slate-50 text-slate-600 font-bold gap-2"
+                                            >
+                                                <ChevronLeft className="w-4 h-4" />
+                                                Previous
+                                            </Button>
+
+                                            <div className="flex items-center gap-1">
+                                                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                                    .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                                                    .map((p, i, arr) => {
+                                                        return (
+                                                            <div key={p} className="flex items-center">
+                                                                {i > 0 && arr[i - 1] !== p - 1 && <span className="px-2 text-slate-400">...</span>}
+                                                                <Button
+                                                                    variant={currentPage === p ? 'default' : 'ghost'}
+                                                                    size="sm"
+                                                                    onClick={() => setCurrentPage(p)}
+                                                                    className={cn(
+                                                                        "h-10 w-10 rounded-xl font-bold transition-all",
+                                                                        currentPage === p ? "bg-blue-600 text-white shadow-lg shadow-blue-100" : "text-slate-600 hover:bg-blue-50 hover:text-blue-600"
+                                                                    )}
+                                                                >
+                                                                    {p}
+                                                                </Button>
+                                                            </div>
+                                                        )
+                                                    })}
+                                            </div>
+
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                                disabled={currentPage === totalPages}
+                                                className="h-10 rounded-xl hover:bg-slate-50 text-slate-600 font-bold gap-2"
+                                            >
+                                                Next
+                                                <ChevronRight className="w-4 h-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
                         )}
                     </CardContent>
                 </Card>

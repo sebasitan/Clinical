@@ -45,6 +45,7 @@ export type Patient = {
     phone: string
     email?: string
     lastVisit?: string
+    medicalAlerts?: string
     type: "new" | "existing"
     continuedTreatment?: {
         active: boolean

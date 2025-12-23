@@ -10,102 +10,113 @@ import { Stethoscope, GraduationCap, Award, Heart, CheckCircle2 } from "lucide-r
 export default function DoctorsPage() {
     const doctors = [
         {
-            name: "Dr. Sarah Bennett",
-            role: "Lead Dentist & Oral Surgeon",
-            specialty: "Implantology",
-            bio: "With over 15 years of experience in restorative dentistry, Dr. Bennett specializes in complex oral rehabilitations and dental implants.",
-            image: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766475059/dental-clinic/faculty/professional-female-asian-dentist.jpg",
-            creds: ["DDS (High Honors)", "MSc Implantology", "Fellow of ITI"]
+            name: "Dr. Netheananthene",
+            role: "Dental Practitioner",
+            specialty: "General Dentistry",
+            bio: "Expert in providing comprehensive dental care with a focus on patient comfort and modern treatment techniques.",
+            image: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766474669/dental-clinic/homepage/Dr.Netheananthene.png",
+            creds: ["BDS", "General Practice Residency"]
         },
         {
-            name: "Dr. Mike Lei",
-            role: "Senior Cosmetic Specialist",
-            specialty: "Aesthetic Dentistry",
-            bio: "Dr. Lei is renowned for his meticulously crafted smiles, combining digital design with artistic clinical application.",
-            image: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766475060/dental-clinic/faculty/professional-male-asian-orthodontist.jpg",
-            creds: ["DDS", "PG Dip Aesthetic Dentistry", "AACD Member"]
+            name: "Dr. Durshayine",
+            role: "Dental Practitioner",
+            specialty: "Pediatric Care",
+            bio: "Dedicated to providing gentle and effective dental care for children, ensuring a positive experience from a young age.",
+            image: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766474662/dental-clinic/homepage/Dr.Durshayine.png",
+            creds: ["BDS", "Pediatric Dentistry Clinical Fellowship"]
         },
         {
-            name: "Dr. Micheal Reyes",
-            role: "Pediatric Dental Specialist",
-            specialty: "Children's Care",
-            bio: "Dedicated to creating positive dental experiences for young patients, specializing in gentle care and preventive education.",
-            image: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766475057/dental-clinic/faculty/professional-female-asian-cosmetic-dentist.jpg",
-            creds: ["DDS", "MS Pediatric Dentistry", "Board Certified"]
+            name: "Dr. Kanagarathinam",
+            role: "Dental Practitioner",
+            specialty: "Restorative Dentistry",
+            bio: "Specializes in restoring dental function and aesthetics using advanced materials and meticulous clinical skills.",
+            image: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766474647/dental-clinic/homepage/Dr_Kanagarathinam.png",
+            creds: ["DDS", "Advanced Restorative Training"]
         },
         {
-            name: "Dr. James Carter",
-            role: "Consultant Orthodontist",
-            specialty: "Bite & Alignment",
-            bio: "Expert in both traditional braces and clear aligner therapy, focusing on functional harmony and aesthetics.",
-            image: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766475060/dental-clinic/faculty/professional-male-asian-orthodontist.jpg",
-            creds: ["BDS", "MDS Orthodontics", "Invisalign Platinum Provider"]
+            name: "Dr. Sharviind Raj",
+            role: "Dental Practitioner",
+            specialty: "Oral Health",
+            bio: "Focused on preventive care and maintaining long-term oral health for all patients in the Setapak community.",
+            image: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766474655/dental-clinic/homepage/Dr_Sharviind_Raj.png",
+            creds: ["BDS", "Public Health Dentistry"]
+        },
+        {
+            name: "Dr. Nicholas Gabriel",
+            role: "Dental Practitioner",
+            specialty: "Orthodontics",
+            bio: "Passionate about smile alignment and functional harmony, offering expert orthodontic solutions for all ages.",
+            image: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766474658/dental-clinic/homepage/Dr._Nicholas_Gabriel.png",
+            creds: ["DDS", "Orthodontic Specialization"]
+        },
+        {
+            name: "Dr. Navin Nair",
+            role: "Dental Practitioner",
+            specialty: "Cosmetic Dentistry",
+            bio: "Specializes in aesthetic transformations, combining artistic vision with clinical excellence for your best smile.",
+            image: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766474651/dental-clinic/homepage/Dr_Navin_Nair.png",
+            creds: ["BDS", "Cosmetic Dentistry Certification"]
         }
     ]
 
     return (
-        <div className="min-h-screen bg-white font-sans">
+        <div className="min-h-screen bg-white font-sans text-slate-900">
             <Navbar />
 
             {/* Header */}
-            <section className="pt-32 pb-20 bg-white">
+            <section className="pt-32 pb-20 bg-slate-50">
                 <div className="container mx-auto px-6 text-center">
                     <span className="text-blue-600 font-black uppercase text-xs tracking-widest mb-6 block">Our Faculty</span>
-                    <h1 className="text-5xl md:text-7xl font-sans font-black text-slate-900 tracking-tighter mb-8 italic">Medical <span className="text-blue-600">Leadership.</span></h1>
+                    <h1 className="text-5xl md:text-7xl font-sans font-black tracking-tighter mb-8 italic">Medical <span className="text-blue-600">Leadership.</span></h1>
                     <p className="text-slate-500 text-xl font-medium max-w-2xl mx-auto leading-relaxed">
                         Meet the clinicians who set the standard for dental excellence in Setapak. Each specialist brings decades of combined global expertise to our clinic.
                     </p>
                 </div>
             </section>
 
-            {/* Doctors Detailed Grid */}
-            <section className="pb-24 bg-white">
+            {/* Doctors Grid */}
+            <section className="py-24 bg-white">
                 <div className="container mx-auto px-6">
-                    <div className="space-y-24">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
                         {doctors.map((doc, i) => (
-                            <div key={i} className={`flex flex-col lg:flex-row items-center gap-16 ${i % 2 !== 0 ? 'lg:flex-row-reverse' : ''}`}>
-                                <div className="lg:w-1/2 relative">
-                                    <div className="relative rounded-[3rem] overflow-hidden shadow-2xl group transition-all duration-500">
+                            <div key={i} className="group bg-white rounded-[2.5rem] border border-slate-100 p-6 hover:shadow-2xl transition-all duration-300">
+                                <div className="relative mb-8">
+                                    <div className="relative rounded-2xl overflow-hidden aspect-[4/5] shadow-xl border-4 border-slate-50">
                                         <Image
                                             src={doc.image}
                                             alt={doc.name}
-                                            width={800}
-                                            height={1000}
-                                            className="w-full h-auto object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
+                                            fill
+                                            className="object-cover transition-transform duration-700 group-hover:scale-105"
                                         />
-                                        <div className="absolute inset-0 bg-blue-600/10 group-hover:bg-transparent transition-colors" />
                                     </div>
-                                    <div className={`absolute -bottom-8 ${i % 2 === 0 ? '-right-8' : '-left-8'} p-8 bg-white rounded-[2rem] shadow-xl border border-slate-50 hidden md:block`}>
-                                        <Award className="w-8 h-8 text-blue-600 mb-2" />
-                                        <p className="text-xs font-black uppercase tracking-widest text-slate-400">Board Certified</p>
+                                    <div className="absolute -bottom-4 right-4 p-4 bg-white rounded-2xl shadow-lg border border-slate-100">
+                                        <Award className="w-6 h-6 text-blue-600" />
                                     </div>
                                 </div>
-                                <div className="lg:w-1/2 space-y-8">
-                                    <div className="space-y-4">
-                                        <span className="text-blue-600 font-bold uppercase text-sm tracking-wider">{doc.specialty}</span>
-                                        <h2 className="text-5xl font-black text-slate-900 tracking-tight">{doc.name}</h2>
-                                        <p className="text-slate-900 font-black uppercase text-xs tracking-[0.2em]">{doc.role}</p>
+
+                                <div className="space-y-4">
+                                    <div>
+                                        <span className="text-blue-600 font-bold uppercase text-[10px] tracking-wider mb-2 block">{doc.specialty}</span>
+                                        <h2 className="text-3xl font-black tracking-tight mb-1">{doc.name}</h2>
+                                        <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">{doc.role}</p>
                                     </div>
-                                    <p className="text-slate-500 text-lg leading-relaxed">
+
+                                    <p className="text-slate-500 text-sm leading-relaxed line-clamp-3">
                                         {doc.bio}
                                     </p>
-                                    <div className="space-y-4">
-                                        <h4 className="font-bold text-slate-900 flex items-center gap-2">
-                                            <GraduationCap className="w-5 h-5 text-blue-600" />
-                                            Credentials & Affiliations
-                                        </h4>
-                                        <div className="flex flex-wrap gap-3">
-                                            {doc.creds.map((cred, j) => (
-                                                <span key={j} className="px-4 py-2 bg-slate-50 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-600 border border-slate-100 italic">
-                                                    {cred}
-                                                </span>
-                                            ))}
-                                        </div>
+
+                                    <div className="flex flex-wrap gap-2 pt-2">
+                                        {doc.creds.map((cred, j) => (
+                                            <span key={j} className="px-3 py-1 bg-slate-50 rounded-full text-[9px] font-black uppercase tracking-widest text-slate-500 border border-slate-100 italic">
+                                                {cred}
+                                            </span>
+                                        ))}
                                     </div>
-                                    <div className="pt-6">
+
+                                    <div className="pt-4">
                                         <Link href="/booking">
-                                            <Button className="h-14 px-10 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-blue-200 transition-all hover:-translate-y-1">
-                                                Schedule Consultation
+                                            <Button className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black uppercase tracking-widest shadow-lg shadow-blue-100 transition-all">
+                                                Book Consultation
                                             </Button>
                                         </Link>
                                     </div>

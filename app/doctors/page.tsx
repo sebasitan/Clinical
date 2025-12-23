@@ -14,7 +14,7 @@ export default function DoctorsPage() {
             role: "Lead Dentist & Oral Surgeon",
             specialty: "Implantology",
             bio: "With over 15 years of experience in restorative dentistry, Dr. Bennett specializes in complex oral rehabilitations and dental implants.",
-            image: "/professional-female-asian-dentist.jpg",
+            image: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766475059/dental-clinic/faculty/professional-female-asian-dentist.jpg",
             creds: ["DDS (High Honors)", "MSc Implantology", "Fellow of ITI"]
         },
         {
@@ -22,7 +22,7 @@ export default function DoctorsPage() {
             role: "Senior Cosmetic Specialist",
             specialty: "Aesthetic Dentistry",
             bio: "Dr. Lei is renowned for his meticulously crafted smiles, combining digital design with artistic clinical application.",
-            image: "/professional-male-asian-orthodontist.jpg",
+            image: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766475060/dental-clinic/faculty/professional-male-asian-orthodontist.jpg",
             creds: ["DDS", "PG Dip Aesthetic Dentistry", "AACD Member"]
         },
         {
@@ -30,7 +30,7 @@ export default function DoctorsPage() {
             role: "Pediatric Dental Specialist",
             specialty: "Children's Care",
             bio: "Dedicated to creating positive dental experiences for young patients, specializing in gentle care and preventive education.",
-            image: "/professional-female-asian-cosmetic-dentist.jpg",
+            image: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766475057/dental-clinic/faculty/professional-female-asian-cosmetic-dentist.jpg",
             creds: ["DDS", "MS Pediatric Dentistry", "Board Certified"]
         },
         {
@@ -38,7 +38,7 @@ export default function DoctorsPage() {
             role: "Consultant Orthodontist",
             specialty: "Bite & Alignment",
             bio: "Expert in both traditional braces and clear aligner therapy, focusing on functional harmony and aesthetics.",
-            image: "/professional-male-asian-orthodontist.jpg",
+            image: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766475060/dental-clinic/faculty/professional-male-asian-orthodontist.jpg",
             creds: ["BDS", "MDS Orthodontics", "Invisalign Platinum Provider"]
         }
     ]

@@ -10,12 +10,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
-import {
-  Dialog,
-  DialogContent,
-  DialogTrigger,
-} from "@/components/ui/dialog"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
 import { Smile, Check, ArrowRight, ShieldCheck, Sparkles, Stethoscope, Monitor, Phone, Mail } from "lucide-react"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
@@ -27,7 +23,7 @@ export default function HomePage() {
       <Navbar />
 
       {/* Hero Section */}
-      <section className="relative pt-20 pb-20 lg:pt-32 lg:pb-32 overflow-hidden">
+      <section className="relative pt-10 pb-20 lg:pt-12 lg:pb-32 overflow-hidden">
         {/* Background Gradient similar to reference */}
         <div className="absolute inset-0 bg-gradient-to-r from-blue-50/80 via-white to-blue-50/50 -z-20" />
         {/* Subtle overlay texture/blob */}
@@ -75,8 +71,8 @@ export default function HomePage() {
               <div className="relative z-10">
                 <div className="relative rounded-[2.5rem] overflow-hidden shadow-2xl border-8 border-white">
                   <Image
-                    src="/professional-female-asian-dentist.jpg"
-                    alt="Professional Dentist"
+                    src="https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766474665/dental-clinic/homepage/Dr.Netheananthene_hero.png"
+                    alt="Dr. Netheananthene"
                     width={800}
                     height={900}
                     className="w-full h-auto object-cover"
@@ -103,19 +99,19 @@ export default function HomePage() {
               <div className="flex gap-4">
                 <div className="w-1/2 pt-12">
                   <Image
-                    src="/professional-female-asian-dentist.jpg"
+                    src="https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766474647/dental-clinic/homepage/Dr_Kanagarathinam.png"
                     width={400}
                     height={500}
-                    alt="Dentist 1"
+                    alt="Dr. Kanagarathinam"
                     className="rounded-3xl shadow-lg object-cover w-full h-80"
                   />
                 </div>
                 <div className="w-1/2">
                   <Image
-                    src="/professional-male-asian-orthodontist.jpg"
+                    src="https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766474662/dental-clinic/homepage/Dr.Durshayine.png"
                     width={400}
                     height={500}
-                    alt="Dentist 2"
+                    alt="Dr. Durshayine"
                     className="rounded-3xl shadow-lg object-cover w-full h-80"
                   />
                 </div>
@@ -218,26 +214,46 @@ export default function HomePage() {
             Our team of experienced dentists and specialists are passionate about providing the highest standard of care in a friendly environment.
           </p>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {[
-              { name: "Dr. Sarah Bennett", role: "Lead Dentist" },
-              { name: "Dr. Mike Lei", role: "Cosmetic Dentist" },
-              { name: "Dr. Micheal Reyes", role: "Pediatric Specialist" },
-              { name: "Dr. James Carter", role: "Dental Hygienist" },
-            ].map((doc, i) => (
-              <div key={i} className="relative group overflow-hidden rounded-3xl h-96">
-                <Image
-                  src={i % 2 === 0 ? "/professional-female-asian-cosmetic-dentist.jpg" : "/professional-male-asian-orthodontist.jpg"}
-                  alt={doc.name}
-                  fill
-                  className="object-cover"
-                />
-                <div className="absolute bottom-4 left-4 right-4 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg translate-y-2 group-hover:translate-y-0 transition-transform">
-                  <h4 className="font-bold text-slate-900">{doc.name}</h4>
-                  <p className="text-blue-500 text-xs font-semibold uppercase">{doc.role}</p>
-                </div>
+          <div className="max-w-6xl mx-auto px-4 sm:px-12">
+            <Carousel
+              opts={{
+                align: "start",
+                loop: true,
+              }}
+              className="w-full"
+            >
+              <CarouselContent className="-ml-2 md:-ml-4">
+                {[
+                  { name: "Dr. Netheananthene", role: "Dental practitioner", img: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766474669/dental-clinic/homepage/Dr.Netheananthene.png" },
+                  { name: "Dr. Kanagarathinam", role: "Dental practitioner", img: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766474647/dental-clinic/homepage/Dr_Kanagarathinam.png" },
+                  { name: "Dr. Durshayine", role: "Dental practitioner", img: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766474662/dental-clinic/homepage/Dr.Durshayine.png" },
+                  { name: "Dr. Sharviind", role: "Dental practitioner", img: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766474655/dental-clinic/homepage/Dr_Sharviind_Raj.png" },
+                  { name: "Dr. Nicholas", role: "Dental practitioner", img: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766474658/dental-clinic/homepage/Dr._Nicholas_Gabriel.png" },
+                  { name: "Dr. Navin", role: "Dental practitioner", img: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766474651/dental-clinic/homepage/Dr_Navin_Nair.png" },
+                ].map((doc, i) => (
+                  <CarouselItem key={i} className="pl-4 md:pl-6 basis-full sm:basis-1/2 md:basis-1/3 lg:basis-1/4">
+                    <div className="relative group overflow-hidden rounded-[2rem] h-[440px] shadow-xl border-4 border-white bg-slate-100">
+                      <Image
+                        src={doc.img}
+                        alt={doc.name}
+                        fill
+                        className="object-cover transition-transform duration-700 group-hover:scale-105"
+                      />
+
+                      {/* Floating Info Card */}
+                      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[90%] bg-white/95 backdrop-blur-md py-5 px-4 rounded-2xl shadow-xl border border-slate-100/50 text-center transform transition-all duration-300 group-hover:bottom-8">
+                        <h4 className="font-bold text-slate-900 text-lg leading-tight mb-1">{doc.name}</h4>
+                        <p className="text-blue-600 text-[10px] font-bold uppercase tracking-[0.15em]">{doc.role}</p>
+                      </div>
+                    </div>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <div className="flex items-center justify-center gap-6 mt-16">
+                <CarouselPrevious className="static translate-y-0 h-14 w-14 rounded-2xl border-2 border-slate-200 text-slate-400 hover:border-blue-600 hover:bg-blue-600 hover:text-white transition-all shadow-md active:scale-95" />
+                <CarouselNext className="static translate-y-0 h-14 w-14 rounded-2xl border-2 border-slate-200 text-slate-400 hover:border-blue-600 hover:bg-blue-600 hover:text-white transition-all shadow-md active:scale-95" />
               </div>
-            ))}
+            </Carousel>
           </div>
 
           <div className="flex flex-wrap justify-center gap-16 mt-20">

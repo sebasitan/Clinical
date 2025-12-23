@@ -36,7 +36,7 @@ export default function AboutPage() {
                             <div className="relative">
                                 <div className="absolute -top-10 -left-10 w-40 h-40 bg-blue-50 rounded-full -z-10" />
                                 <Image
-                                    src="/hero-dental.png"
+                                    src="https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766474670/dental-clinic/homepage/hero-dental.jpg"
                                     alt="Our modern facility"
                                     width={800}
                                     height={600}

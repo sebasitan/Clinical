@@ -2,45 +2,46 @@ import { mocean } from './mocean';
 import { generateGoogleCalendarLink } from './calendar-utils';
 import { OTPModel } from './models';
 import dbConnect from './db';
+import { formatMalaysianPhone } from '@/lib/utils'; // Import the centralized formatter
 
 /**
  * Sanitizes phone number to format acceptable by general logic
  */
 function sanitizePhone(phone: string): string {
-    // Basic sanitization, ensure numbers only but keep + if international
-    // Mocean handles formats fairly well, but we should clear spaces
-    return phone.replace(/\s+/g, '');
+    return formatMalaysianPhone(phone);
 }
 
 /**
  * Sends a verification code (OTP) via SMS using Mocean
  * @param to Phone number in E.164 format
  */
+/**
+ * Sends a verification code (OTP) via SMS using Mocean Verify API
+ * @param to Phone number in E.164 format
+ */
 export async function sendSMSOTP(to: string) {
     try {
         await dbConnect();
-        const code = Math.floor(100000 + Math.random() * 900000).toString();
         const formattedPhone = sanitizePhone(to);
 
-        console.log(`[Mocean] Generating OTP ${code} for ${formattedPhone}`);
+        console.log(`[Mocean] Requesting Verify OTP for ${formattedPhone}`);
 
-        // Store OTP in DB
-        await OTPModel.findOneAndUpdate(
-            { phone: formattedPhone },
-            { code: code, createdAt: new Date() },
-            { upsert: true, new: true }
-        );
+        // Use Mocean Verify API
+        const result = await mocean.requestVerify(formattedPhone);
 
-        // Send via Mocean
-        const result = await mocean.sendSMS(formattedPhone, `Your KPS Dental verification code is: ${code}`);
-
-        if (result.success) {
-            return { success: true, sid: result.msgid };
+        if (result.success && result.reqid) {
+            // Store reqid in DB (we don't need the code itself as Mocean handles it)
+            await OTPModel.findOneAndUpdate(
+                { phone: formattedPhone },
+                { reqid: result.reqid, code: null, createdAt: new Date() },
+                { upsert: true, new: true }
+            );
+            return { success: true, reqid: result.reqid };
         } else {
-            return { success: false, error: result.error };
+            return { success: false, error: result.error || 'Failed to request verification' };
         }
     } catch (error: any) {
-        console.error('Mocean SMS OTP Error:', error);
+        console.error('Mocean Verify API Error:', error);
         return { success: false, error: error.message || 'Unknown error' };
     }
 }
@@ -48,21 +49,41 @@ export async function sendSMSOTP(to: string) {
 /**
  * Verifies the code entered by the user
  * @param to Phone number
- * @param code The 6-digit code to verify
+ * @param code The digit code to verify
  */
 export async function verifySMSOTP(to: string, code: string) {
     try {
         await dbConnect();
         const formattedPhone = sanitizePhone(to);
 
+        // Find the active verification request
         const record = await OTPModel.findOne({ phone: formattedPhone });
 
-        if (record && record.code === code) {
-            // Delete after successful verification (optional, or let TTL handle it)
-            await OTPModel.deleteOne({ _id: record._id });
-            return { success: true, status: 'approved' };
+        if (!record) {
+            return { success: false, error: 'No verification request found' };
+        }
+
+        // Check if we have a reqid (Mocean Verify) or legacy code
+        if (record.reqid) {
+            const result = await mocean.checkVerify(record.reqid, code);
+
+            if (result.success) {
+                // Delete after successful verification
+                await OTPModel.deleteOne({ _id: record._id });
+                return { success: true, status: 'approved' };
+            } else {
+                return { success: false, status: 'failed', error: result.error || 'Invalid code' };
+            }
+        } else if (record.code) {
+            // Fallback to legacy local verification
+            if (record.code === code) {
+                await OTPModel.deleteOne({ _id: record._id });
+                return { success: true, status: 'approved' };
+            } else {
+                return { success: false, status: 'failed', error: 'Invalid or expired code' };
+            }
         } else {
-            return { success: false, status: 'failed', error: 'Invalid or expired code' };
+            return { success: false, error: 'Invalid verification state' };
         }
     } catch (error: any) {
         console.error('Verify OTP Error:', error);

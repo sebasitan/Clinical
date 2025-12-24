@@ -13,16 +13,16 @@ export default function AboutPage() {
             <Navbar />
 
             {/* Sub-Hero Header */}
-            <section className="relative pt-24 pb-20 bg-slate-900 text-white overflow-hidden">
+            <section className="relative pt-24 pb-16 md:pb-20 bg-slate-900 text-white overflow-hidden">
                 <div className="absolute inset-0 opacity-20">
                     <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-500 via-transparent to-transparent blur-3xl" />
                 </div>
                 <div className="container mx-auto px-6 relative z-10 text-center">
                     <span className="text-blue-400 font-black uppercase text-xs tracking-[0.3em] mb-4 block animate-in fade-in slide-in-from-bottom-2 duration-500">Established 2008</span>
-                    <h1 className="text-5xl md:text-7xl font-sans font-black tracking-tighter mb-6 italic italic animate-in fade-in slide-in-from-bottom-4 duration-700">
+                    <h1 className="text-4xl md:text-5xl lg:text-7xl font-sans font-black tracking-tighter mb-6 italic italic animate-in fade-in slide-in-from-bottom-4 duration-700">
                         Our Story of <span className="text-blue-500">Excellence.</span>
                     </h1>
-                    <p className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed animate-in fade-in slide-in-from-bottom-6 duration-1000">
+                    <p className="text-slate-400 text-base md:text-xl max-w-2xl mx-auto leading-relaxed animate-in fade-in slide-in-from-bottom-6 duration-1000">
                         Discover the passion and commitment behind Klinik Pergigian Setapak (Sri Rampai). We're more than just a clinic; we're your partners in lifelong oral health.
                     </p>
                 </div>
@@ -77,18 +77,18 @@ export default function AboutPage() {
             </section>
 
             {/* Why Choose Us CTA */}
-            <section className="py-24 bg-slate-900 text-white relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2" />
+            <section className="py-16 md:py-24 bg-slate-900 text-white relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-[300px] h-[300px] md:w-[600px] md:h-[600px] bg-blue-600/10 rounded-full blur-[80px] md:blur-[120px] -translate-y-1/2 translate-x-1/2" />
                 <div className="container mx-auto px-6 text-center relative z-10">
-                    <h2 className="text-4xl md:text-5xl font-sans font-black tracking-tight mb-8">Ready to experience <br /><span className="text-blue-500">dentistry Redefined?</span></h2>
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-                        <Link href="/booking">
-                            <Button size="lg" className="h-16 px-12 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase tracking-widest shadow-2xl transition-all hover:scale-105">
+                    <h2 className="text-3xl md:text-5xl font-sans font-black tracking-tight mb-8">Ready to experience <br /><span className="text-blue-500">dentistry Redefined?</span></h2>
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4 md:gap-6">
+                        <Link href="/booking" className="w-full sm:w-auto">
+                            <Button size="lg" className="w-full sm:w-auto h-14 md:h-16 px-8 md:px-12 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase tracking-widest shadow-2xl transition-all hover:scale-105 text-sm md:text-base">
                                 Book Your Visit
                             </Button>
                         </Link>
-                        <Link href="/contact">
-                            <Button variant="outline" size="lg" className="h-16 px-12 border-2 border-blue-600/50 bg-transparent hover:bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest transition-all">
+                        <Link href="/contact" className="w-full sm:w-auto">
+                            <Button variant="outline" size="lg" className="w-full sm:w-auto h-14 md:h-16 px-8 md:px-12 border-2 border-blue-600/50 bg-transparent hover:bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest transition-all text-sm md:text-base">
                                 Speak with Us
                             </Button>
                         </Link>

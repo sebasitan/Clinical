@@ -23,42 +23,39 @@ export default function HomePage() {
       <Navbar />
 
       {/* Hero Section */}
-      <section className="relative pt-10 pb-20 lg:pt-12 lg:pb-32 overflow-hidden">
+      <section className="relative pt-6 pb-16 lg:pt-12 lg:pb-32 overflow-hidden">
         {/* Background Gradient similar to reference */}
         <div className="absolute inset-0 bg-gradient-to-r from-blue-50/80 via-white to-blue-50/50 -z-20" />
         {/* Subtle overlay texture/blob */}
-        <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-blue-100/40 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 -z-10" />
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] lg:w-[800px] lg:h-[800px] bg-blue-100/40 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 -z-10" />
 
         <div className="container mx-auto px-6 relative z-10">
           <div className="flex flex-col lg:flex-row items-center">
-            {/* Left Content - Pushed for right alignment in visual hierarchy as per ref, but typically hero text is left. 
-                Ref image has text on right. Let's stick to standard left for readability unless user asks to flip, 
-                BUT I will match the typography style exactly. */}
-
-            <div className="lg:w-1/2 relative z-20 space-y-8 text-center lg:text-left">
+            {/* Left Content */}
+            <div className="lg:w-1/2 relative z-20 space-y-6 lg:space-y-8 text-center lg:text-left mb-12 lg:mb-0">
               <div>
-                <h2 className="font-bold text-slate-500 uppercase tracking-[0.2em] mb-4 text-sm md:text-base">
+                <h2 className="font-bold text-slate-500 uppercase tracking-[0.2em] mb-4 text-xs md:text-sm lg:text-base">
                   Get your dental care now
                 </h2>
-                <h1 className="font-black text-6xl md:text-7xl lg:text-8xl text-slate-900 uppercase leading-[0.9] tracking-tighter mb-6">
+                <h1 className="font-black text-5xl md:text-7xl lg:text-8xl text-slate-900 uppercase leading-[0.9] tracking-tighter mb-4 lg:mb-6">
                   Setapak <br />
                   <span className="text-blue-700">Dental.</span>
                 </h1>
               </div>
 
-              <p className="font-sans text-slate-500 text-lg md:text-xl font-medium max-w-lg mx-auto lg:mx-0 leading-relaxed">
+              <p className="font-sans text-slate-500 text-base md:text-xl font-medium max-w-lg mx-auto lg:mx-0 leading-relaxed">
                 Expert dental care in the heart of Setapak (Sri Rampai). Professional consultation and modern treatments for your bright and healthy smile.
               </p>
 
-              <div className="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start pt-4">
-                <Link href="/booking">
-                  <Button size="lg" className="h-14 px-10 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-sm font-bold uppercase tracking-widest shadow-xl shadow-blue-200 transition-all hover:-translate-y-1">
+              <div className="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start pt-4 w-full sm:w-auto">
+                <Link href="/booking" className="w-full sm:w-auto">
+                  <Button size="lg" className="w-full sm:w-auto h-12 md:h-14 px-8 md:px-10 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-xs md:text-sm font-bold uppercase tracking-widest shadow-xl shadow-blue-200 transition-all hover:-translate-y-1">
                     Book Appointment
                   </Button>
                 </Link>
 
-                <Link href="/booking/manage">
-                  <Button variant="outline" size="lg" className="h-14 px-10 border-2 border-slate-200 text-slate-600 hover:border-slate-900 hover:text-slate-900 rounded-full text-sm font-bold uppercase tracking-widest transition-all">
+                <Link href="/booking/manage" className="w-full sm:w-auto">
+                  <Button variant="outline" size="lg" className="w-full sm:w-auto h-12 md:h-14 px-8 md:px-10 border-2 border-slate-200 text-slate-600 hover:border-slate-900 hover:text-slate-900 rounded-full text-xs md:text-sm font-bold uppercase tracking-widest transition-all">
                     Manage Booking
                   </Button>
                 </Link>
@@ -67,7 +64,7 @@ export default function HomePage() {
 
 
             {/* Right Image */}
-            <div className="lg:w-1/2 relative">
+            <div className="lg:w-1/2 relative px-4 lg:px-0">
               <div className="relative z-10">
                 <div className="relative rounded-[2.5rem] overflow-hidden shadow-2xl border-8 border-white">
                   <Image

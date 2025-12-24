@@ -64,11 +64,11 @@ export default function DoctorsPage() {
             <Navbar />
 
             {/* Header */}
-            <section className="pt-32 pb-20 bg-slate-50">
+            <section className="pt-24 pb-16 md:pt-32 md:pb-20 bg-slate-50">
                 <div className="container mx-auto px-6 text-center">
-                    <span className="text-blue-600 font-black uppercase text-xs tracking-widest mb-6 block">Our Faculty</span>
-                    <h1 className="text-5xl md:text-7xl font-sans font-black tracking-tighter mb-8 italic">Medical <span className="text-blue-600">Leadership.</span></h1>
-                    <p className="text-slate-500 text-xl font-medium max-w-2xl mx-auto leading-relaxed">
+                    <span className="text-blue-600 font-black uppercase text-xs tracking-widest mb-4 md:mb-6 block">Our Faculty</span>
+                    <h1 className="text-4xl md:text-7xl font-sans font-black tracking-tighter mb-6 md:mb-8 italic">Medical <span className="text-blue-600">Leadership.</span></h1>
+                    <p className="text-slate-500 text-lg md:text-xl font-medium max-w-2xl mx-auto leading-relaxed">
                         Meet the clinicians who set the standard for dental excellence in Setapak. Each specialist brings decades of combined global expertise to our clinic.
                     </p>
                 </div>

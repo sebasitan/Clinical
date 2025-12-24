@@ -3,63 +3,118 @@
 import { useState, useEffect } from "react"
 import { LoadingScreen } from "@/components/ui/loading-screen"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
-import { Bell, Calendar, Clock, Send, MessageCircle, Mail, Sparkles, CheckCircle2, AlertCircle, Save } from "lucide-react"
+import { Bell, Send, MessageCircle, Mail, Sparkles, CheckCircle2, Clock, Calendar } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-export default function OutreachSettingsPage() {
+export default function RemindersPage() {
     const { isLoading } = useAdminAuth()
     const [isSaving, setIsSaving] = useState(false)
-    const [isChecking, setIsChecking] = useState(false)
+    const [isRunning, setIsRunning] = useState(false)
     const [isDataLoading, setIsDataLoading] = useState(true)
-
-    // Global Settings State
     const [settings, setSettings] = useState({
-        bookingReminders: {
-            enabled: true,
-            daysBefore: [1, 2],
-            channels: { sms: false, whatsapp: true, email: true }
-        },
-        followUpReminders: {
-            enabled: true,
-            periodDays: 30, // Periodical check
-            channels: { sms: false, whatsapp: true, email: true }
-        }
+        enabled: true,
+        daysBefore: [1, 2],
+        channels: { sms: false, whatsapp: true, email: true }
     })
-
-    const handleSave = async () => {
-        setIsSaving(true)
-        // Simulate save - in real app we'd hit a settings API
-        setTimeout(() => setIsSaving(false), 1000)
-    }
-
-    const runGlobalCheck = async () => {
-        setIsChecking(true)
-        try {
-            const res = await fetch('/api/admin/automation/run')
-            if (res.ok) {
-                const data = await res.json()
-                alert(`Automation check complete! Reminders processed: ${data.totalSent}`)
-            }
-        } catch (e) {
-            console.error(e)
-        } finally {
-            setIsChecking(false)
-        }
-    }
+    const [recentActivity, setRecentActivity] = useState<any[]>([])
 
     useEffect(() => {
-        // Just a small delay to show the nice animation for consistency
-        const timer = setTimeout(() => setIsDataLoading(false), 800)
-        return () => clearTimeout(timer)
+        loadData()
     }, [])
+
+    const loadData = async () => {
+        setIsDataLoading(true)
+        try {
+            // Load settings
+            const settingsRes = await fetch('/api/admin/reminders/settings')
+            if (settingsRes.ok) {
+                const data = await settingsRes.json()
+                setSettings({
+                    enabled: data.enabled,
+                    daysBefore: data.daysBefore,
+                    channels: data.channels
+                })
+            }
+
+            // Load recent activity
+            const logsRes = await fetch('/api/admin/reminders/logs')
+            if (logsRes.ok) {
+                const logs = await logsRes.json()
+                setRecentActivity(logs)
+            }
+        } catch (e) {
+            console.error('Error loading reminder data:', e)
+        } finally {
+            setIsDataLoading(false)
+        }
+    }
+
+    const handleSaveSettings = async () => {
+        setIsSaving(true)
+        try {
+            const res = await fetch('/api/admin/reminders/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(settings)
+            })
+            if (res.ok) {
+                alert('Settings saved successfully!')
+            } else {
+                alert('Failed to save settings')
+            }
+        } catch (e) {
+            console.error('Error saving settings:', e)
+            alert('Error saving settings')
+        } finally {
+            setIsSaving(false)
+        }
+    }
+
+    const handleRunNow = async () => {
+        setIsRunning(true)
+        try {
+            const res = await fetch('/api/admin/reminders/run', {
+                method: 'POST'
+            })
+            const data = await res.json()
+            if (data.success) {
+                alert(`Automation complete! ${data.totalReminders} reminders sent.`)
+                loadData() // Reload to show new activity
+            } else {
+                alert(`Automation failed: ${data.message || data.error}`)
+            }
+        } catch (e) {
+            console.error('Error running automation:', e)
+            alert('Error running automation')
+        } finally {
+            setIsRunning(false)
+        }
+    }
+
+    const toggleDayBefore = (day: number) => {
+        const current = settings.daysBefore
+        const next = current.includes(day)
+            ? current.filter(d => d !== day)
+            : [...current, day].sort((a, b) => b - a)
+        setSettings({ ...settings, daysBefore: next })
+    }
+
+    const toggleChannel = (channel: 'sms' | 'whatsapp' | 'email') => {
+        setSettings({
+            ...settings,
+            channels: {
+                ...settings.channels,
+                [channel]: !settings.channels[channel]
+            }
+        })
+    }
 
     if (isLoading || isDataLoading) {
         return (
             <div className="flex-1 flex items-center justify-center bg-slate-50/50 min-h-screen">
-                <LoadingScreen message="Accessing Reminder Engine..." />
+                <LoadingScreen message="Loading Reminder System..." />
             </div>
         )
     }
@@ -67,153 +122,147 @@ export default function OutreachSettingsPage() {
     return (
         <div className="flex-1 bg-slate-50/50 p-6 md:p-10">
             <div className="max-w-5xl mx-auto">
-                <div className="flex justify-between items-end mb-10">
-                    <div>
-                        <h1 className="text-4xl font-sans font-bold text-slate-900 tracking-tight">Clinical Automation</h1>
-                        <p className="text-slate-500 mt-1">Configure how the system reaches out to your patients.</p>
+                <div className="mb-10">
+                    <h1 className="text-4xl font-sans font-bold text-slate-900 tracking-tight">Appointment Reminders</h1>
+                    <p className="text-slate-500 mt-1">Configure automatic reminders for upcoming appointments.</p>
+                </div>
+
+                {/* Configuration Card */}
+                <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden mb-8">
+                    <div className="bg-blue-600 p-8 text-white relative">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+                        <div className="flex items-center gap-3 mb-2">
+                            <Bell className="w-6 h-6" />
+                            <h3 className="text-2xl font-bold">Reminder Configuration</h3>
+                        </div>
+                        <p className="text-blue-100 text-sm">Set when and how to send appointment reminders</p>
                     </div>
-                    <Button
-                        onClick={runGlobalCheck}
-                        disabled={isChecking}
-                        className="h-12 px-6 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold gap-2 shadow-xl shadow-blue-100 transition-all"
-                    >
-                        <Sparkles className={cn("w-4 h-4", isChecking && "animate-spin")} />
-                        {isChecking ? "Processing..." : "Run Global Check"}
-                    </Button>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-8">
-                    {/* SECTION 1: NEW BOOKING REMINDERS */}
-                    <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
-                        <div className="bg-slate-900 p-8 text-white">
-                            <div className="flex items-center gap-3 mb-2">
-                                <Calendar className="w-5 h-5 text-blue-400" />
-                                <h3 className="text-xl font-bold">Booking Reminders</h3>
+                    <CardContent className="p-8 space-y-8">
+                        {/* Timing Configuration */}
+                        <div className="space-y-4">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Send Reminders:</label>
+                            <div className="flex flex-wrap gap-3">
+                                {[
+                                    { label: "2 Days Before", val: 2 },
+                                    { label: "1 Day Before", val: 1 },
+                                    { label: "Day of Appointment", val: 0 },
+                                ].map(d => (
+                                    <Button
+                                        key={d.val}
+                                        variant={settings.daysBefore.includes(d.val) ? "default" : "outline"}
+                                        onClick={() => toggleDayBefore(d.val)}
+                                        className="rounded-xl h-11 px-5 text-sm font-bold"
+                                    >
+                                        {d.label}
+                                    </Button>
+                                ))}
                             </div>
-                            <p className="text-slate-400 text-xs uppercase font-black tracking-widest">Global rule for new appointments</p>
                         </div>
-                        <CardContent className="p-8 space-y-8">
-                            <div className="space-y-4">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Send Reminders on:</label>
-                                <div className="flex flex-wrap gap-3">
-                                    {[
-                                        { label: "2 Days Before", val: 2 },
-                                        { label: "1 Day Before", val: 1 },
-                                        { label: "Day of Arrival", val: 0 },
-                                    ].map(d => (
-                                        <Button
-                                            key={d.val}
-                                            variant={settings.bookingReminders.daysBefore.includes(d.val) ? "default" : "outline"}
-                                            onClick={() => {
-                                                const current = settings.bookingReminders.daysBefore
-                                                const next = current.includes(d.val) ? current.filter(v => v !== d.val) : [...current, d.val]
-                                                setSettings({ ...settings, bookingReminders: { ...settings.bookingReminders, daysBefore: next } })
-                                            }}
-                                            className="rounded-xl h-10 px-4 text-xs font-bold"
-                                        >
-                                            {d.label}
-                                        </Button>
-                                    ))}
-                                </div>
-                            </div>
 
-                            <div className="space-y-4">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Distribution Channels</label>
-                                <div className="grid grid-cols-3 gap-3">
-                                    {[
-                                        { id: 'sms', label: 'SMS', icon: Send, color: 'text-blue-500' },
-                                        { id: 'whatsapp', label: 'WhatsApp', icon: MessageCircle, color: 'text-emerald-500' },
-                                        { id: 'email', label: 'Email', icon: Mail, color: 'text-amber-500' }
-                                    ].map(chan => (
-                                        <button
-                                            key={chan.id}
-                                            //@ts-ignore
-                                            onClick={() => setSettings({ ...settings, bookingReminders: { ...settings.bookingReminders, channels: { ...settings.bookingReminders.channels, [chan.id]: !settings.bookingReminders.channels[chan.id] } } })}
-                                            //@ts-ignore
-                                            className={cn("flex flex-col items-center p-4 rounded-2xl border-2 transition-all", settings.bookingReminders.channels[chan.id] ? "bg-slate-900 border-slate-900 text-white" : "bg-white border-slate-50 text-slate-400 shadow-sm")}
-                                        >
-                                            <chan.icon className="w-5 h-5 mb-1" />
-                                            <span className="text-[9px] font-black tracking-widest uppercase">{chan.label}</span>
-                                        </button>
-                                    ))}
-                                </div>
+                        {/* Channel Configuration */}
+                        <div className="space-y-4">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Communication Channels</label>
+                            <div className="grid grid-cols-3 gap-4">
+                                {[
+                                    { id: 'sms', label: 'SMS', icon: Send, color: 'text-blue-500' },
+                                    { id: 'whatsapp', label: 'WhatsApp', icon: MessageCircle, color: 'text-emerald-500' },
+                                    { id: 'email', label: 'Email', icon: Mail, color: 'text-amber-500' }
+                                ].map(chan => (
+                                    <button
+                                        key={chan.id}
+                                        onClick={() => toggleChannel(chan.id as any)}
+                                        className={cn(
+                                            "flex flex-col items-center p-5 rounded-2xl border-2 transition-all",
+                                            settings.channels[chan.id as keyof typeof settings.channels]
+                                                ? "bg-blue-600 border-blue-600 text-white shadow-lg"
+                                                : "bg-white border-slate-100 text-slate-400 hover:border-slate-200"
+                                        )}
+                                    >
+                                        <chan.icon className="w-6 h-6 mb-2" />
+                                        <span className="text-xs font-black tracking-widest uppercase">{chan.label}</span>
+                                    </button>
+                                ))}
                             </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* SECTION 2: TREATMENT FOLLOW-UPS */}
-                    <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
-                        <div className="bg-blue-600 p-8 text-white relative">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
-                            <div className="flex items-center gap-3 mb-2">
-                                <Clock className="w-5 h-5 text-blue-200" />
-                                <h3 className="text-xl font-bold">Follow-up Care</h3>
-                            </div>
-                            <p className="text-blue-100 text-xs uppercase font-black tracking-widest">Periodical check for ongoing cases</p>
                         </div>
-                        <CardContent className="p-8 space-y-8">
+
+                        {/* Save Button */}
+                        <div className="pt-4">
+                            <Button
+                                onClick={handleSaveSettings}
+                                disabled={isSaving}
+                                className="w-full h-12 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold"
+                            >
+                                {isSaving ? "Saving..." : "Save Configuration"}
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Manual Trigger Card */}
+                <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden mb-8">
+                    <CardContent className="p-8 text-center">
+                        <Sparkles className="w-12 h-12 text-blue-600 mx-auto mb-4" />
+                        <h3 className="text-xl font-bold text-slate-900 mb-2">Run Automation Now</h3>
+                        <p className="text-sm text-slate-500 mb-6">
+                            Manually trigger the reminder system to send notifications for all upcoming appointments based on your configuration.
+                        </p>
+                        <Button
+                            onClick={handleRunNow}
+                            disabled={isRunning}
+                            className="h-12 px-8 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold gap-2 shadow-xl shadow-blue-100"
+                        >
+                            <Sparkles className={cn("w-4 h-4", isRunning && "animate-spin")} />
+                            {isRunning ? "Processing..." : "Run Automation Now"}
+                        </Button>
+                    </CardContent>
+                </Card>
+
+                {/* Recent Activity */}
+                <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
+                    <div className="bg-slate-50 p-6 border-b border-slate-100">
+                        <div className="flex items-center gap-3">
+                            <Clock className="w-5 h-5 text-slate-400" />
+                            <h3 className="text-lg font-bold text-slate-900">Recent Activity</h3>
+                        </div>
+                    </div>
+                    <CardContent className="p-6">
+                        {recentActivity.length === 0 ? (
+                            <div className="py-12 text-center">
+                                <Calendar className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+                                <p className="text-slate-400 font-medium">No automation runs yet</p>
+                            </div>
+                        ) : (
                             <div className="space-y-4">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Follow-up Cycle</label>
-                                <div className="flex items-center gap-3">
-                                    <div className="flex-1">
-                                        <Input
-                                            type="number"
-                                            value={settings.followUpReminders.periodDays}
-                                            onChange={(e) => setSettings({ ...settings, followUpReminders: { ...settings.followUpReminders, periodDays: parseInt(e.target.value) } })}
-                                            className="h-12 rounded-xl bg-slate-50 border-slate-100 font-bold text-center"
-                                        />
+                                {recentActivity.slice(0, 10).map((log) => (
+                                    <div key={log.id} className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50 hover:bg-slate-100 transition-colors">
+                                        <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+                                            <CheckCircle2 className="w-5 h-5" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <p className="text-sm font-bold text-slate-900">
+                                                    {log.totalReminders} reminders sent
+                                                </p>
+                                                <span className="text-xs text-slate-400">
+                                                    {new Date(log.timestamp).toLocaleDateString('en-US', {
+                                                        month: 'short',
+                                                        day: 'numeric',
+                                                        year: 'numeric',
+                                                        hour: '2-digit',
+                                                        minute: '2-digit'
+                                                    })}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-slate-500">
+                                                {log.processedDates?.map((d: any) =>
+                                                    `${d.appointmentsFound} appointments on ${new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                                                ).join(', ')}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <span className="text-sm font-bold text-slate-500">Days</span>
-                                </div>
-                                <p className="text-[10px] text-slate-400 italic leading-relaxed">System will send a treatment update reminder every {settings.followUpReminders.periodDays} days until care is marked "Complete".</p>
+                                ))}
                             </div>
-
-                            <div className="space-y-4">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Outreach Channels</label>
-                                <div className="grid grid-cols-3 gap-3">
-                                    {[
-                                        { id: 'sms', label: 'SMS', icon: Send, color: 'text-blue-500' },
-                                        { id: 'whatsapp', label: 'WhatsApp', icon: MessageCircle, color: 'text-emerald-500' },
-                                        { id: 'email', label: 'Email', icon: Mail, color: 'text-amber-500' }
-                                    ].map(chan => (
-                                        <button
-                                            key={chan.id}
-                                            //@ts-ignore
-                                            onClick={() => setSettings({ ...settings, followUpReminders: { ...settings.followUpReminders, channels: { ...settings.followUpReminders.channels, [chan.id]: !settings.followUpReminders.channels[chan.id] } } })}
-                                            //@ts-ignore
-                                            className={cn("flex flex-col items-center p-4 rounded-2xl border-2 transition-all", settings.followUpReminders.channels[chan.id] ? "bg-blue-600 border-blue-600 text-white" : "bg-white border-slate-50 text-slate-400 shadow-sm")}
-                                        >
-                                            <chan.icon className="w-5 h-5 mb-1" />
-                                            <span className="text-[9px] font-black tracking-widest uppercase">{chan.label}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                <div className="mt-12 flex justify-center">
-                    <Button
-                        onClick={handleSave}
-                        disabled={isSaving}
-                        className="h-14 px-12 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black uppercase tracking-widest gap-2 shadow-2xl transition-all hover:scale-105"
-                    >
-                        {isSaving ? "Applying Changes..." : "Save Global Configuration"}
-                        <Save className="w-4 h-4 ml-2" />
-                    </Button>
-                </div>
-
-                {/* Automation Summary */}
-                <Card className="mt-12 border-none bg-emerald-50/50 rounded-[2rem] overflow-hidden">
-                    <CardContent className="p-8 flex items-start gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
-                            <CheckCircle2 className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <h4 className="text-sm font-black text-emerald-900 uppercase tracking-widest mb-1">Automation Status</h4>
-                            <p className="text-xs text-emerald-700 leading-relaxed font-medium">The clinical automation engine is active. It will process all upcoming bookings and ongoing treatment plans daily based on these configurations.</p>
-                        </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>

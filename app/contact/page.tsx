@@ -28,14 +28,14 @@ export default function ContactPage() {
             <Navbar />
 
             {/* Header */}
-            <section className="pt-32 pb-20 bg-white">
+            <section className="pt-24 pb-16 md:pt-32 md:pb-20 bg-white">
                 <div className="container mx-auto px-6">
                     <div className="max-w-4xl">
-                        <span className="text-blue-600 font-black uppercase text-xs tracking-widest mb-6 block">Direct Communication</span>
-                        <h1 className="text-5xl md:text-7xl font-sans font-black text-slate-900 tracking-tighter mb-8 leading-tight">
+                        <span className="text-blue-600 font-black uppercase text-xs tracking-widest mb-4 md:mb-6 block">Direct Communication</span>
+                        <h1 className="text-4xl md:text-7xl font-sans font-black text-slate-900 tracking-tighter mb-6 md:mb-8 leading-tight">
                             Get in touch for <br /><span className="text-blue-600">Clinical Assistance.</span>
                         </h1>
-                        <p className="text-slate-500 text-xl font-medium leading-relaxed max-w-2xl">
+                        <p className="text-slate-500 text-lg md:text-xl font-medium leading-relaxed max-w-2xl">
                             Our team is ready to assist you with inquiries regarding treatments, scheduling, and emergency triage. Expect a reply within 4 working hours.
                         </p>
                     </div>

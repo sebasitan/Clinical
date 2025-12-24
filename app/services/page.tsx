@@ -67,11 +67,11 @@ export default function ServicesPage() {
             <Navbar />
 
             {/* Premium Hero Section */}
-            <section className="relative pt-32 pb-32 lg:pt-48 lg:pb-48 bg-slate-900 overflow-hidden">
+            <section className="relative pt-24 pb-20 lg:pt-48 lg:pb-48 bg-slate-900 overflow-hidden">
                 {/* Abstract Background Elements */}
                 <div className="absolute inset-0 z-0">
-                    <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-blue-600/20 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2" />
-                    <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/3" />
+                    <div className="absolute top-0 right-0 w-[400px] h-[400px] lg:w-[800px] lg:h-[800px] bg-blue-600/20 rounded-full blur-[80px] lg:blur-[120px] -translate-y-1/2 translate-x-1/2" />
+                    <div className="absolute bottom-0 left-0 w-[300px] h-[300px] lg:w-[600px] lg:h-[600px] bg-indigo-600/10 rounded-full blur-[60px] lg:blur-[100px] translate-y-1/2 -translate-x-1/3" />
                 </div>
 
                 <div className="container mx-auto px-6 relative z-10 text-center">
@@ -80,14 +80,14 @@ export default function ServicesPage() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.6 }}
                     >
-                        <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-black uppercase tracking-[0.3em] mb-8">
+                        <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-black uppercase tracking-[0.3em] mb-4 md:mb-8">
                             Clinical Specialties
                         </span>
-                        <h1 className="text-6xl md:text-8xl lg:text-9xl font-black text-white tracking-tighter leading-[0.85] mb-8">
+                        <h1 className="text-5xl md:text-8xl lg:text-9xl font-black text-white tracking-tighter leading-[0.85] mb-6 md:mb-8">
                             PRECISION <br />
                             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500">DENTISTRY.</span>
                         </h1>
-                        <p className="text-slate-400 text-lg md:text-2xl max-w-3xl mx-auto leading-relaxed font-medium">
+                        <p className="text-slate-400 text-base md:text-2xl max-w-3xl mx-auto leading-relaxed font-medium">
                             Merging high-fidelity technology with biological integrity. Discover a new standard of dental care tailored to your unique anatomy.
                         </p>
                     </motion.div>
@@ -123,9 +123,9 @@ export default function ServicesPage() {
             </section>
 
             {/* Redesigned Services Grid */}
-            <section className="py-32 bg-white">
+            <section className="py-16 md:py-32 bg-white">
                 <div className="container mx-auto px-6">
-                    <div className="space-y-12">
+                    <div className="space-y-12 lg:space-y-16">
                         {services.map((s, i) => (
                             <motion.div
                                 key={i}
@@ -133,10 +133,10 @@ export default function ServicesPage() {
                                 whileInView={{ opacity: 1, x: 0 }}
                                 transition={{ duration: 0.8 }}
                                 viewport={{ once: true, margin: "-100px" }}
-                                className={`flex flex-col lg:flex-row gap-12 items-stretch group ${i % 2 !== 0 ? 'lg:flex-row-reverse' : ''}`}
+                                className={`flex flex-col lg:flex-row gap-8 lg:gap-12 items-stretch group ${i % 2 !== 0 ? 'lg:flex-row-reverse' : ''}`}
                             >
                                 {/* Media Panel */}
-                                <div className="lg:w-1/2 relative min-h-[400px] h-full rounded-[3.5rem] overflow-hidden shadow-2xl border-4 border-white">
+                                <div className="lg:w-1/2 relative min-h-[300px] md:min-h-[400px] h-full rounded-[2.5rem] md:rounded-[3.5rem] overflow-hidden shadow-xl md:shadow-2xl border-4 border-white">
                                     <Image
                                         src={s.image}
                                         alt={s.title}
@@ -146,28 +146,28 @@ export default function ServicesPage() {
                                     <div className="absolute inset-0 bg-slate-900/40 group-hover:bg-slate-900/20 transition-colors duration-500" />
 
                                     {/* Icon Floating Badge */}
-                                    <div className="absolute top-10 left-10 p-6 bg-white/90 backdrop-blur-xl rounded-3xl shadow-xl flex items-center justify-center text-blue-600">
-                                        <s.icon className="w-10 h-10" />
+                                    <div className="absolute top-6 left-6 md:top-10 md:left-10 p-4 md:p-6 bg-white/90 backdrop-blur-xl rounded-2xl md:rounded-3xl shadow-xl flex items-center justify-center text-blue-600">
+                                        <s.icon className="w-8 h-8 md:w-10 md:h-10" />
                                     </div>
 
                                     {/* Price/Type Badge */}
-                                    <div className="absolute bottom-10 right-10 px-8 py-3 bg-blue-600 text-white rounded-full font-black text-xs uppercase tracking-widest shadow-xl">
+                                    <div className="absolute bottom-6 right-6 md:bottom-10 md:right-10 px-6 py-2 md:px-8 md:py-3 bg-blue-600 text-white rounded-full font-black text-[10px] md:text-xs uppercase tracking-widest shadow-xl">
                                         {s.price}
                                     </div>
                                 </div>
 
                                 {/* Content Panel */}
-                                <div className="lg:w-1/2 flex flex-col justify-center p-8 lg:p-12 space-y-8">
-                                    <div className="space-y-4">
-                                        <h3 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none italic italic">
+                                <div className="lg:w-1/2 flex flex-col justify-center py-4 md:p-8 lg:p-12 space-y-6 md:space-y-8">
+                                    <div className="space-y-3 md:space-y-4">
+                                        <h3 className="text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 tracking-tighter leading-none italic italic">
                                             {s.title}
                                         </h3>
-                                        <p className="text-slate-500 text-xl font-medium leading-relaxed max-w-xl">
+                                        <p className="text-slate-500 text-lg md:text-xl font-medium leading-relaxed max-w-xl">
                                             {s.desc}
                                         </p>
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                                         {s.features.map((f, j) => (
                                             <div key={j} className="flex items-center gap-4 group/feature">
                                                 <div className="w-8 h-8 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-emerald-500 group-hover/feature:bg-emerald-500 group-hover/feature:text-white transition-all duration-300">
@@ -178,10 +178,10 @@ export default function ServicesPage() {
                                         ))}
                                     </div>
 
-                                    <div className="pt-6">
-                                        <Link href="/booking">
-                                            <Button size="lg" className="h-16 px-12 bg-slate-900 hover:bg-blue-600 text-white rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl hover:-translate-y-1 transition-all">
-                                                Schedule Clinical Session <ArrowRight className="ml-3 w-5 h-5" />
+                                    <div className="pt-4 md:pt-6">
+                                        <Link href="/booking" className="block w-full sm:w-auto">
+                                            <Button size="lg" className="w-full sm:w-auto h-14 md:h-16 px-8 md:px-12 bg-slate-900 hover:bg-blue-600 text-white rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl hover:-translate-y-1 transition-all">
+                                                Schedule Session <ArrowRight className="ml-3 w-5 h-5" />
                                             </Button>
                                         </Link>
                                     </div>

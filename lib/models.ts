@@ -200,10 +200,47 @@ const ConsultationSchema = new Schema({
 
 export const ConsultationModel = models.Consultation || model('Consultation', ConsultationSchema);
 
+// --- Reminder Settings Schema ---
+const ReminderSettingsSchema = new Schema({
+    enabled: { type: Boolean, default: true },
+    daysBefore: { type: [Number], default: [1, 2] }, // Send 1 and 2 days before
+    channels: {
+        sms: { type: Boolean, default: false },
+        whatsapp: { type: Boolean, default: true },
+        email: { type: Boolean, default: true }
+    },
+    updatedBy: String
+}, { timestamps: true });
+
+export const ReminderSettingsModel = models.ReminderSettings || model('ReminderSettings', ReminderSettingsSchema);
+
+// --- Reminder Log Schema ---
+const ReminderLogSchema = new Schema({
+    id: { type: String, required: true, unique: true },
+    timestamp: { type: Date, default: Date.now },
+    processedDates: [{
+        date: String,
+        daysBefore: Number,
+        appointmentsFound: Number,
+        remindersSent: {
+            whatsapp: { type: Number, default: 0 },
+            email: { type: Number, default: 0 },
+            sms: { type: Number, default: 0 }
+        }
+    }],
+    totalReminders: { type: Number, default: 0 },
+    status: { type: String, enum: ['success', 'partial', 'failed'], default: 'success' },
+    errors: [String]
+}, { timestamps: true });
+
+export const ReminderLogModel = models.ReminderLog || model('ReminderLog', ReminderLogSchema);
+
+
 // --- OTP Schema (Temporary) ---
 const OTPSchema = new Schema({
     phone: { type: String, required: true },
-    code: { type: String, required: true },
+    code: { type: String }, // Optional when using Mocean Verify
+    reqid: { type: String }, // Mocean Verify Request ID
     createdAt: { type: Date, default: Date.now, expires: 600 } // Expires in 10 minutes
 });
 

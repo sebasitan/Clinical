@@ -275,7 +275,7 @@ export default function BookingPage() {
     }
 
     try {
-      console.log(`[Flow] Requesting SMS OTP for ${patientPhone} via Twilio Verify...`)
+      console.log(`[Flow] Requesting SMS OTP for ${patientPhone} via Mocean Verify...`)
       const res = await fetch('/api/otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

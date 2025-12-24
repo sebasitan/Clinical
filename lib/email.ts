@@ -91,7 +91,7 @@ export async function sendAppointmentConfirmation(
                             <div class="footer">
                                 <p><strong>Klinik Pergigian Setapak (Sri Rampai)</strong></p>
                                 <p>16-2, Jalan 46/26, Taman Sri Rampai, 53300 Kuala Lumpur</p>
-                                <p>Phone: +60 17-510 1003 | Email: hello@kpsrirampai.com</p>
+                                <p>Phone: +60 17-510 1003 | Email: Kpsetapaksr@gmail.com</p>
                             </div>
                         </div>
                     </div>

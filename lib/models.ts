@@ -41,7 +41,7 @@ const SettingsSchema = new Schema({
     clinicName: { type: String, default: "Klinik Pergigian Setapak (Sri Rampai)" },
     address: { type: String, default: "16-2, Jalan 46/26, Taman Sri Rampai, 53300 Kuala Lumpur, Wilayah Persekutuan Kuala Lumpur, Malaysia" },
     phone: { type: String, default: "+60 17-510 1003" },
-    email: { type: String, default: "hello@kpsrirampai.com" },
+    email: { type: String, default: "Kpsetapaksr@gmail.com" },
     defaultSlotDuration: { type: Number, default: 30 },
     workingHours: {
         start: { type: String, default: "09:00" },

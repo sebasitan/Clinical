@@ -93,7 +93,7 @@ export default function ContactPage() {
                                         </div>
                                         <div>
                                             <h4 className="font-bold text-slate-900 mb-1">Email Enquiries</h4>
-                                            <p className="text-slate-500 font-medium">hello@kpsrirampai.com</p>
+                                            <p className="text-slate-500 font-medium">Kpsetapaksr@gmail.com</p>
                                         </div>
                                     </div>
                                     <div className="flex gap-6 items-start">

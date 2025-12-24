@@ -515,9 +515,11 @@ const formatTime = (time24: string) => {
 }
 
 // Appointments
-export const getAppointmentsAsync = async (): Promise<Appointment[]> => {
+export const getAppointmentsAsync = async (date?: string): Promise<Appointment[]> => {
     try {
-        const res = await fetch(`${API_BASE}/appointments`, { cache: 'no-store' });
+        let url = `${API_BASE}/appointments`;
+        if (date) url += `?date=${date}`;
+        const res = await fetch(url, { cache: 'no-store' });
         if (!res.ok) return [];
         return await res.json();
     } catch (e) {
@@ -679,6 +681,17 @@ export const getPatientsAsync = async (): Promise<Patient[]> => {
     } catch (e) {
         console.error("Failed to fetch patients", e);
         return [];
+    }
+}
+
+export const getPatientStatsAsync = async (): Promise<{ new: number, existing: number, total: number }> => {
+    try {
+        const res = await fetch(`${API_BASE}/patients?mode=stats`, { cache: 'no-store' });
+        if (!res.ok) return { new: 0, existing: 0, total: 0 };
+        return await res.json();
+    } catch (e) {
+        console.error("Failed to fetch patient stats", e);
+        return { new: 0, existing: 0, total: 0 };
     }
 }
 

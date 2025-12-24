@@ -8,9 +8,8 @@ import { useAdminAuth } from "@/hooks/use-admin-auth"
 import {
     getAppointmentsAsync,
     getDoctorsAsync,
-    getPatientsAsync,
+    getPatientStatsAsync,
     getSlotsAsync,
-    getDoctorConsultationsAsync,
 } from "@/lib/storage"
 import { formatDate } from "@/lib/date-utils"
 import type { Appointment, Doctor, Patient, Slot } from "@/lib/types"
@@ -35,9 +34,8 @@ export default function AdminDashboardPage() {
     const { isLoading, admin } = useAdminAuth()
     const [appointments, setAppointments] = useState<Appointment[]>([])
     const [doctors, setDoctors] = useState<Doctor[]>([])
-    const [patients, setPatients] = useState<Patient[]>([])
+    const [patientStats, setPatientStats] = useState({ new: 0, existing: 0, total: 0 })
     const [slots, setSlots] = useState<Slot[]>([])
-    const [doctorPatientCounts, setDoctorPatientCounts] = useState<Record<string, number>>({})
     const [isDataLoading, setIsDataLoading] = useState(true)
 
     const todayStr = new Date().toISOString().split('T')[0]
@@ -47,27 +45,21 @@ export default function AdminDashboardPage() {
     }, [])
 
     const loadData = async () => {
-        const [apts, docs, pts, slts] = await Promise.all([
-            getAppointmentsAsync(),
+        const [apts, docs, stats, slts] = await Promise.all([
+            getAppointmentsAsync(todayStr),
             getDoctorsAsync(),
-            getPatientsAsync(),
+            getPatientStatsAsync(),
             getSlotsAsync(undefined, todayStr)
         ])
         setAppointments(apts)
         setDoctors(docs)
-        setPatients(pts)
+        setPatientStats(stats)
         setSlots(slts)
-
-        // Fetch patient counts for each doctor
-        const counts: Record<string, number> = {}
-        for (const doc of docs) {
-            const consultations = await getDoctorConsultationsAsync(doc.id)
-            counts[doc.id] = consultations.length
-        }
-        setDoctorPatientCounts(counts)
 
         setIsDataLoading(false)
     }
+
+
 
     if (isLoading || isDataLoading) {
         return (
@@ -83,8 +75,8 @@ export default function AdminDashboardPage() {
     const completedToday = todayApps.filter(a => a.status === 'completed')
     const cancelledToday = todayApps.filter(a => a.status === 'cancelled')
 
-    const newPatientsCount = patients.filter(p => p.type === 'new').length
-    const existingPatientsCount = patients.filter(p => p.type === 'existing').length
+    const newPatientsCount = patientStats.new
+    const existingPatientsCount = patientStats.existing
 
     const stats = [
         { label: "Today's Load", value: todayApps.length, icon: Calendar, color: "text-slate-900", bg: "bg-slate-50" },

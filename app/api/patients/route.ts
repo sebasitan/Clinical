@@ -13,42 +13,57 @@ export async function GET(req: Request) {
             return NextResponse.json(patient);
         }
 
-        // --- NEW: Sync Logic ---
-        try {
-            const { ConsultationModel } = await import('@/lib/models');
-            // Get all unique ICs from both collections
-            const uniqueConsultationICs = await ConsultationModel.distinct('patientIC');
-            const existingPatientICs = await PatientModel.distinct('ic');
+        const mode = searchParams.get('mode');
+        if (mode === 'stats') {
+            const newPatients = await PatientModel.countDocuments({ type: 'new' });
+            const existingPatients = await PatientModel.countDocuments({ type: 'existing' }); // or type: { $ne: 'new' }
+            const total = await PatientModel.countDocuments({});
+            return NextResponse.json({
+                new: newPatients,
+                existing: existingPatients, // Simplified, assuming only two types or logical separation
+                total
+            });
+        }
 
-            // Filter out nulls/falsy values from consultation ICs
-            const validConsultationICs = uniqueConsultationICs.filter(Boolean);
+        // --- NEW: Sync Logic (Conditional) ---
+        const sync = searchParams.get('sync');
+        if (sync === 'true') {
+            try {
+                const { ConsultationModel } = await import('@/lib/models');
+                // Get all unique ICs from both collections
+                const uniqueConsultationICs = await ConsultationModel.distinct('patientIC');
+                const existingPatientICs = await PatientModel.distinct('ic');
 
-            const missingICs = validConsultationICs.filter((ic: string) => !existingPatientICs.includes(ic));
+                // Filter out nulls/falsy values from consultation ICs
+                const validConsultationICs = uniqueConsultationICs.filter(Boolean);
 
-            if (missingICs.length > 0) {
-                console.log(`[Sync] Found ${missingICs.length} missing patients in Registry. Syncing...`);
-                for (const mic of missingICs) {
-                    try {
-                        // Find any consultation record to get basic info
-                        const latestConsultation = await ConsultationModel.findOne({ patientIC: mic }).sort({ consultationDate: -1, createdAt: -1 });
-                        if (latestConsultation && latestConsultation.patientName) {
-                            await PatientModel.create({
-                                id: `PAT-${Math.random().toString(36).substring(2, 11).toUpperCase()}`,
-                                name: latestConsultation.patientName,
-                                ic: mic,
-                                phone: latestConsultation.handphoneNo || "N/A",
-                                type: 'existing',
-                                lastVisit: latestConsultation.consultationDate
-                            });
-                            console.log(`[Sync] Created patient profile for IC: ${mic}`);
+                const missingICs = validConsultationICs.filter((ic: string) => !existingPatientICs.includes(ic));
+
+                if (missingICs.length > 0) {
+                    console.log(`[Sync] Found ${missingICs.length} missing patients in Registry. Syncing...`);
+                    for (const mic of missingICs) {
+                        try {
+                            // Find any consultation record to get basic info
+                            const latestConsultation = await ConsultationModel.findOne({ patientIC: mic }).sort({ consultationDate: -1, createdAt: -1 });
+                            if (latestConsultation && latestConsultation.patientName) {
+                                await PatientModel.create({
+                                    id: `PAT-${Math.random().toString(36).substring(2, 11).toUpperCase()}`,
+                                    name: latestConsultation.patientName,
+                                    ic: mic,
+                                    phone: latestConsultation.handphoneNo || "N/A",
+                                    type: 'existing',
+                                    lastVisit: latestConsultation.consultationDate
+                                });
+                                console.log(`[Sync] Created patient profile for IC: ${mic}`);
+                            }
+                        } catch (loopErr) {
+                            console.error(`[Sync] Failed to sync IC ${mic}:`, loopErr);
                         }
-                    } catch (loopErr) {
-                        console.error(`[Sync] Failed to sync IC ${mic}:`, loopErr);
                     }
                 }
+            } catch (syncErr) {
+                console.error("[Sync] Critical error in patient synchronization:", syncErr);
             }
-        } catch (syncErr) {
-            console.error("[Sync] Critical error in patient synchronization:", syncErr);
         }
         // --- END Sync Logic ---
 

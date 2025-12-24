@@ -339,7 +339,6 @@ export default function PatientsPage() {
                                 <div className="px-2 py-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Sort Options</div>
                                 <SelectItem value="name">Sort by Name</SelectItem>
                                 <SelectItem value="ic">Sort by IC</SelectItem>
-                                <SelectItem value="doctor">Sort by Doctor</SelectItem>
                                 <SelectItem value="careStatus">Sort by Care Status</SelectItem>
                                 <SelectItem value="lastVisit">Sort by Date</SelectItem>
 

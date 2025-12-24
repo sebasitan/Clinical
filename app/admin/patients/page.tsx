@@ -40,6 +40,7 @@ export default function PatientsPage() {
         type: "existing"
     })
     const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' })
+    const [selectedDoctorId, setSelectedDoctorId] = useState<string>('all')
     const [currentPage, setCurrentPage] = useState(1)
     const itemsPerPage = 25
 
@@ -81,22 +82,35 @@ export default function PatientsPage() {
             p.ic?.toLowerCase().includes(query) ||
             p.phone?.includes(searchQuery);
 
+        // Helper function to get patient's doctor ID
+        const getPatientDoctorId = (pt: Patient) => {
+            const lastApt = appointments
+                .filter(ap => ap.patientIC === pt.ic && (ap.status === 'confirmed' || ap.status === 'completed'))
+                .sort((ap1, ap2) => new Date(ap2.appointmentDate).getTime() - new Date(ap1.appointmentDate).getTime())[0];
+            if (lastApt) return lastApt.doctorId;
+
+            const lastCon = consultations
+                .filter(c => c.patientIC === pt.ic)
+                .sort((c1, c2) => new Date(c2.consultationDate).getTime() - new Date(c1.consultationDate).getTime())[0];
+            if (lastCon) return lastCon.doctorId;
+
+            return null;
+        };
+
+        // Filter by doctor if a specific doctor is selected
+        if (selectedDoctorId !== 'all') {
+            const patientDoctorId = getPatientDoctorId(p);
+            if (patientDoctorId !== selectedDoctorId) return false;
+        }
+
+        // If basic search matches, include the patient
         if (matchesBasic) return true;
 
         // Check if doctor matches search query
         const getDoctorName = (pt: Patient) => {
-            const lastApt = appointments
-                .filter(ap => ap.patientIC === pt.ic && (ap.status === 'confirmed' || ap.status === 'completed'))
-                .sort((ap1, ap2) => new Date(ap2.appointmentDate).getTime() - new Date(ap1.appointmentDate).getTime())[0];
-            if (lastApt) {
-                const doc = doctors.find(d => d.id === lastApt.doctorId);
-                if (doc) return doc.name;
-            }
-            const lastCon = consultations
-                .filter(c => c.patientIC === pt.ic)
-                .sort((c1, c2) => new Date(c2.consultationDate).getTime() - new Date(c1.consultationDate).getTime())[0];
-            if (lastCon) {
-                const doc = doctors.find(d => d.id === lastCon.doctorId);
+            const doctorId = getPatientDoctorId(pt);
+            if (doctorId) {
+                const doc = doctors.find(d => d.id === doctorId);
                 return doc?.name || "";
             }
             return "";
@@ -306,18 +320,41 @@ export default function PatientsPage() {
                     </div>
                     <div className="flex items-center gap-4">
                         <Select
-                            value={sortConfig.key}
-                            onValueChange={(value) => handleSort(value)}
+                            value={selectedDoctorId !== 'all' ? `doctor-${selectedDoctorId}` : sortConfig.key}
+                            onValueChange={(value) => {
+                                if (value.startsWith('doctor-')) {
+                                    const doctorId = value.replace('doctor-', '');
+                                    setSelectedDoctorId(doctorId);
+                                    setCurrentPage(1);
+                                } else {
+                                    setSelectedDoctorId('all');
+                                    handleSort(value);
+                                }
+                            }}
                         >
-                            <SelectTrigger className="h-12 w-[180px] rounded-2xl border-slate-200 font-bold">
-                                <SelectValue placeholder="Sort by..." />
+                            <SelectTrigger className="h-12 w-[200px] rounded-2xl border-slate-200 font-bold">
+                                <SelectValue placeholder="Sort & Filter..." />
                             </SelectTrigger>
                             <SelectContent>
+                                <div className="px-2 py-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Sort Options</div>
                                 <SelectItem value="name">Sort by Name</SelectItem>
                                 <SelectItem value="ic">Sort by IC</SelectItem>
                                 <SelectItem value="doctor">Sort by Doctor</SelectItem>
                                 <SelectItem value="careStatus">Sort by Care Status</SelectItem>
                                 <SelectItem value="lastVisit">Sort by Date</SelectItem>
+
+                                <div className="my-2 h-px bg-slate-100" />
+
+                                <div className="px-2 py-1.5 text-[10px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-1.5">
+                                    <Stethoscope className="w-3 h-3" />
+                                    Filter by Doctor
+                                </div>
+                                <SelectItem value="doctor-all">All Doctors</SelectItem>
+                                {doctors.filter(d => d.isActive).map(doctor => (
+                                    <SelectItem key={doctor.id} value={`doctor-${doctor.id}`}>
+                                        {doctor.name}
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
 

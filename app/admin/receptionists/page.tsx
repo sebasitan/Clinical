@@ -46,10 +46,15 @@ export default function ReceptionistsPage() {
 
     // Form state
     const [name, setName] = useState("")
+    const [username, setUsername] = useState("")
+    const [password, setPassword] = useState("")
     const [photo, setPhoto] = useState("")
     const [phone, setPhone] = useState("")
     const [email, setEmail] = useState("")
     const [shift, setShift] = useState<Receptionist["shift"]>("full-day")
+
+    // Password Reset
+    const [resetId, setResetId] = useState<string | null>(null)
 
     const loadData = async () => {
         const data = await getReceptionistsAsync()
@@ -87,7 +92,7 @@ export default function ReceptionistsPage() {
     };
 
     const handleAdd = async () => {
-        if (!name || !phone || !email) {
+        if (!name || !username || !password || !phone || !email) {
             toast({ title: "Error", description: "Please fill in all required fields", variant: "destructive" })
             return
         }
@@ -96,6 +101,8 @@ export default function ReceptionistsPage() {
         try {
             await addReceptionistAsync({
                 name,
+                username,
+                password,
                 photo: photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
                 phone,
                 email,
@@ -125,6 +132,22 @@ export default function ReceptionistsPage() {
         }
     }
 
+    const handleResetPassword = async () => {
+        if (!resetId) return
+        try {
+            const res = await fetch(`/api/receptionists/${resetId}/reset-password`, { method: 'POST' })
+            const data = await res.json()
+            if (res.ok) {
+                toast({ title: "Password Reset", description: `New Password: ${data.password}` })
+                setResetId(null)
+            } else {
+                toast({ title: "Error", description: "Failed to reset password", variant: "destructive" })
+            }
+        } catch (e) {
+            toast({ title: "Error", description: "Connection failed", variant: "destructive" })
+        }
+    }
+
     const toggleStatus = async (rec: Receptionist) => {
         try {
             await updateReceptionistAsync(rec.id, { isActive: !rec.isActive })
@@ -137,6 +160,8 @@ export default function ReceptionistsPage() {
 
     const resetForm = () => {
         setName("")
+        setUsername("")
+        setPassword("")
         setPhoto("")
         setPhone("")
         setEmail("")
@@ -157,14 +182,14 @@ export default function ReceptionistsPage() {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
                     <div>
                         <h1 className="text-4xl font-sans font-bold text-slate-900 tracking-tight">Receptionists</h1>
-                        <p className="text-slate-500 mt-1">Manage front desk staff and shift schedules.</p>
+                        <p className="text-slate-500 mt-1">Manage front desk staff, shift schedules, and credentials.</p>
                     </div>
 
                     <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                         <DialogTrigger asChild>
                             <Button className="h-14 px-8 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold transition-all shadow-xl shadow-slate-200 gap-2 group">
                                 <Plus className="w-5 h-5" />
-                                Hire Receptionist
+                                Add Receptionist
                             </Button>
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-[450px] rounded-[2.5rem] border-none shadow-2xl p-0 overflow-hidden">
@@ -197,6 +222,16 @@ export default function ReceptionistsPage() {
                                     <div className="space-y-2">
                                         <Label htmlFor="name" className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Full Name</Label>
                                         <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="h-12 rounded-xl bg-slate-50 border-slate-100 focus:bg-white transition-all px-4" placeholder="Alice Wong" />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="username" className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Username</Label>
+                                            <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} className="h-12 rounded-xl bg-slate-50 border-slate-100 px-4" placeholder="alice.w" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="password" className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Password</Label>
+                                            <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="h-12 rounded-xl bg-slate-50 border-slate-100 px-4" placeholder="••••••" />
+                                        </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
@@ -268,10 +303,14 @@ export default function ReceptionistsPage() {
                                         <h3 className="text-2xl font-black text-slate-900 tracking-tight transition-colors group-hover:text-blue-600">{rec.name}</h3>
                                         <div className="flex items-center gap-2.5">
                                             <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
-                                                <Clock className="w-3.5 h-3.5" />
+                                                <UserCircle className="w-3.5 h-3.5" />
                                             </div>
                                             <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">
-                                                {rec.shift.replace('-', ' ')} Shift
+                                                {rec.username}
+                                            </span>
+                                            <span className="text-slate-300">|</span>
+                                            <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">
+                                                {rec.shift.replace('-', ' ')}
                                             </span>
                                         </div>
                                     </div>
@@ -290,14 +329,10 @@ export default function ReceptionistsPage() {
                                     <div className="flex gap-4">
                                         <Button
                                             variant="outline"
-                                            className={cn(
-                                                "flex-1 h-14 rounded-2xl border-slate-100 transition-all font-bold gap-3",
-                                                rec.isActive ? "hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100 text-slate-600" : "hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-100 text-slate-600"
-                                            )}
-                                            onClick={() => toggleStatus(rec)}
+                                            className="flex-1 h-14 rounded-2xl border-slate-100 hover:bg-slate-50 hover:text-slate-900 text-slate-500 font-bold"
+                                            onClick={() => setResetId(rec.id)}
                                         >
-                                            <Activity className="w-4 h-4" />
-                                            {rec.isActive ? "Set Inactive" : "Set Active"}
+                                            Reset Password
                                         </Button>
                                         <Button
                                             variant="outline"
@@ -305,6 +340,18 @@ export default function ReceptionistsPage() {
                                             onClick={() => handleDelete(rec.id)}
                                         >
                                             <Trash2 className="w-5 h-5" />
+                                        </Button>
+                                    </div>
+                                    <div className="mt-4">
+                                        <Button
+                                            variant="ghost"
+                                            className={cn(
+                                                "w-full h-10 rounded-xl transition-all font-bold",
+                                                rec.isActive ? "text-emerald-600 bg-emerald-50 hover:bg-emerald-100" : "text-slate-400 bg-slate-50 hover:bg-slate-100"
+                                            )}
+                                            onClick={() => toggleStatus(rec)}
+                                        >
+                                            {rec.isActive ? "Active Staff" : "Inactive"}
                                         </Button>
                                     </div>
                                 </div>
@@ -323,6 +370,26 @@ export default function ReceptionistsPage() {
                     )}
                 </div>
             </main>
+
+            {/* Password Reset Dialog */}
+            <Dialog open={!!resetId} onOpenChange={(open: boolean) => !open && setResetId(null)}>
+                <DialogContent className="sm:max-w-[400px] rounded-[2rem] border-none shadow-2xl overflow-hidden">
+                    <DialogHeader className="mb-4">
+                        <DialogTitle className="text-xl font-bold">Reset Credential</DialogTitle>
+                        <DialogDescription>
+                            This will generate a new random password for the selected receptionist.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <div className="flex gap-2 w-full">
+                            <Button variant="ghost" className="flex-1 rounded-xl h-12" onClick={() => setResetId(null)}>Cancel</Button>
+                            <Button className="flex-1 rounded-xl h-12 font-bold bg-slate-900 text-white" onClick={handleResetPassword}>
+                                Generate New Password
+                            </Button>
+                        </div>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

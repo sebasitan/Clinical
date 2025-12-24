@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 
 export default function ArrivalsPage() {
-    const { isLoading } = useAdminAuth()
+    const { admin, isLoading } = useAdminAuth()
     const { toast } = useToast()
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
     const [doctors, setDoctors] = useState<Doctor[]>([])
@@ -44,7 +44,14 @@ export default function ArrivalsPage() {
 
     const handleStatusUpdate = async (appointmentId: string, status: Appointment['status']) => {
         try {
-            await updateAppointmentStatusAsync(appointmentId, status)
+            // Pass the current admin user as the manager of this action
+            const managerOfAction = {
+                id: admin?.id || 'unknown',
+                name: admin?.username || 'System',
+                role: admin?.role || 'admin'
+            }
+
+            await updateAppointmentStatusAsync(appointmentId, status, managerOfAction)
             toast({
                 title: status === 'arrived' ? "Patient Checked In" : "Status Updated",
                 description: status === 'arrived' ? "Patient has been marked as arrived." : `Patient marked as ${status}.`
@@ -116,7 +123,7 @@ export default function ArrivalsPage() {
                                         <tr className="bg-slate-50/50 border-b border-slate-100">
                                             <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Time</th>
                                             <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Patient Details</th>
-                                            <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Provider</th>
+                                            <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Doctor</th>
                                             <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 text-right">Actions</th>
                                         </tr>
                                     </thead>
@@ -214,6 +221,14 @@ export default function ArrivalsPage() {
                                                         Mark Done
                                                     </Button>
                                                 </div>
+                                                {apt.managedBy && (
+                                                    <div className="mt-3 pt-3 border-t border-emerald-200/50">
+                                                        <p className="text-[9px] text-emerald-700 italic flex items-center gap-1">
+                                                            <CheckCircle2 className="w-3 h-3" />
+                                                            Checked in by {apt.managedBy.name}
+                                                        </p>
+                                                    </div>
+                                                )}
                                             </CardContent>
                                         </Card>
                                     )

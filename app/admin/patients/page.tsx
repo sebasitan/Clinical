@@ -17,7 +17,7 @@ import { Search, UserSearch, History, Mail, Phone, ExternalLink, Activity, Calen
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export default function PatientsPage() {
-    const { isLoading } = useAdminAuth()
+    const { admin, isLoading } = useAdminAuth()
     const [patients, setPatients] = useState<Patient[]>([])
     const [appointments, setAppointments] = useState<Appointment[]>([])
     const [doctors, setDoctors] = useState<Doctor[]>([])
@@ -178,10 +178,20 @@ export default function PatientsPage() {
         if (!editingPatient) return
         setIsSaving(true)
         try {
+            const updatedPatient = {
+                ...editingPatient,
+                lastUpdatedBy: {
+                    id: admin?.id || 'unknown',
+                    name: admin?.username || 'System',
+                    role: admin?.role || 'admin'
+                },
+                lastUpdatedAt: new Date().toISOString()
+            }
+
             const res = await fetch('/api/patients', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(editingPatient)
+                body: JSON.stringify(updatedPatient)
             })
             if (res.ok) {
                 await loadData()
@@ -409,7 +419,7 @@ export default function PatientsPage() {
                                                     {sortConfig.key === 'ic' && (sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
                                                 </div>
                                             </TableHead>
-                                            <TableHead className="px-4 h-12 text-[11px] font-black uppercase text-slate-400 whitespace-nowrap">Contact</TableHead>
+                                            <TableHead className="px-4 h-12 text-[11px] font-black uppercase text-slate-400 whitespace-nowrap">Last Update</TableHead>
                                             <TableHead
                                                 className="px-4 h-12 text-[11px] font-black uppercase text-slate-400 cursor-pointer hover:bg-slate-100 transition-colors whitespace-nowrap"
                                                 onClick={() => handleSort('careStatus')}
@@ -441,9 +451,16 @@ export default function PatientsPage() {
                                                     <span className="text-sm font-bold text-slate-600">{patient.ic}</span>
                                                 </TableCell>
                                                 <TableCell className="px-4 py-3 whitespace-nowrap">
-                                                    <div className="flex items-center gap-2 text-slate-900">
-                                                        <Phone className="w-3.5 h-3.5 text-slate-400" />
-                                                        <span className="text-sm font-bold">{patient.phone}</span>
+                                                    <div className="flex flex-col">
+                                                        <div className="flex items-center gap-2 text-slate-900">
+                                                            <Phone className="w-3.5 h-3.5 text-slate-400" />
+                                                            <span className="text-sm font-bold">{patient.phone}</span>
+                                                        </div>
+                                                        {patient.lastUpdatedBy && (
+                                                            <span className="text-[9px] text-slate-400 mt-0.5">
+                                                                By: {patient.lastUpdatedBy.name}
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="px-4 py-3 whitespace-nowrap">

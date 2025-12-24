@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast"
 import { getDoctorsAsync, addAppointmentAsync, getSlotsAsync, seedDatabaseAsync, getDoctorScheduleAsync } from "@/lib/storage"
 import type { Doctor, TimeSlot, Slot, DoctorWeeklySchedule, DayOfWeek } from "@/lib/types"
-import { CheckCircle2, User, Clock, Phone, Mail, Check, Sparkles, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Shield, ArrowRight, MapPin, Stethoscope, Smile } from "lucide-react"
+import { CheckCircle2, User, Clock, Phone, Mail, Check, Sparkles, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Shield, ArrowRight, MapPin, Stethoscope, Smile, RefreshCcw, ShieldX } from "lucide-react"
 import { CalendarDatePickerContent } from "@/components/ui/calendar-date-picker"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
@@ -253,6 +253,13 @@ export default function BookingPage() {
         })
         return
       }
+
+      toast({
+        title: "Identity Verified",
+        description: "Your details have been confirmed. Proceeding...",
+        variant: "default",
+        className: "bg-emerald-50 border-emerald-200 text-emerald-800"
+      })
     }
 
     if (step === 5) return;
@@ -475,15 +482,15 @@ export default function BookingPage() {
           </div>
 
           {step === 1 && (
-            <div className="w-full max-w-5xl mx-auto bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[550px]">
-              <div className="bg-slate-900 text-white md:w-1/2 p-10 flex flex-col justify-between relative overflow-hidden">
+            <div className="w-full max-w-5xl mx-auto bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[auto] md:min-h-[550px]">
+              <div className="bg-slate-900 text-white md:w-1/2 p-6 md:p-10 flex flex-col justify-between relative overflow-hidden">
                 <div className="relative z-10">
-                  <span className="inline-block py-1 px-3 rounded-full bg-white/10 text-blue-300 text-xs font-bold uppercase tracking-widest mb-6">Booking Portal</span>
-                  <h1 className="font-bold text-4xl md:text-5xl leading-tight mb-4">Let's Schedule <br /> <span className="text-blue-400">Your Visit</span></h1>
-                  <p className="text-slate-400 text-lg max-w-sm">We're excited to see you. Please tell us if you have visited us before so we can tailor your experience.</p>
+                  <span className="inline-block py-1 px-3 rounded-full bg-white/10 text-blue-300 text-[10px] md:text-xs font-bold uppercase tracking-widest mb-4 md:mb-6">Booking Portal</span>
+                  <h1 className="font-bold text-3xl md:text-5xl leading-tight mb-4">Let's Schedule <br /> <span className="text-blue-400">Your Visit</span></h1>
+                  <p className="text-slate-400 text-sm md:text-lg max-w-sm">We're excited to see you. Please tell us if you have visited us before so we can tailor your experience.</p>
                 </div>
               </div>
-              <div className="md:w-1/2 p-10 bg-white flex flex-col justify-center gap-6">
+              <div className="md:w-1/2 p-6 md:p-10 bg-white flex flex-col justify-center gap-6">
                 <div className="space-y-4">
                   <h3 className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] ml-1">Appointment Selection</h3>
                   <button
@@ -525,19 +532,19 @@ export default function BookingPage() {
           )}
 
           {step === 2 && (
-            <div className="w-full max-w-5xl mx-auto bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[550px]">
-              <div className="bg-slate-900 text-white md:w-1/3 p-10 flex flex-col relative overflow-hidden">
-                <h2 className="text-3xl font-bold mb-4">Choose Specialist</h2>
+            <div className="w-full max-w-5xl mx-auto bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[auto] md:min-h-[550px]">
+              <div className="bg-slate-900 text-white md:w-1/3 p-6 md:p-10 flex flex-col relative overflow-hidden shrink-0">
+                <h2 className="text-2xl md:text-3xl font-bold mb-2 md:mb-4">Choose Specialist</h2>
                 <p className="text-slate-400 text-sm">Select a doctor for your visit.</p>
               </div>
-              <div className="md:w-2/3 p-8 bg-white overflow-y-auto max-h-[600px]">
-                <div className="grid gap-4">
+              <div className="md:w-2/3 p-4 md:p-8 bg-white overflow-y-auto max-h-[500px] md:max-h-[600px]">
+                <div className="grid gap-3 md:gap-4">
                   {doctors.map((doctor) => (
-                    <div key={doctor.id} onClick={() => { setSelectedDoctorId(doctor.id); setStep(3); }} className={`group flex items-center gap-5 p-4 rounded-3xl border cursor-pointer transition-all ${selectedDoctorId === doctor.id ? "border-blue-500 bg-blue-50" : "border-slate-100 hover:border-blue-200"}`}>
-                      <Avatar className="w-16 h-16 rounded-2xl"><AvatarImage src={doctor.photo} className="object-cover" /><AvatarFallback>{doctor.name.charAt(0)}</AvatarFallback></Avatar>
+                    <div key={doctor.id} onClick={() => { setSelectedDoctorId(doctor.id); setStep(3); }} className={`group flex items-center gap-4 md:gap-5 p-3 md:p-4 rounded-3xl border cursor-pointer transition-all ${selectedDoctorId === doctor.id ? "border-blue-500 bg-blue-50" : "border-slate-100 hover:border-blue-200"}`}>
+                      <Avatar className="w-12 h-12 md:w-16 md:h-16 rounded-2xl"><AvatarImage src={doctor.photo} className="object-cover" /><AvatarFallback>{doctor.name.charAt(0)}</AvatarFallback></Avatar>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-lg text-slate-900 group-hover:text-blue-700 truncate">{doctor.name}</h3>
-                        <p className="text-blue-600 text-sm font-medium">{doctor.specialization}</p>
+                        <h3 className="font-bold text-base md:text-lg text-slate-900 group-hover:text-blue-700 truncate">{doctor.name}</h3>
+                        <p className="text-blue-600 text-xs md:text-sm font-medium">{doctor.specialization}</p>
                       </div>
                       <ArrowRight className="w-5 h-5 text-slate-300 group-hover:text-blue-600" />
                     </div>
@@ -592,12 +599,12 @@ export default function BookingPage() {
                   </div>
                 </div>
 
-                <div className="w-full lg:w-1/2 bg-white rounded-[3rem] shadow-2xl overflow-hidden flex flex-col border border-slate-100">
-                  <div className="bg-slate-900 p-8 text-white h-[150px] flex flex-col justify-center items-center">
+                <div className="w-full lg:w-1/2 bg-white rounded-[3rem] shadow-2xl overflow-hidden flex flex-col border border-slate-100" ref={timeSlotsRef}>
+                  <div className="bg-slate-900 p-6 md:p-8 text-white h-[120px] md:h-[150px] flex flex-col justify-center items-center">
                     <span className="text-blue-300 font-bold text-xs uppercase tracking-widest mb-2">Available Slots</span>
-                    <h3 className="font-bold text-4xl">{selectedTimeSlot ? selectedTimeSlot.split(' - ')[0] : '--:--'}</h3>
+                    <h3 className="font-bold text-3xl md:text-4xl">{selectedTimeSlot ? selectedTimeSlot.split(' - ')[0] : '--:--'}</h3>
                   </div>
-                  <div className="p-8 flex-1 overflow-y-auto">
+                  <div className="p-4 md:p-8 flex-1 overflow-y-auto">
                     {!selectedDate ? <p className="col-span-full text-center py-10 text-slate-400">Choose a date first</p> : (
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                         {dailySlots.length === 0 ? (
@@ -631,12 +638,12 @@ export default function BookingPage() {
           )}
 
           {step === 4 && (
-            <div className="w-full max-w-5xl mx-auto bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[550px]">
-              <div className="bg-slate-900 text-white md:w-1/3 p-10 flex flex-col">
-                <h2 className="text-3xl font-bold mb-4">Your Details</h2>
+            <div className="w-full max-w-5xl mx-auto bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[auto] md:min-h-[550px]">
+              <div className="bg-slate-900 text-white md:w-1/3 p-6 md:p-10 flex flex-col">
+                <h2 className="text-2xl md:text-3xl font-bold mb-4">Your Details</h2>
                 <p className="text-slate-400 text-sm">Fill in your information accurately.</p>
               </div>
-              <div className="md:w-2/3 p-8 space-y-6">
+              <div className="md:w-2/3 p-6 md:p-8 space-y-6">
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Patient IC / ID Number</Label>
@@ -692,10 +699,10 @@ export default function BookingPage() {
                   <Button onClick={handleBack} variant="ghost" className="h-12 rounded-2xl flex-1 font-bold text-slate-500">Back</Button>
                   <Button
                     onClick={() => handleNext()}
-                    disabled={!isPatientValidated || isValidatingPatient}
+                    disabled={isValidatingPatient}
                     className={cn(
                       "h-12 rounded-2xl flex-1 font-bold shadow-lg transition-all",
-                      isPatientValidated ? "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-100" : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                      isPatientValidated ? "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-100" : "bg-slate-900 text-white"
                     )}
                   >
                     Confirm Identity
@@ -706,15 +713,15 @@ export default function BookingPage() {
           )}
 
           {step === 5 && (
-            <div className="w-full max-w-5xl mx-auto bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[550px]">
-              <div className="bg-slate-900 text-white md:w-1/3 p-10">
-                <h2 className="text-3xl font-bold mb-8">Review</h2>
+            <div className="w-full max-w-5xl mx-auto bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[auto] md:min-h-[550px]">
+              <div className="bg-slate-900 text-white md:w-1/3 p-6 md:p-10">
+                <h2 className="text-2xl md:text-3xl font-bold mb-8">Review</h2>
                 <div className="space-y-4 text-sm">
                   <p className="font-bold text-white">{selectedDoctor?.name}</p>
                   <p className="text-slate-400">{selectedDate} at {selectedTimeSlot}</p>
                 </div>
               </div>
-              <div className="md:w-2/3 p-10 flex flex-col items-center justify-center">
+              <div className="md:w-2/3 p-6 md:p-10 flex flex-col items-center justify-center">
                 {!showOtpVerification ? (
                   <div className="space-y-8 w-full max-w-sm text-center">
                     <div className="bg-slate-50 p-6 rounded-3xl text-left space-y-2">
@@ -740,13 +747,13 @@ export default function BookingPage() {
           )}
 
           {step === 6 && (
-            <div className="flex flex-col items-center justify-center text-center py-12 max-w-2xl mx-auto px-6">
-              <div className="w-24 h-24 bg-emerald-500 text-white rounded-full flex items-center justify-center mb-8 shadow-2xl shadow-emerald-200 animate-in zoom-in duration-500">
-                <Check className="w-12 h-12" />
+            <div className="flex flex-col items-center justify-center text-center py-6 md:py-12 max-w-2xl mx-auto px-4 md:px-6">
+              <div className="w-16 h-16 md:w-24 md:h-24 bg-emerald-500 text-white rounded-full flex items-center justify-center mb-6 md:mb-8 shadow-2xl shadow-emerald-200 animate-in zoom-in duration-500">
+                <Check className="w-8 h-8 md:w-12 md:h-12" />
               </div>
 
-              <h1 className="text-4xl font-black text-slate-900 mb-2 mt-2 tracking-tight">Confirmed!</h1>
-              <p className="text-slate-500 mb-10 text-lg">Your appointment has been successfully scheduled.</p>
+              <h1 className="text-2xl md:text-4xl font-black text-slate-900 mb-2 mt-2 tracking-tight">Confirmed!</h1>
+              <p className="text-slate-500 mb-6 md:mb-10 text-base md:text-lg">Your appointment has been successfully scheduled.</p>
 
               <div className="w-full bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden mb-12 text-left">
                 <div className="bg-slate-50 px-8 py-5 border-b border-slate-100 flex justify-between items-center" id="summary-header">

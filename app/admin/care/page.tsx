@@ -16,7 +16,7 @@ import type { Patient } from "@/lib/types"
 import { RefreshCw } from "lucide-react"
 
 export default function FollowUpsPage() {
-    const { isLoading } = useAdminAuth()
+    const { admin, isLoading } = useAdminAuth()
     const [patients, setPatients] = useState<any[]>([])
     const [searchQuery, setSearchQuery] = useState("")
     const [editingFollowUp, setEditingFollowUp] = useState<any>(null)
@@ -46,10 +46,23 @@ export default function FollowUpsPage() {
         if (!editingFollowUp) return
         setIsSaving(true)
         try {
+            const updatedPatient = {
+                ...editingFollowUp,
+                continuedTreatment: {
+                    ...editingFollowUp.continuedTreatment,
+                    lastUpdatedBy: {
+                        id: admin?.id || 'unknown',
+                        name: admin?.username || 'System',
+                        role: admin?.role || 'admin'
+                    },
+                    lastUpdatedAt: new Date().toISOString()
+                }
+            }
+
             const res = await fetch('/api/patients', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(editingFollowUp)
+                body: JSON.stringify(updatedPatient)
             })
             if (res.ok) {
                 await loadData()
@@ -182,6 +195,11 @@ export default function FollowUpsPage() {
                                                 <p className="text-[11px] text-slate-500 italic line-clamp-1">
                                                     {patient.continuedTreatment?.notes || 'No visit notes'}
                                                 </p>
+                                                {patient.continuedTreatment?.lastUpdatedBy && (
+                                                    <p className="text-[9px] text-slate-400 mt-1">
+                                                        Updated by {patient.continuedTreatment.lastUpdatedBy.name}
+                                                    </p>
+                                                )}
                                             </TableCell>
                                             <TableCell className="px-8 py-6">
                                                 <div className="flex items-center gap-2">

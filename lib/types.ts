@@ -47,6 +47,18 @@ export type Patient = {
     lastVisit?: string
     medicalAlerts?: string
     type: "new" | "existing"
+    createdBy?: {
+        id: string
+        name: string
+        role: string
+    }
+    createdAt?: string
+    lastUpdatedBy?: {
+        id: string
+        name: string
+        role: string
+    }
+    lastUpdatedAt?: string
     continuedTreatment?: {
         active: boolean
         nextFollowUpDate?: string | Date
@@ -58,6 +70,12 @@ export type Patient = {
             whatsapp: boolean
             email: boolean
         }
+        lastUpdatedBy?: {
+            id: string
+            name: string
+            role: string
+        }
+        lastUpdatedAt?: string
     }
 }
 
@@ -90,13 +108,19 @@ export type Appointment = {
     doctorId: string
     status: "pending" | "confirmed" | "arrived" | "completed" | "cancelled" | "no-show"
     createdAt: string
+    managedBy?: {
+        id: string
+        name: string
+        role: string
+    }
+    managedAt?: string
 }
 
 export type Admin = {
     id: string
     username: string
     password?: string
-    role: "super-admin" | "admin" | "receptionist"
+    role: "super-admin" | "admin" | "receptionist" | "doctor"
     lastLogin?: string
 }
 

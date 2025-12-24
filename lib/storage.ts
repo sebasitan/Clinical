@@ -195,6 +195,11 @@ export const authenticateAdmin = (username: string, password?: string): Admin | 
     const admins = getAdmins()
     const found = admins.find((a) => a.username === username && (a.password === password || !a.password))
     if (found) {
+        // Explicitly block doctors from logging in
+        if (found.role === 'doctor') {
+            return null
+        }
+
         const updated = { ...found, lastLogin: new Date().toISOString() }
         setCurrentAdmin(updated)
         addAuditLog(found.id, found.username, "Login", "Successful session start")
@@ -613,11 +618,11 @@ export const deleteConsultationRecordAsync = async (id: string): Promise<void> =
     if (!res.ok) throw new Error("Failed to delete record");
 }
 
-export const updateAppointmentStatusAsync = async (id: string, status: Appointment["status"]) => {
+export const updateAppointmentStatusAsync = async (id: string, status: Appointment["status"], managedBy?: { id: string, name: string, role: string }) => {
     const res = await fetch(`${API_BASE}/appointments/${id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
+        body: JSON.stringify({ status, managedBy })
     });
     if (!res.ok) throw new Error('Failed to update appointment status');
     return await res.json();
@@ -743,6 +748,14 @@ export const updateReceptionistAsync = async (id: string, updates: Partial<Recep
         body: JSON.stringify(updates)
     });
     if (!res.ok) throw new Error('Failed to update receptionist');
+    return await res.json();
+}
+
+export const resetReceptionistPasswordAsync = async (id: string) => {
+    const res = await fetch(`${API_BASE}/receptionists/${id}/reset-password`, {
+        method: 'POST'
+    });
+    if (!res.ok) throw new Error('Failed to reset password');
     return await res.json();
 }
 

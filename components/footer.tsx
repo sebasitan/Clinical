@@ -95,12 +95,8 @@ export function Footer() {
                         <h4 className="text-sm font-black uppercase tracking-widest mb-8 text-blue-400">Opening Hours</h4>
                         <ul className="space-y-4">
                             <li className="flex justify-between items-center text-sm">
-                                <span className="text-slate-400">Monday — Saturday</span>
-                                <span className="text-white font-bold">09:00 — 21:00</span>
-                            </li>
-                            <li className="flex justify-between items-center text-sm">
-                                <span className="text-slate-400">Sunday</span>
-                                <span className="text-rose-400 font-bold uppercase tracking-widest text-xs">Closed</span>
+                                <span className="text-slate-400">Monday — Sunday</span>
+                                <span className="text-white font-bold">09:00 — 00:00</span>
                             </li>
                         </ul>
                         <div className="mt-8 p-4 bg-blue-600/10 rounded-2xl border border-blue-600/20">

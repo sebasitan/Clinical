@@ -23,7 +23,11 @@ export function Navbar() {
                         </div>
                         <div className="leading-tight">
                             <span className="font-bold text-xl text-slate-900 tracking-tight block">Pergigian Setapak (Sri Rampai)</span>
-                            <span className="text-[10px] text-blue-600 font-black uppercase tracking-widest">Klinik Pergigian</span>
+                            <span className="text-[10px] text-blue-600 font-black uppercase tracking-widest flex items-center gap-2">
+                                <span>Klinik Pergigian</span>
+                                <span className="w-1 h-1 bg-blue-600 rounded-full"></span>
+                                <span className="text-slate-400">Established since 1987</span>
+                            </span>
                         </div>
                     </Link>
 

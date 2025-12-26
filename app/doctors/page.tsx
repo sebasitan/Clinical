@@ -18,7 +18,7 @@ export default function DoctorsPage() {
             creds: ["BDS", "General Practice Residency"]
         },
         {
-            name: "Dr. Durshayine",
+            name: "Dr. Kanagarathinam",
             role: "Dental Practitioner",
             specialty: "Pediatric Care",
             bio: "Dedicated to providing gentle and effective dental care for children, ensuring a positive experience from a young age.",
@@ -26,7 +26,7 @@ export default function DoctorsPage() {
             creds: ["BDS", "Pediatric Dentistry Clinical Fellowship"]
         },
         {
-            name: "Dr. Kanagarathinam",
+            name: "Dr. Durshayine",
             role: "Dental Practitioner",
             specialty: "Restorative Dentistry",
             bio: "Specializes in restoring dental function and aesthetics using advanced materials and meticulous clinical skills.",

@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoceanAPI Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+        
+        h1 {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 30px;
+        }
+        
+        button {
+            padding: 14px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .btn-sms {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-whatsapp {
+            background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+            color: white;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .result {
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: 10px;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .result.success {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            color: #155724;
+            display: block;
+        }
+        
+        .result.error {
+            background: #f8d7da;
+            border: 2px solid #dc3545;
+            color: #721c24;
+            display: block;
+        }
+        
+        .result-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+        
+        .result-details {
+            font-size: 14px;
+            line-height: 1.6;
+            font-family: 'Courier New', monospace;
+            background: rgba(0, 0, 0, 0.05);
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            word-break: break-all;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .loading.active {
+            display: block;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .info-box {
+            background: #e7f3ff;
+            border: 2px solid #2196F3;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #0c5a91;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 MoceanAPI Test</h1>
+        <p class="subtitle">Test SMS & WhatsApp Integration</p>
+        
+        <div class="info-box">
+            💡 <strong>Tip:</strong> Use Malaysian phone format (e.g., 60123456789 or 0123456789)
+        </div>
+        
+        <form id="testForm">
+            <div class="form-group">
+                <label for="phone">Phone Number *</label>
+                <input 
+                    type="tel" 
+                    id="phone" 
+                    name="phone" 
+                    placeholder="60123456789 or 0123456789"
+                    required
+                >
+            </div>
+            
+            <div class="form-group">
+                <label for="message">Custom Message (Optional)</label>
+                <textarea 
+                    id="message" 
+                    name="message" 
+                    placeholder="Leave empty for default test message"
+                ></textarea>
+            </div>
+            
+            <div class="button-group">
+                <button type="button" class="btn-sms" onclick="sendTest('sms')">
+                    📱 Send SMS
+                </button>
+                <button type="button" class="btn-whatsapp" onclick="sendTest('whatsapp')">
+                    💬 Send WhatsApp
+                </button>
+            </div>
+        </form>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 10px; color: #666;">Sending message...</p>
+        </div>
+        
+        <div class="result" id="result"></div>
+    </div>
+    
+    <script>
+        async function sendTest(type) {
+            const phone = document.getElementById('phone').value.trim();
+            const message = document.getElementById('message').value.trim();
+            const resultDiv = document.getElementById('result');
+            const loadingDiv = document.getElementById('loading');
+            const buttons = document.querySelectorAll('button');
+            
+            if (!phone) {
+                showResult('error', 'Please enter a phone number');
+                return;
+            }
+            
+            // Hide previous result
+            resultDiv.style.display = 'none';
+            loadingDiv.classList.add('active');
+            buttons.forEach(btn => btn.disabled = true);
+            
+            try {
+                const response = await fetch('/api/test-mocean', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        type,
+                        phone,
+                        message: message || undefined
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult('success', 
+                        `✅ ${type.toUpperCase()} sent successfully!`,
+                        `Phone: ${data.phone}\nMessage: ${data.message}\nMessage ID: ${data.result.msgid || 'N/A'}`
+                    );
+                } else {
+                    showResult('error', 
+                        `❌ Failed to send ${type.toUpperCase()}`,
+                        `Error: ${data.result?.error || data.error || 'Unknown error'}`
+                    );
+                }
+            } catch (error) {
+                showResult('error', 
+                    '❌ Request Failed',
+                    `Error: ${error.message}`
+                );
+            } finally {
+                loadingDiv.classList.remove('active');
+                buttons.forEach(btn => btn.disabled = false);
+            }
+        }
+        
+        function showResult(type, title, details = '') {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = `result ${type}`;
+            resultDiv.innerHTML = `
+                <div class="result-title">${title}</div>
+                ${details ? `<div class="result-details">${details}</div>` : ''}
+            `;
+            resultDiv.style.display = 'block';
+        }
+        
+        // Allow Enter key in phone field to trigger SMS send
+        document.getElementById('phone').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                sendTest('sms');
+            }
+        });
+    </script>
+</body>
+</html>

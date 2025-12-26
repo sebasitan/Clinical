@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import dbConnect from '@/lib/db';
 import { DoctorDateSchedule } from '@/lib/models';
 
 // GET /api/doctors/[id]/date-schedule
@@ -7,6 +8,7 @@ export async function GET(
     { params }: { params: { id: string } }
 ) {
     try {
+        await dbConnect();
         const doctorId = params.id;
         const schedule = await DoctorDateSchedule.findOne({ doctorId });
 
@@ -27,6 +29,7 @@ export async function POST(
     { params }: { params: { id: string } }
 ) {
     try {
+        await dbConnect();
         const doctorId = params.id;
         const body = await request.json();
 

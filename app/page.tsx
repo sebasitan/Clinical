@@ -99,7 +99,7 @@ export default function HomePage() {
                     src="https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766474647/dental-clinic/homepage/Dr_Kanagarathinam.png"
                     width={400}
                     height={500}
-                    alt="Dr. Kanagarathinam"
+                    alt="Dr. Durshayine"
                     className="rounded-3xl shadow-lg object-cover w-full h-80"
                   />
                 </div>
@@ -108,7 +108,7 @@ export default function HomePage() {
                     src="https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766474662/dental-clinic/homepage/Dr.Durshayine.png"
                     width={400}
                     height={500}
-                    alt="Dr. Durshayine"
+                    alt="Dr. Kanagarathinam"
                     className="rounded-3xl shadow-lg object-cover w-full h-80"
                   />
                 </div>
@@ -222,8 +222,8 @@ export default function HomePage() {
               <CarouselContent className="-ml-2 md:-ml-4">
                 {[
                   { name: "Dr. Netheananthene", role: "Dental practitioner", img: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766474669/dental-clinic/homepage/Dr.Netheananthene.png" },
-                  { name: "Dr. Kanagarathinam", role: "Dental practitioner", img: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766474647/dental-clinic/homepage/Dr_Kanagarathinam.png" },
-                  { name: "Dr. Durshayine", role: "Dental practitioner", img: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766474662/dental-clinic/homepage/Dr.Durshayine.png" },
+                  { name: "Dr. Durshayine", role: "Dental practitioner", img: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766474647/dental-clinic/homepage/Dr_Kanagarathinam.png" },
+                  { name: "Dr. Kanagarathinam", role: "Dental practitioner", img: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766474662/dental-clinic/homepage/Dr.Durshayine.png" },
                   { name: "Dr. Sharviind", role: "Dental practitioner", img: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766474655/dental-clinic/homepage/Dr_Sharviind_Raj.png" },
                   { name: "Dr. Nicholas", role: "Dental practitioner", img: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766474658/dental-clinic/homepage/Dr._Nicholas_Gabriel.png" },
                   { name: "Dr. Navin", role: "Dental practitioner", img: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766474651/dental-clinic/homepage/Dr_Navin_Nair.png" },

@@ -1,5 +1,5 @@
 import dbConnect from './db';
-import { SlotModel, DoctorModel, ScheduleModel, LeaveModel } from './models';
+import { SlotModel, DoctorModel, ScheduleModel, LeaveModel, DoctorDateSchedule } from './models';
 import type { DayOfWeek } from './types';
 
 const formatTime = (time24: string) => {
@@ -26,17 +26,20 @@ export async function regenerateDoctorSlotsCloud(doctorId: string) {
     // 3. Get Leaves
     const leaves = await LeaveModel.find({ doctorId });
 
-    // 4. Determine Date Range (Next 60 days)
+    // 4. Get Date-Specific Overrides
+    const dateSchedule = await DoctorDateSchedule.findOne({ doctorId });
+
+    // 5. Determine Date Range (Next 60 days)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // 4. Delete only available slots for this doctor
+    // 6. Delete only available slots for this doctor
     await SlotModel.deleteMany({
         doctorId,
         status: 'available'
     });
 
-    // 5. Fetch all remaining slots (booked/blocked) to avoid overlaps
+    // 7. Fetch all remaining slots (booked/blocked) to avoid overlaps
     const existingSlots = await SlotModel.find({ doctorId });
 
     const newSlots = [];
@@ -47,8 +50,10 @@ export async function regenerateDoctorSlotsCloud(doctorId: string) {
         const dateStr = date.toISOString().split('T')[0];
         const dayName = date.toLocaleDateString('en-US', { weekday: 'long' }) as DayOfWeek;
 
-        // Get and sort daily ranges from weekly schedule
-        const dayRanges = [...(schedule?.days?.[dayName] || [])].sort((a, b) => a.start.localeCompare(b.start));
+        // Use date-specific override if it exists, otherwise use weekly schedule
+        const dateOverride = dateSchedule?.schedules?.get?.(dateStr);
+        const baseRanges = dateOverride || schedule?.days?.[dayName] || [];
+        const dayRanges = [...baseRanges].sort((a, b) => a.start.localeCompare(b.start));
 
         if (dayRanges.length > 0 && doctor.isActive && doctor.isAvailable) {
             // Check if on leave

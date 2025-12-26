@@ -20,7 +20,7 @@ export async function sendAppointmentConfirmation(
         );
         const resend = new Resend(process.env.RESEND_API_KEY);
         const { data, error } = await resend.emails.send({
-            from: 'Klinik Pergigian Setapak (Sri Rampai) <onboarding@resend.dev>',
+            from: `Klinik Pergigian Setapak (Sri Rampai) <${process.env.RESEND_EMAIL_FROM || 'onboarding@resend.dev'}>`,
             to: [to],
             subject: 'Appointment Confirmation - Klinik Pergigian Setapak (Sri Rampai)',
             html: `
@@ -122,7 +122,7 @@ export async function sendAppointmentReminder(
     try {
         const resend = new Resend(process.env.RESEND_API_KEY);
         const { data, error } = await resend.emails.send({
-            from: 'Klinik Pergigian Setapak (Sri Rampai) <onboarding@resend.dev>',
+            from: `Klinik Pergigian Setapak (Sri Rampai) <${process.env.RESEND_EMAIL_FROM || 'onboarding@resend.dev'}>`,
             to: [to],
             subject: 'Appointment Reminder - Tomorrow',
             html: `
@@ -190,7 +190,7 @@ export async function sendAppointmentRescheduled(
         );
         const resend = new Resend(process.env.RESEND_API_KEY);
         await resend.emails.send({
-            from: 'Klinik Pergigian Setapak (Sri Rampai) <onboarding@resend.dev>',
+            from: `Klinik Pergigian Setapak (Sri Rampai) <${process.env.RESEND_EMAIL_FROM || 'onboarding@resend.dev'}>`,
             to: [to],
             subject: 'Appointment Rescheduled - Klinik Pergigian Setapak (Sri Rampai)',
             html: `
@@ -230,7 +230,7 @@ export async function sendAppointmentCancelled(
     try {
         const resend = new Resend(process.env.RESEND_API_KEY);
         await resend.emails.send({
-            from: 'Klinik Pergigian Setapak (Sri Rampai) <onboarding@resend.dev>',
+            from: `Klinik Pergigian Setapak (Sri Rampai) <${process.env.RESEND_EMAIL_FROM || 'onboarding@resend.dev'}>`,
             to: [to],
             subject: 'Appointment Cancelled - Klinik Pergigian Setapak (Sri Rampai)',
             html: `

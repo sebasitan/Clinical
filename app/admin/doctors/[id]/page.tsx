@@ -13,6 +13,8 @@ import {
     updateDoctorAsync,
     getDoctorScheduleAsync,
     saveDoctorScheduleAsync,
+    getDoctorDateScheduleAsync,
+    saveDoctorDateScheduleAsync,
     getDoctorLeavesAsync,
     addDoctorLeaveAsync,
     deleteDoctorLeaveAsync,
@@ -28,7 +30,7 @@ import {
     deleteConsultationRecordAsync
 } from "@/lib/storage"
 import { cn } from "@/lib/utils"
-import type { Doctor, DoctorWeeklySchedule, DayOfWeek, ScheduleTimeRange, DoctorLeave, Appointment, Slot, ConsultationRecord } from "@/lib/types"
+import type { Doctor, DoctorWeeklySchedule, DoctorDateSchedule, DayOfWeek, ScheduleTimeRange, DoctorLeave, Appointment, Slot, ConsultationRecord } from "@/lib/types"
 import {
     ArrowLeft,
     Calendar,
@@ -79,6 +81,8 @@ export default function DoctorManagementPage() {
 
     const [doctor, setDoctor] = useState<Doctor | null>(null)
     const [schedule, setSchedule] = useState<DoctorWeeklySchedule | null>(null)
+    const [dateSchedule, setDateSchedule] = useState<DoctorDateSchedule | null>(null)
+    const [selectedScheduleDate, setSelectedScheduleDate] = useState<string | null>(null)
     const [leaves, setLeaves] = useState<DoctorLeave[]>([])
     const [appointments, setAppointments] = useState<Appointment[]>([])
     const [slots, setSlots] = useState<Slot[]>([])
@@ -125,10 +129,12 @@ export default function DoctorManagementPage() {
     const [pendingDeletions, setPendingDeletions] = useState<string[]>([])
     const [initialDocState, setInitialDocState] = useState<Doctor | null>(null)
     const [initialScheduleState, setInitialScheduleState] = useState<DoctorWeeklySchedule | null>(null)
+    const [initialDateScheduleState, setInitialDateScheduleState] = useState<DoctorDateSchedule | null>(null)
     const [initialConsultations, setInitialConsultations] = useState<ConsultationRecord[]>([])
 
     const [calendarDate, setCalendarDate] = useState(new Date())
     const [selectedCalendarDay, setSelectedCalendarDay] = useState<any | null>(null)
+    const [scheduleMonth, setScheduleMonth] = useState(new Date()) // For Schedule tab calendar
 
     const getDaysInMonth = (date: Date) => {
         const year = date.getFullYear()
@@ -153,6 +159,27 @@ export default function DoctorManagementPage() {
         if (direction === 'prev') newDate.setMonth(newDate.getMonth() - 1)
         else newDate.setMonth(newDate.getMonth() + 1)
         setCalendarDate(newDate)
+    }
+
+    const navigateScheduleMonth = (direction: 'prev' | 'next') => {
+        const newDate = new Date(scheduleMonth)
+        if (direction === 'prev') newDate.setMonth(newDate.getMonth() - 1)
+        else newDate.setMonth(newDate.getMonth() + 1)
+        setScheduleMonth(newDate)
+    }
+
+    const getScheduleMonthDays = () => {
+        const year = scheduleMonth.getFullYear()
+        const month = scheduleMonth.getMonth()
+        const daysInMonth = new Date(year, month + 1, 0).getDate()
+        const firstDay = new Date(year, month, 1).getDay() // 0 = Sunday
+
+        return Array.from({ length: daysInMonth }, (_, i) => {
+            const day = i + 1
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+            const hasSchedule = dateSchedule?.schedules[dateStr] && dateSchedule.schedules[dateStr].length > 0
+            return { day, dateStr, hasSchedule, firstDay }
+        })
     }
 
     const patientRegistry = Array.from(new Set(appointments.map(a => a.patientIC)))
@@ -185,11 +212,12 @@ export default function DoctorManagementPage() {
     }, [id])
 
     const loadDoctorData = async (docId: string) => {
-        const [docs, apts, drSlots, drSchedule, drLeaves, drConsultations] = await Promise.all([
+        const [docs, apts, drSlots, drSchedule, drDateSchedule, drLeaves, drConsultations] = await Promise.all([
             getDoctorsAsync(),
             getAppointmentsAsync(),
             getSlotsAsync(docId),
             getDoctorScheduleAsync(docId),
+            getDoctorDateScheduleAsync(docId),
             getDoctorLeavesAsync(docId),
             getDoctorConsultationsAsync(docId)
         ])
@@ -203,6 +231,8 @@ export default function DoctorManagementPage() {
         setInitialDocState(doc)
         setSchedule(drSchedule || { doctorId: docId, days: {} })
         setInitialScheduleState(drSchedule || { doctorId: docId, days: {} })
+        setDateSchedule(drDateSchedule || { doctorId: docId, schedules: {} })
+        setInitialDateScheduleState(drDateSchedule || { doctorId: docId, schedules: {} })
         setLeaves(drLeaves)
         setAppointments(apts.filter(a => a.doctorId === docId))
         setSlots(drSlots)
@@ -217,7 +247,7 @@ export default function DoctorManagementPage() {
     }
 
     const handleSaveAllChanges = async () => {
-        if (!doctor || !schedule) return
+        if (!doctor || !schedule || !dateSchedule) return
         setIsSavingAll(true)
         try {
             // 1. Save Doctor Profile if changed
@@ -225,12 +255,17 @@ export default function DoctorManagementPage() {
                 await updateDoctorAsync(doctor.id, doctor)
             }
 
-            // 2. Save Schedule if changed
+            // 2. Save Weekly Schedule if changed (keeping for backward compatibility)
             if (JSON.stringify(schedule) !== JSON.stringify(initialScheduleState)) {
                 await saveDoctorScheduleAsync(schedule)
             }
 
-            // 3. Process Consultation Records
+            // 3. Save Date Schedule if changed
+            if (JSON.stringify(dateSchedule) !== JSON.stringify(initialDateScheduleState)) {
+                await saveDoctorDateScheduleAsync(dateSchedule)
+            }
+
+            // 4. Process Consultation Records
             // Deletions
             for (const id of pendingDeletions) {
                 await deleteConsultationRecordAsync(id)
@@ -249,10 +284,11 @@ export default function DoctorManagementPage() {
                 }
             }
 
-            // 4. Regenerate Slots if high-impact changes made
+            // 5. Regenerate Slots if high-impact changes made
             const impactFields: (keyof Doctor)[] = ["isAvailable", "isActive", "slotDuration"]
             const hasImpactChange = impactFields.some(f => doctor[f] !== initialDocState?.[f]) ||
-                JSON.stringify(schedule) !== JSON.stringify(initialScheduleState)
+                JSON.stringify(schedule) !== JSON.stringify(initialScheduleState) ||
+                JSON.stringify(dateSchedule) !== JSON.stringify(initialDateScheduleState)
 
             if (hasImpactChange) {
                 await regenerateDoctorSlotsAsync(doctor.id)
@@ -260,7 +296,7 @@ export default function DoctorManagementPage() {
                 setSlots(freshSlots)
             }
 
-            // 5. Refresh everything to be safe and reset states
+            // 6. Refresh everything to be safe and reset states
             await loadDoctorData(doctor.id)
             setHasChanges(false)
             setPendingDeletions([])
@@ -311,6 +347,52 @@ export default function DoctorManagementPage() {
         currentDayRanges[index] = updatedRange
         currentDays[day] = currentDayRanges
         setSchedule({ ...schedule, days: currentDays })
+        setHasChanges(true)
+    }
+
+    // Date Schedule Functions
+    const addDateTimeRange = (date: string) => {
+        if (!dateSchedule) return
+        const currentSchedules = { ...dateSchedule.schedules }
+        const currentRanges = currentSchedules[date] || []
+        currentSchedules[date] = [...currentRanges, { start: "09:00", end: "17:00" }]
+        setDateSchedule({ ...dateSchedule, schedules: currentSchedules })
+        setHasChanges(true)
+    }
+
+    const removeDateTimeRange = (date: string, index: number) => {
+        if (!dateSchedule) return
+        const currentSchedules = { ...dateSchedule.schedules }
+        const currentRanges = [...(currentSchedules[date] || [])]
+        currentRanges.splice(index, 1)
+        if (currentRanges.length === 0) {
+            delete currentSchedules[date]
+        } else {
+            currentSchedules[date] = currentRanges
+        }
+        setDateSchedule({ ...dateSchedule, schedules: currentSchedules })
+        setHasChanges(true)
+    }
+
+    const updateDateTimeRange = (date: string, index: number, field: "start" | "end", value: string) => {
+        if (!dateSchedule || !doctor) return
+        const currentSchedules = { ...dateSchedule.schedules }
+        const currentRanges = [...(currentSchedules[date] || [])]
+
+        let updatedRange = { ...currentRanges[index], [field]: value }
+
+        if (field === "start" && doctor.slotDuration) {
+            const [h, m] = value.split(':').map(Number)
+            const date = new Date()
+            date.setHours(h, m + doctor.slotDuration)
+            const endH = date.getHours().toString().padStart(2, '0')
+            const endM = date.getMinutes().toString().padStart(2, '0')
+            updatedRange.end = `${endH}:${endM}`
+        }
+
+        currentRanges[index] = updatedRange
+        currentSchedules[date] = currentRanges
+        setDateSchedule({ ...dateSchedule, schedules: currentSchedules })
         setHasChanges(true)
     }
 
@@ -628,24 +710,26 @@ export default function DoctorManagementPage() {
                                             </div>
                                         </div>
 
-                                        <div className="space-y-3 pt-2">
+                                        <div className="space-y-2">
                                             <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Slot Duration</Label>
                                             <Select
-                                                value={doctor.slotDuration.toString()}
-                                                onValueChange={(val) => handleUpdateDoctor({ slotDuration: parseInt(val) as 10 | 15 | 20 | 30 })}
+                                                value={doctor.slotDuration?.toString()}
+                                                onValueChange={(val) => handleUpdateDoctor({ slotDuration: parseInt(val) })}
                                             >
-                                                <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-slate-100 focus:ring-blue-100">
-                                                    <SelectValue placeholder="Select duration" />
+                                                <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-slate-100">
+                                                    <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="10">10 Minutes</SelectItem>
                                                     <SelectItem value="15">15 Minutes</SelectItem>
                                                     <SelectItem value="20">20 Minutes</SelectItem>
                                                     <SelectItem value="30">30 Minutes</SelectItem>
+                                                    <SelectItem value="45">45 Minutes</SelectItem>
+                                                    <SelectItem value="60">60 Minutes</SelectItem>
                                                 </SelectContent>
                                             </Select>
-                                            <p className="text-[10px] text-slate-400 text-center italic">Changes will automatically regenerate upcoming slots.</p>
                                         </div>
+                                        <p className="text-[10px] text-slate-400 text-center italic">Changes will automatically regenerate upcoming slots.</p>
                                     </CardContent>
                                 </Card>
 
@@ -688,7 +772,7 @@ export default function DoctorManagementPage() {
                                 </TabsTrigger>
                                 <TabsTrigger value="calendar" className="px-5 py-2 rounded-xl data-[state=active]:bg-slate-900 data-[state=active]:text-white font-bold flex-1 max-w-[150px]">
                                     <Calendar className="w-4 h-4 mr-2" />
-                                    Calendar
+                                    Overview
                                 </TabsTrigger>
                                 <TabsTrigger value="leaves" className="px-5 py-2 rounded-xl data-[state=active]:bg-slate-900 data-[state=active]:text-white font-bold flex-1 max-w-[150px]">
                                     <ShieldAlert className="w-4 h-4 mr-2" />
@@ -709,61 +793,167 @@ export default function DoctorManagementPage() {
                             </TabsList>
 
                             <TabsContent value="schedule" className="space-y-6 outline-none">
-                                <div className="grid gap-6">
-                                    {DAYS.map(day => (
-                                        <Card key={day} className="border-none shadow-sm rounded-3xl overflow-hidden bg-white group hover:shadow-md transition-all">
-                                            <div className="flex flex-col md:flex-row md:items-center justify-between p-6 gap-6">
-                                                <div className="min-w-[120px]">
-                                                    <h3 className="text-lg font-bold text-slate-900">{day}</h3>
-                                                    <Badge variant="outline" className={`mt-1 border-none px-0 ${schedule?.days[day]?.length ? 'text-emerald-500' : 'text-slate-400'}`}>
-                                                        {schedule?.days[day]?.length ? 'Working Day' : 'Weekend / Off'}
-                                                    </Badge>
+                                <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
+                                    <CardHeader>
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <CardTitle>Date-Specific Schedule</CardTitle>
+                                                <CardDescription>Select a month, then click any date to set working hours</CardDescription>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => navigateScheduleMonth('prev')}
+                                                    className="h-10 w-10 rounded-xl hover:bg-slate-100"
+                                                >
+                                                    <ChevronLeft className="w-5 h-5" />
+                                                </Button>
+                                                <h3 className="text-xl font-bold text-slate-900 min-w-[200px] text-center">
+                                                    {scheduleMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                                                </h3>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => navigateScheduleMonth('next')}
+                                                    className="h-10 w-10 rounded-xl hover:bg-slate-100"
+                                                >
+                                                    <ChevronRight className="w-5 h-5" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="space-y-8">
+                                        {/* Monthly Calendar Grid */}
+                                        <div className="space-y-4">
+                                            {/* Day Headers */}
+                                            <div className="grid grid-cols-7 gap-2">
+                                                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(d => (
+                                                    <div key={d} className="text-center text-xs font-black text-slate-400 uppercase tracking-wider py-2">
+                                                        {d}
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            {/* Calendar Days */}
+                                            <div className="grid grid-cols-7 gap-2">
+                                                {/* Empty cells for days before month starts */}
+                                                {Array.from({ length: getScheduleMonthDays()[0]?.firstDay || 0 }).map((_, i) => (
+                                                    <div key={`empty-${i}`} className="aspect-square" />
+                                                ))}
+
+                                                {/* Actual days */}
+                                                {getScheduleMonthDays().map((dayData) => {
+                                                    const isSelected = selectedScheduleDate === dayData.dateStr
+                                                    const isToday = dayData.dateStr === new Date().toISOString().split('T')[0]
+
+                                                    return (
+                                                        <button
+                                                            key={dayData.dateStr}
+                                                            onClick={() => setSelectedScheduleDate(dayData.dateStr)}
+                                                            className={cn(
+                                                                "aspect-square p-2 rounded-2xl border-2 transition-all relative group",
+                                                                isSelected
+                                                                    ? "bg-blue-600 border-blue-600 shadow-lg scale-105"
+                                                                    : dayData.hasSchedule
+                                                                        ? "bg-emerald-50 border-emerald-200 hover:border-emerald-400 hover:shadow-md"
+                                                                        : isToday
+                                                                            ? "bg-slate-100 border-slate-300 hover:border-blue-300 hover:shadow-md"
+                                                                            : "bg-white border-slate-100 hover:border-blue-200 hover:shadow-md"
+                                                            )}
+                                                        >
+                                                            <div className="flex flex-col items-center justify-center h-full">
+                                                                <span className={cn(
+                                                                    "text-lg font-bold",
+                                                                    isSelected ? "text-white" : "text-slate-900"
+                                                                )}>
+                                                                    {dayData.day}
+                                                                </span>
+                                                                {dayData.hasSchedule && !isSelected && (
+                                                                    <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5">
+                                                                        <div className="w-1 h-1 rounded-full bg-emerald-500" />
+                                                                        <div className="w-1 h-1 rounded-full bg-emerald-500" />
+                                                                    </div>
+                                                                )}
+                                                                {isToday && !isSelected && (
+                                                                    <div className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-blue-500" />
+                                                                )}
+                                                            </div>
+                                                        </button>
+                                                    )
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        {/* Schedule Editor for Selected Date */}
+                                        {selectedScheduleDate && (
+                                            <div className="space-y-6 p-6 bg-gradient-to-br from-slate-50 to-blue-50/30 rounded-3xl border-2 border-blue-100">
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <h3 className="text-xl font-bold text-slate-900">
+                                                            {new Date(selectedScheduleDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                                                        </h3>
+                                                        <p className="text-sm text-slate-600 mt-1">
+                                                            {dateSchedule?.schedules[selectedScheduleDate]?.length || 0} time range(s) set
+                                                        </p>
+                                                    </div>
+                                                    <Button
+                                                        onClick={() => addDateTimeRange(selectedScheduleDate)}
+                                                        className="h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white gap-2 shadow-lg shadow-blue-200"
+                                                    >
+                                                        <Plus className="w-4 h-4" />
+                                                        Add Hours
+                                                    </Button>
                                                 </div>
 
-                                                <div className="flex-1 space-y-3">
-                                                    {schedule?.days[day]?.map((range, idx) => (
-                                                        <div key={idx} className="flex items-center gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100 group/range">
-                                                            <Input
-                                                                type="time"
-                                                                value={range.start}
-                                                                onChange={(e) => updateTimeRange(day, idx, "start", e.target.value)}
-                                                                className="h-10 rounded-xl bg-white border-slate-200"
-                                                            />
-                                                            <span className="text-slate-400 font-bold">to</span>
-                                                            <Input
-                                                                type="time"
-                                                                value={range.end}
-                                                                onChange={(e) => updateTimeRange(day, idx, "end", e.target.value)}
-                                                                className="h-10 rounded-xl bg-white border-slate-200"
-                                                            />
+                                                <div className="space-y-3">
+                                                    {dateSchedule?.schedules[selectedScheduleDate]?.map((range, idx) => (
+                                                        <div key={idx} className="flex items-center gap-3 bg-white p-4 rounded-2xl border-2 border-slate-200 shadow-sm hover:shadow-md transition-all">
+                                                            <div className="flex items-center gap-2 flex-1">
+                                                                <Input
+                                                                    type="time"
+                                                                    value={range.start}
+                                                                    onChange={(e) => updateDateTimeRange(selectedScheduleDate, idx, "start", e.target.value)}
+                                                                    className="h-11 rounded-xl bg-slate-50 border-slate-200 font-bold"
+                                                                />
+                                                                <span className="text-slate-400 font-bold text-lg">→</span>
+                                                                <Input
+                                                                    type="time"
+                                                                    value={range.end}
+                                                                    onChange={(e) => updateDateTimeRange(selectedScheduleDate, idx, "end", e.target.value)}
+                                                                    className="h-11 rounded-xl bg-slate-50 border-slate-200 font-bold"
+                                                                />
+                                                            </div>
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
-                                                                onClick={() => removeTimeRange(day, idx)}
-                                                                className="h-10 w-10 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                                                                onClick={() => removeDateTimeRange(selectedScheduleDate, idx)}
+                                                                className="h-11 w-11 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
                                                             >
-                                                                <Trash2 className="w-4 h-4" />
+                                                                <Trash2 className="w-5 h-5" />
                                                             </Button>
                                                         </div>
                                                     ))}
-                                                    {(!schedule?.days[day] || schedule.days[day]!.length === 0) && (
-                                                        <p className="text-xs text-slate-400 italic">No working hours defined for this day.</p>
+                                                    {(!dateSchedule?.schedules[selectedScheduleDate] || dateSchedule.schedules[selectedScheduleDate].length === 0) && (
+                                                        <div className="py-16 text-center">
+                                                            <Clock className="w-16 h-16 mx-auto mb-4 text-slate-300" />
+                                                            <p className="text-lg font-bold text-slate-900 mb-2">No hours set for this date</p>
+                                                            <p className="text-sm text-slate-500">Click "Add Hours" to set working hours</p>
+                                                        </div>
                                                     )}
                                                 </div>
-
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => addTimeRange(day)}
-                                                    className="h-10 rounded-xl border-dashed border-slate-300 hover:border-blue-500 hover:text-blue-600 gap-2"
-                                                >
-                                                    <Plus className="w-4 h-4" />
-                                                    Add Hours
-                                                </Button>
                                             </div>
-                                        </Card>
-                                    ))}
-                                </div>
+                                        )}
+
+                                        {!selectedScheduleDate && (
+                                            <div className="py-20 text-center opacity-40">
+                                                <Calendar className="w-20 h-20 mx-auto mb-6 text-slate-300" />
+                                                <h4 className="text-xl font-bold text-slate-900 mb-2">Select a Date</h4>
+                                                <p className="text-sm font-medium text-slate-500">Click any date in the calendar above to set working hours</p>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
                             </TabsContent>
 
                             <TabsContent value="calendar" className="space-y-6 outline-none animate-in fade-in slide-in-from-bottom-2 duration-500">
@@ -801,13 +991,7 @@ export default function DoctorManagementPage() {
                                                         </h2>
                                                     </div>
                                                 </div>
-                                                <Button
-                                                    variant="outline"
-                                                    onClick={() => setCalendarDate(new Date())}
-                                                    className="h-11 px-6 rounded-2xl border-slate-200 font-black text-[10px] uppercase tracking-widest hover:bg-slate-50"
-                                                >
-                                                    View Today
-                                                </Button>
+
                                             </div>
 
                                             <div className="grid grid-cols-7 mb-6">
@@ -919,6 +1103,69 @@ export default function DoctorManagementPage() {
                                                             </div>
                                                         )}
 
+                                                        {/* Slot Status Summary */}
+                                                        <div className="mb-8">
+                                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Slot Overview</p>
+                                                            {(() => {
+                                                                const daySlots = slots.filter(s => s.date === selectedCalendarDay.dateStr)
+                                                                const availableSlots = daySlots.filter(s => s.status === 'available')
+                                                                const bookedSlots = daySlots.filter(s => s.status === 'booked')
+                                                                const completedSlots = selectedCalendarDay.dayApts.filter((a: any) => a.status === 'completed')
+                                                                const blockedSlots = daySlots.filter(s => s.status === 'blocked')
+
+                                                                return (
+                                                                    <div className="grid grid-cols-2 gap-3">
+                                                                        {/* Total Slots */}
+                                                                        <div className="p-4 rounded-2xl bg-slate-100 border border-slate-200">
+                                                                            <div className="flex items-center gap-2 mb-2">
+                                                                                <Clock className="w-4 h-4 text-slate-600" />
+                                                                                <p className="text-[10px] font-black text-slate-500 uppercase">Total</p>
+                                                                            </div>
+                                                                            <p className="text-2xl font-black text-slate-900">{daySlots.length}</p>
+                                                                        </div>
+
+                                                                        {/* Available Slots */}
+                                                                        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200">
+                                                                            <div className="flex items-center gap-2 mb-2">
+                                                                                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                                                                <p className="text-[10px] font-black text-emerald-600 uppercase">Available</p>
+                                                                            </div>
+                                                                            <p className="text-2xl font-black text-emerald-700">{availableSlots.length}</p>
+                                                                        </div>
+
+                                                                        {/* Booked Slots */}
+                                                                        <div className="p-4 rounded-2xl bg-blue-50 border border-blue-200">
+                                                                            <div className="flex items-center gap-2 mb-2">
+                                                                                <Calendar className="w-4 h-4 text-blue-600" />
+                                                                                <p className="text-[10px] font-black text-blue-600 uppercase">Booked</p>
+                                                                            </div>
+                                                                            <p className="text-2xl font-black text-blue-700">{bookedSlots.length}</p>
+                                                                        </div>
+
+                                                                        {/* Completed */}
+                                                                        <div className="p-4 rounded-2xl bg-purple-50 border border-purple-200">
+                                                                            <div className="flex items-center gap-2 mb-2">
+                                                                                <Activity className="w-4 h-4 text-purple-600" />
+                                                                                <p className="text-[10px] font-black text-purple-600 uppercase">Completed</p>
+                                                                            </div>
+                                                                            <p className="text-2xl font-black text-purple-700">{completedSlots.length}</p>
+                                                                        </div>
+
+                                                                        {/* Blocked Slots */}
+                                                                        {blockedSlots.length > 0 && (
+                                                                            <div className="p-4 rounded-2xl bg-red-50 border border-red-200 col-span-2">
+                                                                                <div className="flex items-center gap-2 mb-2">
+                                                                                    <Ban className="w-4 h-4 text-red-600" />
+                                                                                    <p className="text-[10px] font-black text-red-600 uppercase">Blocked</p>
+                                                                                </div>
+                                                                                <p className="text-2xl font-black text-red-700">{blockedSlots.length}</p>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                )
+                                                            })()}
+                                                        </div>
+
                                                         <div>
                                                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Patient Timeline</p>
                                                             {selectedCalendarDay.dayApts.length === 0 ? (
@@ -954,18 +1201,7 @@ export default function DoctorManagementPage() {
                                                         </div>
                                                     </div>
 
-                                                    <div className="pt-8">
-                                                        <Button
-                                                            className="w-full h-14 rounded-[1.25rem] bg-slate-900 hover:bg-slate-800 text-white font-bold transition-all shadow-2xl shadow-slate-200/50 flex items-center justify-center gap-3"
-                                                            onClick={() => {
-                                                                setViewDate(selectedCalendarDay.dateStr);
-                                                                setActiveTab('booked');
-                                                            }}
-                                                        >
-                                                            Go to Daily Queue
-                                                            <ArrowRight className="w-4 h-4 ml-2" />
-                                                        </Button>
-                                                    </div>
+
                                                 </div>
                                             ) : (
                                                 <div className="h-full flex flex-col items-center justify-center p-12 text-center opacity-30">

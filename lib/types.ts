@@ -26,6 +26,14 @@ export type DoctorWeeklySchedule = {
     }
 }
 
+// Date-specific schedule - allows different hours for each specific date
+export type DoctorDateSchedule = {
+    doctorId: string
+    schedules: {
+        [date: string]: ScheduleTimeRange[] // "2025-12-28": [{start: "10:00", end: "18:00"}]
+    }
+}
+
 export type LeaveType = "full" | "partial" | "emergency"
 
 export type DoctorLeave = {

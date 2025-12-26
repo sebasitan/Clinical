@@ -99,6 +99,17 @@ const ScheduleSchema = new Schema({
 
 export const ScheduleModel = models.Schedule || model('Schedule', ScheduleSchema);
 
+// --- Date Schedule Schema (Date-specific schedules) ---
+const DateScheduleSchema = new Schema({
+    doctorId: { type: String, required: true, unique: true },
+    schedules: {
+        type: Map,
+        of: [{ start: String, end: String }]
+    }
+});
+
+export const DoctorDateSchedule = models.DoctorDateSchedule || model('DoctorDateSchedule', DateScheduleSchema);
+
 // --- Leave Schema ---
 const LeaveSchema = new Schema({
     id: { type: String, required: true, unique: true },

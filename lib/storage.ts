@@ -1,4 +1,4 @@
-import type { Admin, Appointment, Doctor, Patient, Slot, SystemSettings, AuditLog, Receptionist, Facility, DoctorWeeklySchedule, DoctorLeave, DayOfWeek, ScheduleTimeRange, AvailabilityBlock, ConsultationRecord } from "./types"
+import type { Admin, Appointment, Doctor, Patient, Slot, SystemSettings, AuditLog, Receptionist, Facility, DoctorWeeklySchedule, DoctorLeave, DayOfWeek, ScheduleTimeRange, AvailabilityBlock, ConsultationRecord, DoctorDateSchedule } from "./types"
 
 const STORAGE_KEYS = {
     ADMINS: "dental_admins",
@@ -115,6 +115,32 @@ export const saveDoctorScheduleAsync = async (schedule: DoctorWeeklySchedule) =>
         body: JSON.stringify(schedule)
     });
     if (!res.ok) throw new Error('Failed to save schedule');
+
+    // Also trigger cloud regeneration
+    await regenerateDoctorSlotsAsync(schedule.doctorId);
+
+    return await res.json();
+}
+
+// Date-specific schedule functions
+export const getDoctorDateScheduleAsync = async (doctorId: string): Promise<DoctorDateSchedule | null> => {
+    try {
+        const res = await fetch(`${API_BASE}/doctors/${doctorId}/date-schedule`, { cache: 'no-store' });
+        if (!res.ok) return null;
+        return await res.json();
+    } catch (e) {
+        console.error("Failed to fetch date schedule", e);
+        return null;
+    }
+}
+
+export const saveDoctorDateScheduleAsync = async (schedule: DoctorDateSchedule) => {
+    const res = await fetch(`${API_BASE}/doctors/${schedule.doctorId}/date-schedule`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(schedule)
+    });
+    if (!res.ok) throw new Error('Failed to save date schedule');
 
     // Also trigger cloud regeneration
     await regenerateDoctorSlotsAsync(schedule.doctorId);

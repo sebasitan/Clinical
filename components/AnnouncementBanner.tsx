@@ -8,15 +8,29 @@ import { Button } from "@/components/ui/button"
 
 export function AnnouncementBanner() {
     const [announcements, setAnnouncements] = useState<Announcement[]>([])
-    const [isVisible, setIsVisible] = useState(true)
+    const [isVisible, setIsVisible] = useState(false) // Default false, show after check
 
     useEffect(() => {
         const load = async () => {
             const data = await getAnnouncementsAsync(false)
-            setAnnouncements(data)
+            if (data.length > 0) {
+                const latestAnn = data[0]
+                const dismissedId = localStorage.getItem(`dismissed_announcement_${latestAnn.id}`)
+                if (dismissedId !== latestAnn.id) {
+                    setAnnouncements(data)
+                    setIsVisible(true)
+                }
+            }
         }
         load()
     }, [])
+
+    const handleDismiss = () => {
+        if (announcements.length > 0) {
+            localStorage.setItem(`dismissed_announcement_${announcements[0].id}`, announcements[0].id)
+        }
+        setIsVisible(false)
+    }
 
     if (!isVisible || announcements.length === 0) return null
 
@@ -42,7 +56,7 @@ export function AnnouncementBanner() {
 
     return (
         <div className={cn(
-            "relative z-[100] w-full py-3 px-6 animate-in slide-in-from-top duration-500",
+            "sticky top-0 z-[100] w-full py-3 px-6 animate-in slide-in-from-top duration-500 shadow-md",
             getColors(ann.type)
         )}>
             <div className="container mx-auto flex items-center justify-between gap-4">
@@ -70,7 +84,7 @@ export function AnnouncementBanner() {
                         variant="ghost"
                         size="sm"
                         className="text-white hover:bg-white/20 rounded-full h-8 px-4 font-bold uppercase text-[10px] tracking-widest hidden sm:flex"
-                        onClick={() => setIsVisible(false)}
+                        onClick={handleDismiss}
                     >
                         Dismiss
                     </Button>
@@ -78,7 +92,7 @@ export function AnnouncementBanner() {
                         variant="ghost"
                         size="icon"
                         className="text-white hover:bg-white/20 rounded-full h-8 w-8"
-                        onClick={() => setIsVisible(false)}
+                        onClick={handleDismiss}
                     >
                         <X className="w-4 h-4" />
                     </Button>

@@ -15,13 +15,11 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { Smile, Check, ArrowRight, ShieldCheck, Sparkles, Stethoscope, Monitor, Phone, Mail } from "lucide-react"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
-import { AnnouncementBanner } from "@/components/AnnouncementBanner"
 
 export default function HomePage() {
   return (
     // Applied Outfit font as display and Inter as sans
     <div className="min-h-screen bg-white font-sans">
-      <AnnouncementBanner />
       <Navbar />
 
       {/* Hero Section */}

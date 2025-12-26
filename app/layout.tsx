@@ -35,6 +35,8 @@ export const metadata: Metadata = {
   },
 }
 
+import { AnnouncementBanner } from "@/components/AnnouncementBanner"
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -43,6 +45,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${roboto.variable} font-sans antialiased`} suppressHydrationWarning>
+        <AnnouncementBanner />
         {children}
         <Toaster />
         <Analytics />

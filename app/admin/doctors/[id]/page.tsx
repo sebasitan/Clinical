@@ -73,6 +73,56 @@ import {
 
 const DAYS: DayOfWeek[] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
+const SlotButton = ({ slot, onToggle }: { slot: Slot, onToggle: () => void }) => {
+    const isAvailable = slot.status === "available"
+    const isBooked = slot.status === "booked"
+    const isBlocked = slot.status === "blocked"
+
+    return (
+        <button
+            onClick={() => !isBooked && onToggle()}
+            disabled={isBooked}
+            className={cn(
+                "p-3 rounded-2xl border-2 transition-all text-left relative overflow-hidden group h-full flex flex-col justify-between",
+                isAvailable
+                    ? "bg-white border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/30"
+                    : isBooked
+                        ? "bg-blue-50 border-blue-100 cursor-not-allowed opacity-80"
+                        : "bg-red-50/10 border-red-100 hover:border-red-200"
+            )}
+        >
+            <div className="flex items-center justify-between mb-1.5 w-full">
+                <span className={cn(
+                    "text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md",
+                    isAvailable ? "bg-emerald-100 text-emerald-700" : isBooked ? "bg-blue-100 text-blue-700" : "bg-red-100 text-red-700"
+                )}>
+                    {slot.status === "available" ? "Open" : slot.status === "booked" ? "Booked" : "Blocked"}
+                </span>
+                {!isBooked && (
+                    <div className="text-slate-300 group-hover:text-slate-400 transition-colors">
+                        {isAvailable ? <Unlock className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+                    </div>
+                )}
+            </div>
+
+            <div className="flex flex-col">
+                <span className="text-[13px] font-black text-slate-900 leading-tight">
+                    {slot.timeRange.split(' - ')[0]}
+                </span>
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">
+                    {slot.timeRange.split(' - ')[1]}
+                </span>
+            </div>
+
+            {isBooked && (
+                <div className="mt-2 pt-2 border-t border-blue-100/50">
+                    <p className="text-[9px] font-bold text-blue-600 truncate uppercase">Appointment Reserved</p>
+                </div>
+            )}
+        </button>
+    )
+}
+
 export default function DoctorManagementPage() {
     const { id } = useParams()
     const router = useRouter()
@@ -98,6 +148,7 @@ export default function DoctorManagementPage() {
         return `${year}-${month}-${day}`;
     })
     const [isBlocking, setIsBlocking] = useState(false)
+    const [slotSearch, setSlotSearch] = useState("")
     const [isCancelling, setIsCancelling] = useState(false)
     const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null)
     const [cancelReason, setCancelReason] = useState("")
@@ -173,12 +224,14 @@ export default function DoctorManagementPage() {
         const month = scheduleMonth.getMonth()
         const daysInMonth = new Date(year, month + 1, 0).getDate()
         const firstDay = new Date(year, month, 1).getDay() // 0 = Sunday
+        const todayStr = new Date().toISOString().split('T')[0]
 
         return Array.from({ length: daysInMonth }, (_, i) => {
             const day = i + 1
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
             const hasSchedule = dateSchedule?.schedules[dateStr] && dateSchedule.schedules[dateStr].length > 0
-            return { day, dateStr, hasSchedule, firstDay }
+            const isPast = dateStr < todayStr
+            return { day, dateStr, hasSchedule, firstDay, isPast }
         })
     }
 
@@ -394,6 +447,34 @@ export default function DoctorManagementPage() {
         currentSchedules[date] = currentRanges
         setDateSchedule({ ...dateSchedule, schedules: currentSchedules })
         setHasChanges(true)
+    }
+
+    const handleToggleSlotStatus = async (slotId: string, currentStatus: Slot["status"]) => {
+        const newStatus = currentStatus === "available" ? "blocked" : "available"
+        try {
+            await updateSlotStatusAsync(slotId, newStatus)
+            // Refresh slots
+            const freshSlots = await getSlotsAsync(id as string)
+            setSlots(freshSlots)
+            toast({ title: `Slot marked as ${newStatus}` })
+        } catch (error) {
+            toast({ title: "Failed to update slot", variant: "destructive" })
+        }
+    }
+
+    const handleBulkSlotStatus = async (date: string, action: "block" | "unblock") => {
+        const dateSlots = slots.filter(s => s.date === date && s.status !== "booked")
+        if (dateSlots.length === 0) return
+
+        const newStatus = action === "block" ? "blocked" : "available"
+        try {
+            await Promise.all(dateSlots.map(s => updateSlotStatusAsync(s.id, newStatus)))
+            const freshSlots = await getSlotsAsync(id as string)
+            setSlots(freshSlots)
+            toast({ title: `All slots marked as ${newStatus}` })
+        } catch (error) {
+            toast({ title: "Bulk update failed", variant: "destructive" })
+        }
     }
 
     const handleAddLeave = async () => {
@@ -677,8 +758,8 @@ export default function DoctorManagementPage() {
             <main className="container mx-auto px-6 py-10">
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* Left Column - Stats & Settings (Only visible on Schedule tab) */}
-                        {activeTab === 'schedule' && (
+                        {/* Left Column - Stats & Settings (Only visible on Overview tab) */}
+                        {activeTab === 'calendar' && (
                             <div className="space-y-8">
                                 {/* Status Card */}
                                 <Card className="border-none shadow-sm rounded-[2rem] overflow-hidden bg-white">
@@ -714,7 +795,7 @@ export default function DoctorManagementPage() {
                                             <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Slot Duration</Label>
                                             <Select
                                                 value={doctor.slotDuration?.toString()}
-                                                onValueChange={(val) => handleUpdateDoctor({ slotDuration: parseInt(val) })}
+                                                onValueChange={(val) => handleUpdateDoctor({ slotDuration: parseInt(val) as Doctor['slotDuration'] })}
                                             >
                                                 <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-slate-100">
                                                     <SelectValue />
@@ -763,7 +844,7 @@ export default function DoctorManagementPage() {
                         )}
 
                         {/* Right Column / Main Content */}
-                        <div className={activeTab === 'schedule' ? "lg:col-span-2" : "lg:col-span-3"}>
+                        <div className={activeTab === 'calendar' ? "lg:col-span-2" : "lg:col-span-3"}>
 
                             <TabsList className="bg-white p-1 rounded-2xl shadow-sm border border-slate-100 mb-8 h-auto flex-wrap">
                                 <TabsTrigger value="schedule" className="px-5 py-2 rounded-xl data-[state=active]:bg-slate-900 data-[state=active]:text-white font-bold flex-1 max-w-[150px]">
@@ -823,135 +904,286 @@ export default function DoctorManagementPage() {
                                             </div>
                                         </div>
                                     </CardHeader>
-                                    <CardContent className="space-y-8">
-                                        {/* Monthly Calendar Grid */}
-                                        <div className="space-y-4">
-                                            {/* Day Headers */}
-                                            <div className="grid grid-cols-7 gap-2">
-                                                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(d => (
-                                                    <div key={d} className="text-center text-xs font-black text-slate-400 uppercase tracking-wider py-2">
-                                                        {d}
-                                                    </div>
-                                                ))}
-                                            </div>
-
-                                            {/* Calendar Days */}
-                                            <div className="grid grid-cols-7 gap-2">
-                                                {/* Empty cells for days before month starts */}
-                                                {Array.from({ length: getScheduleMonthDays()[0]?.firstDay || 0 }).map((_, i) => (
-                                                    <div key={`empty-${i}`} className="aspect-square" />
-                                                ))}
-
-                                                {/* Actual days */}
-                                                {getScheduleMonthDays().map((dayData) => {
-                                                    const isSelected = selectedScheduleDate === dayData.dateStr
-                                                    const isToday = dayData.dateStr === new Date().toISOString().split('T')[0]
-
-                                                    return (
-                                                        <button
-                                                            key={dayData.dateStr}
-                                                            onClick={() => setSelectedScheduleDate(dayData.dateStr)}
-                                                            className={cn(
-                                                                "aspect-square p-2 rounded-2xl border-2 transition-all relative group",
-                                                                isSelected
-                                                                    ? "bg-blue-600 border-blue-600 shadow-lg scale-105"
-                                                                    : dayData.hasSchedule
-                                                                        ? "bg-emerald-50 border-emerald-200 hover:border-emerald-400 hover:shadow-md"
-                                                                        : isToday
-                                                                            ? "bg-slate-100 border-slate-300 hover:border-blue-300 hover:shadow-md"
-                                                                            : "bg-white border-slate-100 hover:border-blue-200 hover:shadow-md"
-                                                            )}
+                                    <CardContent className="p-8">
+                                        <div className={cn(
+                                            "transition-all duration-500",
+                                            selectedScheduleDate ? "grid grid-cols-1 xl:grid-cols-2 gap-10" : "max-w-4xl mx-auto"
+                                        )}>
+                                            {/* Monthly Calendar Grid */}
+                                            <div className="space-y-6">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest">Calendar Picker</h4>
+                                                    {selectedScheduleDate && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => setSelectedScheduleDate(null)}
+                                                            className="text-xs text-blue-600 font-bold hover:bg-blue-50 rounded-lg"
                                                         >
-                                                            <div className="flex flex-col items-center justify-center h-full">
-                                                                <span className={cn(
-                                                                    "text-lg font-bold",
-                                                                    isSelected ? "text-white" : "text-slate-900"
-                                                                )}>
-                                                                    {dayData.day}
-                                                                </span>
-                                                                {dayData.hasSchedule && !isSelected && (
-                                                                    <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5">
-                                                                        <div className="w-1 h-1 rounded-full bg-emerald-500" />
-                                                                        <div className="w-1 h-1 rounded-full bg-emerald-500" />
-                                                                    </div>
-                                                                )}
-                                                                {isToday && !isSelected && (
-                                                                    <div className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-blue-500" />
-                                                                )}
-                                                            </div>
-                                                        </button>
-                                                    )
-                                                })}
-                                            </div>
-                                        </div>
-
-                                        {/* Schedule Editor for Selected Date */}
-                                        {selectedScheduleDate && (
-                                            <div className="space-y-6 p-6 bg-gradient-to-br from-slate-50 to-blue-50/30 rounded-3xl border-2 border-blue-100">
-                                                <div className="flex items-center justify-between">
-                                                    <div>
-                                                        <h3 className="text-xl font-bold text-slate-900">
-                                                            {new Date(selectedScheduleDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
-                                                        </h3>
-                                                        <p className="text-sm text-slate-600 mt-1">
-                                                            {dateSchedule?.schedules[selectedScheduleDate]?.length || 0} time range(s) set
-                                                        </p>
-                                                    </div>
-                                                    <Button
-                                                        onClick={() => addDateTimeRange(selectedScheduleDate)}
-                                                        className="h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white gap-2 shadow-lg shadow-blue-200"
-                                                    >
-                                                        <Plus className="w-4 h-4" />
-                                                        Add Hours
-                                                    </Button>
-                                                </div>
-
-                                                <div className="space-y-3">
-                                                    {dateSchedule?.schedules[selectedScheduleDate]?.map((range, idx) => (
-                                                        <div key={idx} className="flex items-center gap-3 bg-white p-4 rounded-2xl border-2 border-slate-200 shadow-sm hover:shadow-md transition-all">
-                                                            <div className="flex items-center gap-2 flex-1">
-                                                                <Input
-                                                                    type="time"
-                                                                    value={range.start}
-                                                                    onChange={(e) => updateDateTimeRange(selectedScheduleDate, idx, "start", e.target.value)}
-                                                                    className="h-11 rounded-xl bg-slate-50 border-slate-200 font-bold"
-                                                                />
-                                                                <span className="text-slate-400 font-bold text-lg">→</span>
-                                                                <Input
-                                                                    type="time"
-                                                                    value={range.end}
-                                                                    onChange={(e) => updateDateTimeRange(selectedScheduleDate, idx, "end", e.target.value)}
-                                                                    className="h-11 rounded-xl bg-slate-50 border-slate-200 font-bold"
-                                                                />
-                                                            </div>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                onClick={() => removeDateTimeRange(selectedScheduleDate, idx)}
-                                                                className="h-11 w-11 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                                                            >
-                                                                <Trash2 className="w-5 h-5" />
-                                                            </Button>
-                                                        </div>
-                                                    ))}
-                                                    {(!dateSchedule?.schedules[selectedScheduleDate] || dateSchedule.schedules[selectedScheduleDate].length === 0) && (
-                                                        <div className="py-16 text-center">
-                                                            <Clock className="w-16 h-16 mx-auto mb-4 text-slate-300" />
-                                                            <p className="text-lg font-bold text-slate-900 mb-2">No hours set for this date</p>
-                                                            <p className="text-sm text-slate-500">Click "Add Hours" to set working hours</p>
-                                                        </div>
+                                                            Clear Selection
+                                                        </Button>
                                                     )}
                                                 </div>
-                                            </div>
-                                        )}
 
-                                        {!selectedScheduleDate && (
-                                            <div className="py-20 text-center opacity-40">
-                                                <Calendar className="w-20 h-20 mx-auto mb-6 text-slate-300" />
-                                                <h4 className="text-xl font-bold text-slate-900 mb-2">Select a Date</h4>
-                                                <p className="text-sm font-medium text-slate-500">Click any date in the calendar above to set working hours</p>
+                                                {/* Day Headers */}
+                                                <div className="grid grid-cols-7 gap-2">
+                                                    {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(d => (
+                                                        <div key={d} className="text-center text-[10px] font-black text-slate-400 uppercase tracking-wider py-2">
+                                                            {d}
+                                                        </div>
+                                                    ))}
+                                                </div>
+
+                                                {/* Calendar Days */}
+                                                <div className="grid grid-cols-7 gap-2">
+                                                    {/* Empty cells for days before month starts */}
+                                                    {getScheduleMonthDays().length > 0 && Array.from({ length: getScheduleMonthDays()[0]?.firstDay || 0 }).map((_, i) => (
+                                                        <div key={`empty-${i}`} className="aspect-square" />
+                                                    ))}
+
+                                                    {/* Actual days */}
+                                                    {getScheduleMonthDays().map((dayData) => {
+                                                        const isSelected = selectedScheduleDate === dayData.dateStr
+                                                        const isToday = dayData.dateStr === new Date().toISOString().split('T')[0]
+
+                                                        return (
+                                                            <button
+                                                                key={dayData.dateStr}
+                                                                disabled={dayData.isPast}
+                                                                onClick={() => setSelectedScheduleDate(dayData.dateStr)}
+                                                                className={cn(
+                                                                    "aspect-square p-2 rounded-2xl border-2 transition-all relative group",
+                                                                    dayData.isPast && "opacity-30 cursor-not-allowed filter grayscale-[0.8]",
+                                                                    isSelected
+                                                                        ? "bg-slate-900 border-slate-900 shadow-xl scale-105 z-10"
+                                                                        : dayData.hasSchedule
+                                                                            ? "bg-emerald-50 border-emerald-100 hover:border-emerald-300 hover:shadow-md"
+                                                                            : isToday
+                                                                                ? "bg-blue-50 border-blue-200 hover:border-blue-400 hover:shadow-md"
+                                                                                : "bg-white border-slate-100 hover:border-blue-200 hover:shadow-md"
+                                                                )}
+                                                            >
+                                                                <div className="flex flex-col items-center justify-center h-full">
+                                                                    <span className={cn(
+                                                                        "text-base font-black transition-colors",
+                                                                        isSelected ? "text-white" : "text-slate-900",
+                                                                        dayData.isPast && "text-slate-300"
+                                                                    )}>
+                                                                        {dayData.day}
+                                                                    </span>
+                                                                    {dayData.hasSchedule && !isSelected && (
+                                                                        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-0.5">
+                                                                            <div className="w-1 h-1 rounded-full bg-emerald-500" />
+                                                                        </div>
+                                                                    )}
+                                                                    {isToday && !isSelected && (
+                                                                        <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-blue-500" />
+                                                                    )}
+                                                                </div>
+                                                            </button>
+                                                        )
+                                                    })}
+                                                </div>
                                             </div>
-                                        )}
+
+                                            {/* Schedule Editor for Selected Date */}
+                                            <div className="relative">
+                                                {selectedScheduleDate ? (
+                                                    <div className="space-y-6 p-8 bg-slate-50 rounded-[2.5rem] border-2 border-slate-100 animate-in fade-in slide-in-from-right-4 duration-500 min-h-full">
+                                                        <div className="flex items-center justify-between">
+                                                            <div>
+                                                                <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] mb-1">
+                                                                    {new Date(selectedScheduleDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' })}
+                                                                </p>
+                                                                <h3 className="text-2xl font-bold text-slate-900">
+                                                                    {new Date(selectedScheduleDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                                </h3>
+                                                            </div>
+                                                            <Button
+                                                                onClick={() => addDateTimeRange(selectedScheduleDate)}
+                                                                className="h-11 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white gap-2 font-bold shadow-lg"
+                                                            >
+                                                                <Plus className="w-4 h-4" />
+                                                                Add Slot
+                                                            </Button>
+                                                        </div>
+
+                                                        <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                                                            {dateSchedule?.schedules[selectedScheduleDate]?.map((range, idx) => (
+                                                                <div key={idx} className="flex items-center gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all group">
+                                                                    <div className="flex items-center gap-2 flex-1">
+                                                                        <div className="relative flex-1">
+                                                                            <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                                                                            <Input
+                                                                                type="time"
+                                                                                value={range.start}
+                                                                                onChange={(e) => updateDateTimeRange(selectedScheduleDate, idx, "start", e.target.value)}
+                                                                                className="h-10 pl-9 rounded-xl bg-slate-50 border-none font-bold text-sm"
+                                                                            />
+                                                                        </div>
+                                                                        <span className="text-slate-300 font-black">→</span>
+                                                                        <div className="relative flex-1">
+                                                                            <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                                                                            <Input
+                                                                                type="time"
+                                                                                value={range.end}
+                                                                                onChange={(e) => updateDateTimeRange(selectedScheduleDate, idx, "end", e.target.value)}
+                                                                                className="h-10 pl-9 rounded-xl bg-slate-50 border-none font-bold text-sm"
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        onClick={() => removeDateTimeRange(selectedScheduleDate, idx)}
+                                                                        className="h-10 w-10 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                                                                    >
+                                                                        <Trash2 className="w-4 h-4" />
+                                                                    </Button>
+                                                                </div>
+                                                            ))}
+                                                            {(!dateSchedule?.schedules[selectedScheduleDate] || dateSchedule.schedules[selectedScheduleDate].length === 0) && (
+                                                                <div className="py-16 text-center bg-white rounded-3xl border border-dashed border-slate-200">
+                                                                    <div className="w-12 h-12 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                                        <Clock className="w-6 h-6" />
+                                                                    </div>
+                                                                    <p className="text-sm font-bold text-slate-500">No slots defined</p>
+                                                                    <button
+                                                                        onClick={() => addDateTimeRange(selectedScheduleDate)}
+                                                                        className="text-xs text-blue-600 font-bold mt-2 hover:underline"
+                                                                    >
+                                                                        Click here to add working hours
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Individual Slot Management */}
+                                                        <div className="pt-8 border-t border-slate-200 mt-2">
+                                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+                                                                <div>
+                                                                    <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-1">Manual Slot Editor</h4>
+                                                                    <p className="text-[10px] text-slate-500 font-medium">Click to toggle specific slots for emergencies</p>
+                                                                </div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="relative flex-1 group sm:min-w-[200px]">
+                                                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                                                                        <Input
+                                                                            placeholder="Search time (e.g. 10:30)..."
+                                                                            value={slotSearch}
+                                                                            onChange={(e) => setSlotSearch(e.target.value)}
+                                                                            className="h-8 pl-8 text-[10px] font-bold bg-slate-50 border-none rounded-lg focus-visible:ring-1 focus-visible:ring-blue-100 transition-all"
+                                                                        />
+                                                                    </div>
+                                                                    <div className="w-px h-4 bg-slate-200 mx-1 hidden sm:block" />
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        onClick={() => handleBulkSlotStatus(selectedScheduleDate, "block")}
+                                                                        className="h-8 px-3 text-[10px] font-bold text-red-600 border-red-100 hover:bg-red-50 hover:border-red-200 rounded-lg flex gap-1.5 items-center bg-white shadow-sm"
+                                                                    >
+                                                                        <Lock className="w-3 h-3" />
+                                                                        Block All
+                                                                    </Button>
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        onClick={() => handleBulkSlotStatus(selectedScheduleDate, "unblock")}
+                                                                        className="h-8 px-3 text-[10px] font-bold text-emerald-600 border-emerald-100 hover:bg-emerald-50 hover:border-emerald-200 rounded-lg flex gap-1.5 items-center bg-white shadow-sm"
+                                                                    >
+                                                                        <Unlock className="w-3 h-3" />
+                                                                        Unblock All
+                                                                    </Button>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        onClick={async () => {
+                                                                            const freshSlots = await getSlotsAsync(id as string)
+                                                                            setSlots(freshSlots)
+                                                                        }}
+                                                                        className="h-8 w-8 text-slate-400 hover:text-blue-600 rounded-lg"
+                                                                    >
+                                                                        <RefreshCcw className="w-3.5 h-3.5" />
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="space-y-8 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                                                                {/* Morning Slots */}
+                                                                {slots.filter(s => s.date === selectedScheduleDate && s.startTime.includes(slotSearch.trim()) && parseInt(s.startTime.split(':')[0]) < 13).length > 0 && (
+                                                                    <div className="space-y-3">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <div className="p-1.5 bg-blue-50 rounded-lg">
+                                                                                <Clock className="w-3 h-3 text-blue-500" />
+                                                                            </div>
+                                                                            <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Morning Session</h5>
+                                                                        </div>
+                                                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                                                            {slots
+                                                                                .filter(s => s.date === selectedScheduleDate && s.startTime.includes(slotSearch.trim()) && parseInt(s.startTime.split(':')[0]) < 13)
+                                                                                .sort((a, b) => a.startTime.localeCompare(b.startTime))
+                                                                                .map(slot => (
+                                                                                    <SlotButton
+                                                                                        key={slot.id}
+                                                                                        slot={slot}
+                                                                                        onToggle={() => handleToggleSlotStatus(slot.id, slot.status)}
+                                                                                    />
+                                                                                ))
+                                                                            }
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Afternoon/Evening Slots */}
+                                                                {slots.filter(s => s.date === selectedScheduleDate && s.startTime.includes(slotSearch.trim()) && parseInt(s.startTime.split(':')[0]) >= 13).length > 0 && (
+                                                                    <div className="space-y-3">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <div className="p-1.5 bg-purple-50 rounded-lg">
+                                                                                <Clock className="w-3 h-3 text-purple-500" />
+                                                                            </div>
+                                                                            <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Afternoon & Evening</h5>
+                                                                        </div>
+                                                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                                                            {slots
+                                                                                .filter(s => s.date === selectedScheduleDate && s.startTime.includes(slotSearch.trim()) && parseInt(s.startTime.split(':')[0]) >= 13)
+                                                                                .sort((a, b) => a.startTime.localeCompare(b.startTime))
+                                                                                .map(slot => (
+                                                                                    <SlotButton
+                                                                                        key={slot.id}
+                                                                                        slot={slot}
+                                                                                        onToggle={() => handleToggleSlotStatus(slot.id, slot.status)}
+                                                                                    />
+                                                                                ))
+                                                                            }
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
+                                                                {slots.filter(s => s.date === selectedScheduleDate && s.startTime.includes(slotSearch.trim())).length === 0 && (
+                                                                    <div className="py-12 text-center bg-white/50 rounded-3xl border border-dashed border-slate-200">
+                                                                        <div className="w-10 h-10 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mx-auto mb-3">
+                                                                            <Ban className="w-5 h-5" />
+                                                                        </div>
+                                                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No slots found</p>
+                                                                        <p className="text-[10px] text-slate-400 font-medium mt-1">Try a different search or check settings</p>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        <p className="text-[10px] text-slate-400 italic text-center pt-4">Don't forget to click "Save All Changes" at the top.</p>
+                                                    </div>
+                                                ) : (
+                                                    <div className="h-full min-h-[400px] flex flex-col items-center justify-center p-12 text-center bg-slate-50/50 rounded-[2.5rem] border-2 border-dashed border-slate-200 opacity-60">
+                                                        <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-6">
+                                                            <Calendar className="w-8 h-8 text-slate-300" />
+                                                        </div>
+                                                        <h4 className="text-xl font-bold text-slate-900 mb-2">Select a Work Date</h4>
+                                                        <p className="text-xs font-medium text-slate-500 max-w-[200px] mx-auto">Click any available date in the calendar to define specific hours</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </TabsContent>
@@ -1802,7 +2034,7 @@ export default function DoctorManagementPage() {
                     ) : (
                         <div className="space-y-4">
                             <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
-                                <p className="font-bold text-sm">{csvFile.name}</p>
+                                <p className="font-bold text-sm">{csvFile?.name}</p>
                                 <Button variant="ghost" size="sm" onClick={() => { setCsvFile(null); setCsvPreview([]) }} className="text-red-500">Remove</Button>
                             </div>
                             <div className="max-h-60 overflow-y-auto border border-slate-100 rounded-xl">
@@ -1892,29 +2124,29 @@ export default function DoctorManagementPage() {
                             <Input
                                 placeholder="Patient Name"
                                 value={editingRecord.patientName}
-                                onChange={e => setEditingRecord({ ...editingRecord, patientName: e.target.value })}
+                                onChange={e => editingRecord && setEditingRecord({ ...editingRecord, patientName: e.target.value })}
                             />
                             <Input
                                 placeholder="Card No"
                                 value={editingRecord.cardNo || ""}
-                                onChange={e => setEditingRecord({ ...editingRecord, cardNo: e.target.value })}
+                                onChange={e => editingRecord && setEditingRecord({ ...editingRecord, cardNo: e.target.value })}
                             />
                             <Input
                                 placeholder="IC No (Required)"
                                 value={editingRecord.patientIC}
-                                onChange={e => setEditingRecord({ ...editingRecord, patientIC: e.target.value })}
+                                onChange={e => editingRecord && setEditingRecord({ ...editingRecord, patientIC: e.target.value })}
                             />
                             <Input
                                 placeholder="Phone No"
                                 value={editingRecord.handphoneNo}
-                                onChange={e => setEditingRecord({ ...editingRecord, handphoneNo: e.target.value })}
+                                onChange={e => editingRecord && setEditingRecord({ ...editingRecord, handphoneNo: e.target.value })}
                             />
                             <div className="space-y-1">
                                 <Label>Total Fee (RM)</Label>
                                 <Input
                                     type="number"
                                     value={editingRecord.totalFee}
-                                    onChange={e => setEditingRecord({ ...editingRecord, totalFee: parseFloat(e.target.value) })}
+                                    onChange={e => editingRecord && setEditingRecord({ ...editingRecord, totalFee: parseFloat(e.target.value) })}
                                 />
                             </div>
                             <div className="space-y-1">
@@ -1922,7 +2154,7 @@ export default function DoctorManagementPage() {
                                 <Input
                                     type="number"
                                     value={editingRecord.consultationFee}
-                                    onChange={e => setEditingRecord({ ...editingRecord, consultationFee: parseFloat(e.target.value) })}
+                                    onChange={e => editingRecord && setEditingRecord({ ...editingRecord, consultationFee: parseFloat(e.target.value) })}
                                 />
                             </div>
                             <div className="space-y-1">
@@ -1930,7 +2162,7 @@ export default function DoctorManagementPage() {
                                 <Input
                                     type="date"
                                     value={editingRecord.consultationDate}
-                                    onChange={e => setEditingRecord({ ...editingRecord, consultationDate: e.target.value })}
+                                    onChange={e => editingRecord && setEditingRecord({ ...editingRecord, consultationDate: e.target.value })}
                                 />
                             </div>
                             <div className="space-y-1">
@@ -1938,20 +2170,24 @@ export default function DoctorManagementPage() {
                                 <Input
                                     type="date"
                                     value={editingRecord.fixDate || ""}
-                                    onChange={e => setEditingRecord({ ...editingRecord, fixDate: e.target.value })}
+                                    onChange={e => editingRecord && setEditingRecord({ ...editingRecord, fixDate: e.target.value })}
                                 />
                             </div>
                             <Input
                                 className="col-span-2"
                                 placeholder="Remark"
                                 value={editingRecord.remark || ""}
-                                onChange={e => setEditingRecord({ ...editingRecord, remark: e.target.value })}
+                                onChange={e => editingRecord && setEditingRecord({ ...editingRecord, remark: e.target.value })}
                             />
                             <Input
                                 className="col-span-2"
                                 placeholder="Updates / History"
                                 value={editingRecord.updates || ""}
-                                onChange={e => setEditingRecord({ ...editingRecord, updates: e.target.value })}
+                                onChange={e => {
+                                    if (editingRecord) {
+                                        setEditingRecord({ ...editingRecord, updates: e.target.value })
+                                    }
+                                }}
                             />
                         </div>
                     )}
@@ -1977,9 +2213,9 @@ export default function DoctorManagementPage() {
                     </DialogHeader>
                     {deletingRecord && (
                         <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 my-4">
-                            <p className="font-bold text-slate-900">{deletingRecord.patientName}</p>
-                            <p className="text-sm text-slate-500">IC: {deletingRecord.patientIC}</p>
-                            <p className="text-sm text-slate-500">Phone: {deletingRecord.handphoneNo}</p>
+                            <p className="font-bold text-slate-900">{deletingRecord?.patientName}</p>
+                            <p className="text-sm text-slate-500">IC: {deletingRecord?.patientIC}</p>
+                            <p className="text-sm text-slate-500">Phone: {deletingRecord?.handphoneNo}</p>
                         </div>
                     )}
                     <div className="flex gap-4">
@@ -1992,6 +2228,6 @@ export default function DoctorManagementPage() {
                     </div>
                 </DialogContent>
             </Dialog>
-        </div>
+        </div >
     )
 }

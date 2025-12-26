@@ -32,11 +32,23 @@ export async function POST(
         await dbConnect();
         const { id: doctorId } = await props.params;
         const body = await request.json();
+        const schedules = body.schedules || {};
+
+        // Validation: Prevent saving schedules for past dates
+        const todayStr = new Date().toISOString().split('T')[0];
+        const pastDates = Object.keys(schedules).filter(date => date < todayStr);
+
+        if (pastDates.length > 0) {
+            return NextResponse.json({
+                error: 'Cannot set schedules for past dates',
+                pastDates
+            }, { status: 400 });
+        }
 
         // Upsert the schedule
         const schedule = await DoctorDateSchedule.findOneAndUpdate(
             { doctorId },
-            { doctorId, schedules: body.schedules },
+            { doctorId, schedules },
             { upsert: true, new: true }
         );
 

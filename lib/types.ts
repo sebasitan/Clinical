@@ -7,7 +7,7 @@ export type Doctor = {
     email: string
     isActive: boolean
     isAvailable: boolean // Quick toggle
-    slotDuration: 10 | 15 | 20 | 30 // in minutes
+    slotDuration: 10 | 15 | 20 | 30 | 45 | 60 // in minutes
 }
 
 export type DayOfWeek = "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday"

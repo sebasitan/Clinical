@@ -113,12 +113,8 @@ export default function ContactPage() {
                                 <h4 className="text-2xl font-black">Our Office Hours</h4>
                                 <div className="space-y-3 font-medium">
                                     <div className="flex justify-between border-b border-blue-500/30 pb-3">
-                                        <span>Mon — Fri</span>
-                                        <span className="font-black">09:00 — 18:00</span>
-                                    </div>
-                                    <div className="flex justify-between border-b border-blue-500/30 pb-3">
-                                        <span>Saturday</span>
-                                        <span className="font-black">09:00 — 13:00</span>
+                                        <span>Monday — Saturday</span>
+                                        <span className="font-black">09:00 — 21:00</span>
                                     </div>
                                     <div className="flex justify-between text-blue-200">
                                         <span>Sunday</span>

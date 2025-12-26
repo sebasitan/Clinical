@@ -51,7 +51,8 @@ export async function regenerateDoctorSlotsCloud(doctorId: string) {
         const dayName = date.toLocaleDateString('en-US', { weekday: 'long' }) as DayOfWeek;
 
         // Use date-specific override if it exists, otherwise use weekly schedule
-        const dateOverride = dateSchedule?.schedules?.get?.(dateStr);
+        const schedules = dateSchedule?.schedules;
+        const dateOverride = (schedules instanceof Map) ? schedules.get(dateStr) : (schedules ? (schedules as any)[dateStr] : undefined);
         const baseRanges = dateOverride || schedule?.days?.[dayName] || [];
         const dayRanges = [...baseRanges].sort((a, b) => a.start.localeCompare(b.start));
 

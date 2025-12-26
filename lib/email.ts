@@ -22,6 +22,7 @@ export async function sendAppointmentConfirmation(
         const { data, error } = await resend.emails.send({
             from: `Klinik Pergigian Setapak (Sri Rampai) <${process.env.RESEND_EMAIL_FROM || 'onboarding@resend.dev'}>`,
             to: [to],
+            reply_to: process.env.RESEND_REPLY_TO || undefined,
             subject: 'Appointment Confirmation - Klinik Pergigian Setapak (Sri Rampai)',
             html: `
                 <!DOCTYPE html>
@@ -124,6 +125,7 @@ export async function sendAppointmentReminder(
         const { data, error } = await resend.emails.send({
             from: `Klinik Pergigian Setapak (Sri Rampai) <${process.env.RESEND_EMAIL_FROM || 'onboarding@resend.dev'}>`,
             to: [to],
+            reply_to: process.env.RESEND_REPLY_TO || undefined,
             subject: 'Appointment Reminder - Tomorrow',
             html: `
                 <!DOCTYPE html>
@@ -192,6 +194,7 @@ export async function sendAppointmentRescheduled(
         await resend.emails.send({
             from: `Klinik Pergigian Setapak (Sri Rampai) <${process.env.RESEND_EMAIL_FROM || 'onboarding@resend.dev'}>`,
             to: [to],
+            reply_to: process.env.RESEND_REPLY_TO || undefined,
             subject: 'Appointment Rescheduled - Klinik Pergigian Setapak (Sri Rampai)',
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
@@ -232,6 +235,7 @@ export async function sendAppointmentCancelled(
         await resend.emails.send({
             from: `Klinik Pergigian Setapak (Sri Rampai) <${process.env.RESEND_EMAIL_FROM || 'onboarding@resend.dev'}>`,
             to: [to],
+            reply_to: process.env.RESEND_REPLY_TO || undefined,
             subject: 'Appointment Cancelled - Klinik Pergigian Setapak (Sri Rampai)',
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #fee2e2; border-radius: 12px; overflow: hidden;">

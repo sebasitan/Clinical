@@ -31,7 +31,8 @@ export default function ServicesPage() {
             desc: "The clinical foundation for long-term oral health. We focus on early detection and biological preservation.",
             features: ["Prophylaxis (Scaling)", "Digital Low-Radiation X-rays", "Biocompatible Fillings", "Periodontal Therapy"],
             color: "blue",
-            image: "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&q=80&w=800"
+            image: "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&q=80&w=800",
+            ctaLink: "https://wa.me/60197773477"
         },
         {
             icon: Sparkles,
@@ -40,7 +41,8 @@ export default function ServicesPage() {
             desc: "Transforming smiles into masterpieces. Our aesthetic protocols balance facial symmetry with natural translucency.",
             features: ["Digital Smile Design", "Hand-Layered Veneers", "Premium Laser Whitening", "Invisalign® System"],
             color: "indigo",
-            image: "https://images.unsplash.com/photo-1606811841689-23dfddce3e95?auto=format&fit=crop&q=80&w=800"
+            image: "https://images.unsplash.com/photo-1606811841689-23dfddce3e95?auto=format&fit=crop&q=80&w=800",
+            ctaLink: "/booking"
         },
         {
             icon: Stethoscope,
@@ -49,7 +51,8 @@ export default function ServicesPage() {
             desc: "Advanced rehabilitation using high-grade materials. We restore bite function and structural integrity seamlessly.",
             features: ["Titanium Implants", "Zirconia Multi-unit Bridges", "Full Mouth Rehab", "Endodontic Triage"],
             color: "slate",
-            image: "https://images.unsplash.com/photo-1598256989800-fe5f95da9787?auto=format&fit=crop&q=80&w=800"
+            image: "https://images.unsplash.com/photo-1598256989800-fe5f95da9787?auto=format&fit=crop&q=80&w=800",
+            ctaLink: "/booking"
         },
         {
             icon: Zap,
@@ -58,7 +61,8 @@ export default function ServicesPage() {
             desc: "On-call clinical support for acute complications. We prioritize same-day intervention for pain and trauma.",
             features: ["Pulpitis Treatment", "Abscess Management", "Dental Trauma Care", "Surgical Extractions"],
             color: "rose",
-            image: "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&q=80&w=800"
+            image: "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&q=80&w=800",
+            ctaLink: "/booking"
         }
     ]
 
@@ -179,7 +183,7 @@ export default function ServicesPage() {
                                     </div>
 
                                     <div className="pt-4 md:pt-6">
-                                        <Link href="/booking" className="block w-full sm:w-auto">
+                                        <Link href={s.ctaLink || "/booking"} className="block w-full sm:w-auto">
                                             <Button size="lg" className="w-full sm:w-auto h-14 md:h-16 px-8 md:px-12 bg-slate-900 hover:bg-blue-600 text-white rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl hover:-translate-y-1 transition-all">
                                                 Schedule Session <ArrowRight className="ml-3 w-5 h-5" />
                                             </Button>

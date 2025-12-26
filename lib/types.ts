@@ -201,3 +201,14 @@ export type ConsultationRecord = {
     createdAt?: string
 }
 
+export type Announcement = {
+    _id?: string
+    id: string
+    title: string
+    message: string
+    startDate: string // ISO Date YYYY-MM-DD
+    endDate: string   // ISO Date YYYY-MM-DD
+    isActive: boolean
+    type: "info" | "warning" | "success" | "emergency"
+    createdAt?: string
+}

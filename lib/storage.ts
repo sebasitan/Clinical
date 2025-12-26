@@ -1,4 +1,4 @@
-import type { Admin, Appointment, Doctor, Patient, Slot, SystemSettings, AuditLog, Receptionist, Facility, DoctorWeeklySchedule, DoctorLeave, DayOfWeek, ScheduleTimeRange, AvailabilityBlock, ConsultationRecord, DoctorDateSchedule } from "./types"
+import type { Admin, Appointment, Doctor, Patient, Slot, SystemSettings, AuditLog, Receptionist, Facility, DoctorWeeklySchedule, DoctorLeave, DayOfWeek, ScheduleTimeRange, AvailabilityBlock, ConsultationRecord, DoctorDateSchedule, Announcement } from "./types"
 
 const STORAGE_KEYS = {
     ADMINS: "dental_admins",
@@ -184,6 +184,45 @@ export const deleteDoctorLeaveAsync = async (doctorId: string, leaveId: string) 
     if (!res.ok) throw new Error('Failed to delete leave');
     return await res.json();
 }
+export const getAnnouncementsAsync = async (isAdmin: boolean = false): Promise<Announcement[]> => {
+    try {
+        const res = await fetch(`${API_BASE}/announcements${isAdmin ? '?admin=true' : ''}`, { cache: 'no-store' });
+        if (!res.ok) return [];
+        return await res.json();
+    } catch (e) {
+        console.error("Failed to fetch announcements", e);
+        return [];
+    }
+}
+
+export const addAnnouncementAsync = async (announcement: Omit<Announcement, "id">) => {
+    const res = await fetch(`${API_BASE}/announcements`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(announcement)
+    });
+    if (!res.ok) throw new Error('Failed to create announcement');
+    return await res.json();
+}
+
+export const updateAnnouncementAsync = async (id: string, updates: Partial<Announcement>) => {
+    const res = await fetch(`${API_BASE}/announcements/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+    });
+    if (!res.ok) throw new Error('Failed to update announcement');
+    return await res.json();
+}
+
+export const deleteAnnouncementAsync = async (id: string) => {
+    const res = await fetch(`${API_BASE}/announcements/${id}`, {
+        method: 'DELETE'
+    });
+    if (!res.ok) throw new Error('Failed to delete announcement');
+    return await res.json();
+}
+
 // --- END API CLIENT ---
 
 // Helper to handle window/localStorage in Next.js

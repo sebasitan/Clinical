@@ -16,12 +16,12 @@ import {
     Shield,
     Menu,
     X,
-    Building2,
     UserCog,
     ChevronLeft,
     ChevronRight,
     Stethoscope,
-    MapPin
+    MapPin,
+    Megaphone
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
@@ -69,6 +69,7 @@ export function AdminNav() {
         { href: "/admin/patients", label: "Patient Registry", icon: UserSearch },
         { href: "/admin/care", label: "Clinical Follow-ups", icon: ActivitySquare },
         { href: "/admin/reminders", label: "Reminders", icon: Clock },
+        { href: "/admin/announcements", label: "Announcements", icon: Megaphone },
         { href: "/admin/reports", label: "Reports", icon: FilePieChart },
         { href: "/admin/audit", label: "Audit Logs", icon: ActivitySquare },
         { href: "/admin/settings", label: "Settings", icon: Settings },

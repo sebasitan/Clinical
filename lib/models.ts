@@ -256,3 +256,15 @@ const OTPSchema = new Schema({
 });
 
 export const OTPModel = models.OTP || model('OTP', OTPSchema);
+// --- Announcement Schema ---
+const AnnouncementSchema = new Schema({
+    id: { type: String, required: true, unique: true },
+    title: { type: String, required: true },
+    message: { type: String, required: true },
+    startDate: { type: String, required: true },
+    endDate: { type: String, required: true },
+    isActive: { type: Boolean, default: true },
+    type: { type: String, enum: ['info', 'warning', 'success', 'emergency'], default: 'info' }
+}, { timestamps: true });
+
+export const AnnouncementModel = models.Announcement || model('Announcement', AnnouncementSchema);

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo, memo } from "react"
 import { LoadingScreen } from "@/components/ui/loading-screen"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -39,6 +39,92 @@ import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 
+const AppointmentRow = memo(({ apt, doc, onAction, onReschedule }: {
+    apt: Appointment,
+    doc: Doctor | undefined,
+    onAction: (id: string, status: Appointment['status']) => void,
+    onReschedule: (apt: Appointment) => void
+}) => {
+    return (
+        <tr key={apt.id} className="hover:bg-slate-50/40 transition-colors group">
+            <td className="px-8 py-6">
+                <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center font-bold text-slate-500 shrink-0">
+                        {apt.patientName.charAt(0)}
+                    </div>
+                    <div>
+                        <p className="font-bold text-slate-900">{apt.patientName}</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mt-1">{apt.patientIC}</p>
+                    </div>
+                </div>
+            </td>
+            <td className="px-8 py-6">
+                <div className="flex items-center gap-2">
+                    <Clock className="w-3.5 h-3.5 text-blue-500" />
+                    <span className="text-sm font-bold text-slate-700">{apt.timeSlot}</span>
+                </div>
+            </td>
+            <td className="px-8 py-6">
+                <div className="flex items-center gap-2">
+                    <Avatar className="w-6 h-6 rounded-lg">
+                        <AvatarImage src={doc?.photo} />
+                        <AvatarFallback>{doc?.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <span className="text-xs font-bold text-slate-600">{doc?.name}</span>
+                </div>
+            </td>
+            <td className="px-8 py-6 text-center">
+                <Badge className={cn(
+                    "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border-none",
+                    apt.status === 'confirmed' ? "bg-blue-100 text-blue-600" :
+                        apt.status === 'arrived' ? "bg-purple-100 text-purple-600" :
+                            apt.status === 'completed' ? "bg-emerald-100 text-emerald-600" :
+                                "bg-rose-100 text-rose-600"
+                )}>
+                    {apt.status}
+                </Badge>
+            </td>
+            <td className="px-8 py-6 text-right">
+                {['confirmed', 'arrived', 'pending'].includes(apt.status) ? (
+                    <div className="flex items-center justify-end gap-2">
+                        <Button
+                            size="sm"
+                            onClick={() => onAction(apt.id, 'completed')}
+                            className="h-8 rounded-lg text-[9px] font-black uppercase bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-200"
+                        >
+                            Complete
+                        </Button>
+
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onAction(apt.id, 'no-show')}
+                            className="h-8 w-8 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 border border-rose-100"
+                            title="Mark No Show"
+                        >
+                            <UserMinus className="w-4 h-4" />
+                        </Button>
+                        {['confirmed', 'pending'].includes(apt.status) && (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => onReschedule(apt)}
+                                className="h-8 w-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 border border-blue-100"
+                                title="Reschedule"
+                            >
+                                <RefreshCcw className="w-4 h-4" />
+                            </Button>
+                        )}
+                    </div>
+                ) : (
+                    <span className="text-[10px] font-bold text-slate-300 italic">No actions</span>
+                )}
+            </td>
+        </tr>
+    )
+})
+AppointmentRow.displayName = "AppointmentRow"
+
 export default function SchedulePage() {
     const router = useRouter()
     const { isLoading } = useAdminAuth()
@@ -60,7 +146,7 @@ export default function SchedulePage() {
     const occupancy = totalSlots > 0 ? Math.round((bookedCount / totalSlots) * 100) : 0
     const isToday = selectedDate === new Date().toISOString().split('T')[0]
 
-    const todaysAppointments = appointments.filter(a => a.appointmentDate === selectedDate)
+    const todaysAppointments = useMemo(() => appointments.filter(a => a.appointmentDate === selectedDate), [appointments, selectedDate])
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 60000)
         return () => clearInterval(timer)
@@ -357,86 +443,15 @@ export default function SchedulePage() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">
-                                        {todaysAppointments.map(apt => {
-                                            const doc = doctors.find(d => d.id === apt.doctorId)
-                                            return (
-                                                <tr key={apt.id} className="hover:bg-slate-50/40 transition-colors group">
-                                                    <td className="px-8 py-6">
-                                                        <div className="flex items-center gap-4">
-                                                            <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center font-bold text-slate-500 shrink-0">
-                                                                {apt.patientName.charAt(0)}
-                                                            </div>
-                                                            <div>
-                                                                <p className="font-bold text-slate-900">{apt.patientName}</p>
-                                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mt-1">{apt.patientIC}</p>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-8 py-6">
-                                                        <div className="flex items-center gap-2">
-                                                            <Clock className="w-3.5 h-3.5 text-blue-500" />
-                                                            <span className="text-sm font-bold text-slate-700">{apt.timeSlot}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-8 py-6">
-                                                        <div className="flex items-center gap-2">
-                                                            <Avatar className="w-6 h-6 rounded-lg">
-                                                                <AvatarImage src={doc?.photo} />
-                                                                <AvatarFallback>{doc?.name.charAt(0)}</AvatarFallback>
-                                                            </Avatar>
-                                                            <span className="text-xs font-bold text-slate-600">{doc?.name}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-8 py-6 text-center">
-                                                        <Badge className={cn(
-                                                            "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border-none",
-                                                            apt.status === 'confirmed' ? "bg-blue-100 text-blue-600" :
-                                                                apt.status === 'arrived' ? "bg-purple-100 text-purple-600" :
-                                                                    apt.status === 'completed' ? "bg-emerald-100 text-emerald-600" :
-                                                                        "bg-rose-100 text-rose-600"
-                                                        )}>
-                                                            {apt.status}
-                                                        </Badge>
-                                                    </td>
-                                                    <td className="px-8 py-6 text-right">
-                                                        {['confirmed', 'arrived', 'pending'].includes(apt.status) ? (
-                                                            <div className="flex items-center justify-end gap-2">
-                                                                <Button
-                                                                    size="sm"
-                                                                    onClick={() => handleAppointmentAction(apt.id, 'completed')}
-                                                                    className="h-8 rounded-lg text-[9px] font-black uppercase bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-200"
-                                                                >
-                                                                    Complete
-                                                                </Button>
-
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    onClick={() => handleAppointmentAction(apt.id, 'no-show')}
-                                                                    className="h-8 w-8 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 border border-rose-100"
-                                                                    title="Mark No Show"
-                                                                >
-                                                                    <UserMinus className="w-4 h-4" />
-                                                                </Button>
-                                                                {['confirmed', 'pending'].includes(apt.status) && (
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        onClick={() => openRescheduleDialog(apt)}
-                                                                        className="h-8 w-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 border border-blue-100"
-                                                                        title="Reschedule"
-                                                                    >
-                                                                        <RefreshCcw className="w-4 h-4" />
-                                                                    </Button>
-                                                                )}
-                                                            </div>
-                                                        ) : (
-                                                            <span className="text-[10px] font-bold text-slate-300 italic">No actions</span>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            )
-                                        })}
+                                        {todaysAppointments.map(apt => (
+                                            <AppointmentRow
+                                                key={apt.id}
+                                                apt={apt}
+                                                doc={doctors.find(d => d.id === apt.doctorId)}
+                                                onAction={handleAppointmentAction}
+                                                onReschedule={openRescheduleDialog}
+                                            />
+                                        ))}
                                     </tbody>
                                 </table>
                             </div>

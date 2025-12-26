@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo, memo } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -73,7 +73,7 @@ import {
 
 const DAYS: DayOfWeek[] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
-const SlotButton = ({ slot, onToggle }: { slot: Slot, onToggle: () => void }) => {
+const SlotButton = memo(({ slot, onToggle }: { slot: Slot, onToggle: () => void }) => {
     const isAvailable = slot.status === "available"
     const isBooked = slot.status === "booked"
     const isBlocked = slot.status === "blocked"
@@ -121,7 +121,8 @@ const SlotButton = ({ slot, onToggle }: { slot: Slot, onToggle: () => void }) =>
             )}
         </button>
     )
-}
+})
+SlotButton.displayName = "SlotButton"
 
 export default function DoctorManagementPage() {
     const { id } = useParams()
@@ -196,20 +197,26 @@ export default function DoctorManagementPage() {
         return { days, firstDay }
     }
 
-    const { days: daysInMonth, firstDay: startDayOffset } = getDaysInMonth(calendarDate)
-    const calendarDays = Array.from({ length: daysInMonth }, (_, i) => {
-        const day = i + 1
-        const dateStr = `${calendarDate.getFullYear()}-${String(calendarDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-        const dayApts = appointments.filter(a => a.appointmentDate === dateStr)
-        const dayLeaves = leaves.filter(l => l.date === dateStr)
-        return { day, dateStr, dayApts, dayLeaves }
-    })
+    const calendarDays = useMemo(() => {
+        const { days: daysInMonth } = getDaysInMonth(calendarDate)
+        return Array.from({ length: daysInMonth }, (_, i) => {
+            const day = i + 1
+            const dateStr = `${calendarDate.getFullYear()}-${String(calendarDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+            const dayApts = appointments.filter(a => a.appointmentDate === dateStr)
+            const dayLeaves = leaves.filter(l => l.date === dateStr)
+            return { day, dateStr, dayApts, dayLeaves }
+        })
+    }, [calendarDate, appointments, leaves])
 
     const navigateMonth = (direction: 'prev' | 'next') => {
         const newDate = new Date(calendarDate)
         if (direction === 'prev') newDate.setMonth(newDate.getMonth() - 1)
         else newDate.setMonth(newDate.getMonth() + 1)
         setCalendarDate(newDate)
+    }
+
+    const calculateOffset = (date: Date) => {
+        return new Date(date.getFullYear(), date.getMonth(), 1).getDay()
     }
 
     const navigateScheduleMonth = (direction: 'prev' | 'next') => {
@@ -219,7 +226,7 @@ export default function DoctorManagementPage() {
         setScheduleMonth(newDate)
     }
 
-    const getScheduleMonthDays = () => {
+    const scheduleMonthDays = useMemo(() => {
         const year = scheduleMonth.getFullYear()
         const month = scheduleMonth.getMonth()
         const daysInMonth = new Date(year, month + 1, 0).getDate()
@@ -233,15 +240,15 @@ export default function DoctorManagementPage() {
             const isPast = dateStr < todayStr
             return { day, dateStr, hasSchedule, firstDay, isPast }
         })
-    }
+    }, [scheduleMonth, dateSchedule])
 
-    const patientRegistry = Array.from(new Set(appointments.map(a => a.patientIC)))
-    const filteredPatients = patientRegistry.filter(ic => {
+    const patientRegistry = useMemo(() => Array.from(new Set(appointments.map(a => a.patientIC))), [appointments])
+    const filteredPatients = useMemo(() => patientRegistry.filter(ic => {
         const apt = appointments.find(a => a.patientIC === ic)
         const nameMatch = apt?.patientName.toLowerCase().includes(patientSearch.toLowerCase())
         const icMatch = ic.toLowerCase().includes(patientSearch.toLowerCase())
         return nameMatch || icMatch
-    })
+    }), [patientRegistry, appointments, patientSearch])
 
     // Form states
     const [newLeave, setNewLeave] = useState<{
@@ -937,12 +944,12 @@ export default function DoctorManagementPage() {
                                                 {/* Calendar Days */}
                                                 <div className="grid grid-cols-7 gap-2">
                                                     {/* Empty cells for days before month starts */}
-                                                    {getScheduleMonthDays().length > 0 && Array.from({ length: getScheduleMonthDays()[0]?.firstDay || 0 }).map((_, i) => (
+                                                    {scheduleMonthDays.length > 0 && Array.from({ length: scheduleMonthDays[0]?.firstDay || 0 }).map((_, i) => (
                                                         <div key={`empty-${i}`} className="aspect-square" />
                                                     ))}
 
                                                     {/* Actual days */}
-                                                    {getScheduleMonthDays().map((dayData) => {
+                                                    {scheduleMonthDays.map((dayData) => {
                                                         const isSelected = selectedScheduleDate === dayData.dateStr
                                                         const isToday = dayData.dateStr === new Date().toISOString().split('T')[0]
 
@@ -1236,7 +1243,7 @@ export default function DoctorManagementPage() {
 
                                             <div className="grid grid-cols-7 gap-3">
                                                 {/* Corrected logic for Monday start if needed, but let's stick to firstDay offset for now */}
-                                                {Array.from({ length: startDayOffset }).map((_, i) => (
+                                                {Array.from({ length: calculateOffset(calendarDate) }).map((_, i) => (
                                                     <div key={`offset-${i}`} className="h-32 bg-slate-50/30 rounded-3xl border border-transparent" />
                                                 ))}
                                                 {calendarDays.map((dayData) => {

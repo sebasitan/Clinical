@@ -5,11 +5,11 @@ import { DoctorDateSchedule } from '@/lib/models';
 // GET /api/doctors/[id]/date-schedule
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    props: { params: Promise<{ id: string }> }
 ) {
     try {
         await dbConnect();
-        const doctorId = params.id;
+        const { id: doctorId } = await props.params;
         const schedule = await DoctorDateSchedule.findOne({ doctorId });
 
         if (!schedule) {
@@ -26,11 +26,11 @@ export async function GET(
 // POST /api/doctors/[id]/date-schedule
 export async function POST(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    props: { params: Promise<{ id: string }> }
 ) {
     try {
         await dbConnect();
-        const doctorId = params.id;
+        const { id: doctorId } = await props.params;
         const body = await request.json();
 
         // Upsert the schedule

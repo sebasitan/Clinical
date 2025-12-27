@@ -1,3 +1,4 @@
+import { formatLocalDate } from "./utils"
 import type { Admin, Appointment, Doctor, Patient, Slot, SystemSettings, AuditLog, Receptionist, Facility, DoctorWeeklySchedule, DoctorLeave, DayOfWeek, ScheduleTimeRange, AvailabilityBlock, ConsultationRecord, DoctorDateSchedule, Announcement } from "./types"
 
 const STORAGE_KEYS = {
@@ -466,7 +467,7 @@ export const regenerateDoctorSlots = (doctorId: string) => {
     for (let i = 0; i < 60; i++) {
         const date = new Date(today)
         date.setDate(today.getDate() + i)
-        const dateStr = date.toISOString().split('T')[0]
+        const dateStr = formatLocalDate(date)
         const dayName = date.toLocaleDateString('en-US', { weekday: 'long' }) as DayOfWeek
 
         // 1. Get ranges from weekly schedule
@@ -785,6 +786,8 @@ const findOrCreatePatient = (name: string, ic: string, phone: string, email?: st
 }
 
 // Receptionists
+export const getReceptionists = (): Receptionist[] => getFromStorage(STORAGE_KEYS.RECEPTIONISTS) || []
+
 export const getReceptionistsAsync = async (): Promise<Receptionist[]> => {
     try {
         const res = await fetch(`${API_BASE}/receptionists`, { cache: 'no-store' });
@@ -802,7 +805,7 @@ export const addReceptionistAsync = async (receptionist: Omit<Receptionist, "id"
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(receptionist)
     });
-    if (!res.ok) throw new Error('Failed to add receptionist');
+    if (!res.ok) throw new Error('Failed to create receptionist');
     return await res.json();
 }
 
@@ -816,14 +819,6 @@ export const updateReceptionistAsync = async (id: string, updates: Partial<Recep
     return await res.json();
 }
 
-export const resetReceptionistPasswordAsync = async (id: string) => {
-    const res = await fetch(`${API_BASE}/receptionists/${id}/reset-password`, {
-        method: 'POST'
-    });
-    if (!res.ok) throw new Error('Failed to reset password');
-    return await res.json();
-}
-
 export const deleteReceptionistAsync = async (id: string) => {
     const res = await fetch(`${API_BASE}/receptionists/${id}`, {
         method: 'DELETE'
@@ -832,155 +827,107 @@ export const deleteReceptionistAsync = async (id: string) => {
     return await res.json();
 }
 
-export const getReceptionists = (): Receptionist[] => getFromStorage(STORAGE_KEYS.RECEPTIONISTS) || []
-export const addReceptionist = (receptionist: Omit<Receptionist, "id">) => {
-    const receptionists = getReceptionists()
-    const newRec = { ...receptionist, id: generateId() }
-    receptionists.push(newRec)
-    saveToStorage(STORAGE_KEYS.RECEPTIONISTS, receptionists)
-}
-export const updateReceptionist = (id: string, updates: Partial<Receptionist>) => {
-    const receptionists = getReceptionists()
-    const index = receptionists.findIndex(r => r.id === id)
-    if (index !== -1) {
-        receptionists[index] = { ...receptionists[index], ...updates }
-        saveToStorage(STORAGE_KEYS.RECEPTIONISTS, receptionists)
-    }
-}
-export const deleteReceptionist = (id: string) => {
-    const receptionists = getReceptionists()
-    const filtered = receptionists.filter(r => r.id !== id)
-    saveToStorage(STORAGE_KEYS.RECEPTIONISTS, filtered)
-}
-
 // Facilities
-export const getFacilities = (): Facility[] => getFromStorage(STORAGE_KEYS.FACILITIES) || []
-export const addFacility = (facility: Omit<Facility, "id">) => {
-    const facilities = getFacilities()
-    const newFacility = { ...facility, id: generateId() }
-    facilities.push(newFacility)
-    saveToStorage(STORAGE_KEYS.FACILITIES, facilities)
-}
-export const updateFacility = (id: string, updates: Partial<Facility>) => {
-    const facilities = getFacilities()
-    const index = facilities.findIndex(f => f.id === id)
-    if (index !== -1) {
-        facilities[index] = { ...facilities[index], ...updates }
-        saveToStorage(STORAGE_KEYS.FACILITIES, facilities)
+export const getFacilitiesAsync = async (): Promise<Facility[]> => {
+    try {
+        const res = await fetch(`${API_BASE}/facilities`, { cache: 'no-store' });
+        if (!res.ok) return [];
+        return await res.json();
+    } catch (e) {
+        console.error("Failed to fetch facilities", e);
+        return [];
     }
 }
-export const deleteFacility = (id: string) => {
-    const facilities = getFacilities()
-    const filtered = facilities.filter(f => f.id !== id)
-    saveToStorage(STORAGE_KEYS.FACILITIES, filtered)
+
+export const updateFacilityAsync = async (id: string, updates: Partial<Facility>) => {
+    const res = await fetch(`${API_BASE}/facilities/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+    });
+    if (!res.ok) throw new Error('Failed to update facility');
+    return await res.json();
 }
 
-// Settings
-export const getSettings = (): SystemSettings => getFromStorage(STORAGE_KEYS.SETTINGS) || {
-    clinicName: "Klinik Pergigian Setapak (Sri Rampai)",
-    address: "16-2, Jalan 46/26, Taman Sri Rampai, 53300 Kuala Lumpur, Wilayah Persekutuan Kuala Lumpur, Malaysia",
-    phone: "+60 17-510 1003",
-    email: "Kpsetapaksr@gmail.com",
-    defaultSlotDuration: 30,
-    workingHours: { start: "09:00", end: "18:00" },
-    notifications: { sms: true, whatsapp: true, emailReminders: true }
+// System Settings
+export const getSettingsAsync = async (): Promise<SystemSettings | null> => {
+    try {
+        const res = await fetch(`${API_BASE}/settings`, { cache: 'no-store' });
+        if (!res.ok) return null;
+        return await res.json();
+    } catch (e) {
+        console.error("Failed to fetch settings", e);
+        return null;
+    }
 }
-export const updateSettings = (settings: SystemSettings) => saveToStorage(STORAGE_KEYS.SETTINGS, settings)
 
-// Audit
-export const getAuditLogs = (): AuditLog[] => getFromStorage(STORAGE_KEYS.AUDIT_LOGS) || []
-export const addAuditLog = (adminId: string, adminUsername: string, action: string, details: string) => {
-    const logs = getAuditLogs()
-    const newLog: AuditLog = {
+export const updateSettingsAsync = async (updates: Partial<SystemSettings>) => {
+    const res = await fetch(`${API_BASE}/settings`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+    });
+    if (!res.ok) throw new Error('Failed to update settings');
+    return await res.json();
+}
+
+export const addAuditLog = (adminId: string, adminName: string, action: string, details: string) => {
+    const logs = getFromStorage(STORAGE_KEYS.AUDIT_LOGS) || []
+    logs.unshift({
         id: generateId(),
-        adminId,
-        adminUsername,
-        action,
-        details,
         timestamp: new Date().toISOString(),
-    }
-    logs.unshift(newLog)
+        adminId,
+        adminName,
+        action,
+        details
+    })
     saveToStorage(STORAGE_KEYS.AUDIT_LOGS, logs.slice(0, 100))
 }
 
-// Initialize Demo Data
-export const initializeDemoData = (force: boolean = false) => {
-    if (typeof window === "undefined") return
+export const getAuditLogs = (): AuditLog[] => getFromStorage(STORAGE_KEYS.AUDIT_LOGS) || []
+
+// --- Initial Seed ---
+export const initializeDemoData = () => {
+    if (getDoctors().length === 0) {
+        const defaultDoctors: Doctor[] = [
+            {
+                id: "d1",
+                name: "Dr. Sarah Chen",
+                specialization: "General Dentistry",
+                photo: "https://images.unsplash.com/photo-1559839734-2b71f1536780?auto=format&fit=crop&q=80&w=200&h=200",
+                phone: "+60 12-345 6789",
+                email: "sarah.chen@clinic.com",
+                isActive: true,
+                isAvailable: true,
+                slotDuration: 30
+            }
+        ]
+        saveToStorage(STORAGE_KEYS.DOCTORS, defaultDoctors)
+        saveDoctorSchedule({ doctorId: "d1", days: { "Monday": [{ start: "09:00", end: "17:00" }] } })
+    }
 
     if (getAdmins().length === 0) {
         saveToStorage(STORAGE_KEYS.ADMINS, [{
-            id: "admin-1",
+            id: "admin1",
             username: "admin",
-            password: "admin123",
-            role: "super-admin"
+            password: "password123",
+            role: "admin"
         }])
     }
 
-    const existingDoctors = getDoctors()
-    if (existingDoctors.length < 7 || force) {
-        const demoDoctors: Doctor[] = [
-            { id: "d1", name: "Dr. Netheananthene", specialization: "Dental practitioner", phone: "91234567", email: "nethe@clinic.com", isActive: true, isAvailable: true, slotDuration: 30, photo: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766474669/dental-clinic/homepage/Dr.Netheananthene.png" },
-            { id: "d2", name: "Dr. Durshayine", specialization: "Dental practitioner", phone: "98765432", email: "kanag@clinic.com", isActive: true, isAvailable: true, slotDuration: 30, photo: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766474647/dental-clinic/homepage/Dr_Kanagarathinam.png" },
-            { id: "d3", name: "Dr. Kanagarathinam", specialization: "Dental practitioner", phone: "92345678", email: "dursh@clinic.com", isActive: true, isAvailable: true, slotDuration: 20, photo: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766474662/dental-clinic/homepage/Dr.Durshayine.png" },
-
-            { id: "d4", name: "Dr. Sharviind Raj", specialization: "Dental practitioner", phone: "93456789", email: "sharv@clinic.com", isActive: true, isAvailable: true, slotDuration: 30, photo: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766474655/dental-clinic/homepage/Dr_Sharviind_Raj.png" },
-            { id: "d5", name: "Dr. Nicholas Gabriel", specialization: "Dental practitioner", phone: "94567890", email: "nich@clinic.com", isActive: true, isAvailable: true, slotDuration: 30, photo: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766474658/dental-clinic/homepage/Dr._Nicholas_Gabriel.png" },
-            { id: "d6", name: "Dr. Navin Nair", specialization: "Dental practitioner", phone: "95678901", email: "navin@clinic.com", isActive: true, isAvailable: true, slotDuration: 30, photo: "https://res.cloudinary.com/dhgwe2rz3/image/upload/v1766474651/dental-clinic/homepage/Dr_Navin_Nair.png" }
-        ]
-        saveToStorage(STORAGE_KEYS.DOCTORS, demoDoctors)
-
-        demoDoctors.forEach(d => {
-            const schedule: DoctorWeeklySchedule = {
-                doctorId: d.id,
-                days: {
-                    Monday: [{ start: "09:00", end: "13:00" }, { start: "14:00", end: "17:00" }],
-                    Tuesday: [{ start: "09:00", end: "13:00" }, { start: "14:00", end: "17:00" }],
-                    Wednesday: [{ start: "09:00", end: "13:00" }, { start: "14:00", end: "17:00" }],
-                    Thursday: [{ start: "09:00", end: "13:00" }, { start: "14:00", end: "17:00" }],
-                    Friday: [{ start: "09:00", end: "13:00" }, { start: "14:00", end: "17:00" }],
-                }
+    if (getReceptionists().length === 0) {
+        saveToStorage(STORAGE_KEYS.RECEPTIONISTS, [
+            {
+                id: "r1",
+                name: "Amira Hassan",
+                username: "amira",
+                password: "password123",
+                phone: "+60 11-222 3333",
+                email: "amira@clinic.com",
+                shift: "morning",
+                isActive: true,
+                role: "receptionist"
             }
-            saveDoctorSchedule(schedule)
-        })
-    }
-
-    if (getAppointments().length === 0 || force) {
-        // Find some available slots for today
-        const todayStr = new Date().toISOString().split('T')[0]
-        const allSlots = getSlots()
-        const todaySlots = allSlots.filter(s => s.date === todayStr && s.status === 'available')
-
-        const demoPatients = [
-            { name: "John Smith", ic: "S1234567A", phone: "90001111" },
-            { name: "Siti Aminah", ic: "850101-14-1234", phone: "012-3456789" },
-            { name: "Chong Wei", ic: "900505-10-5678", phone: "011-22334455" },
-            { name: "Muthu Arumugam", ic: "781212-08-9012", phone: "017-8899001" },
-            { name: "Sarah Tan", ic: "950606-14-4321", phone: "019-1122334" }
-        ]
-
-        demoPatients.forEach((p, idx) => {
-            if (todaySlots[idx]) {
-                addAppointment({
-                    patientName: p.name,
-                    patientIC: p.ic,
-                    patientPhone: p.phone,
-                    patientType: "existing",
-                    appointmentDate: todayStr,
-                    timeSlot: todaySlots[idx].timeRange,
-                    slotId: todaySlots[idx].id,
-                    doctorId: todaySlots[idx].doctorId,
-                    status: "confirmed"
-                })
-            }
-        })
-    }
-
-    if (getReceptionists().length === 0 || force) {
-        const demoRecs: Receptionist[] = [
-            { id: "r1", name: "Alice Wong", username: "alice", password: "123", photo: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200&h=200", phone: "91112222", email: "alice@clinic.com", shift: "morning", isActive: true },
-            { id: "r2", name: "Bob Tan", username: "bob", password: "123", photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200&h=200", phone: "92223333", email: "bob@clinic.com", shift: "afternoon", isActive: true }
-        ]
-        saveToStorage(STORAGE_KEYS.RECEPTIONISTS, demoRecs)
+        ])
     }
 }
-

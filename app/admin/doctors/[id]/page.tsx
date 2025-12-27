@@ -29,7 +29,7 @@ import {
     updateConsultationRecordAsync,
     deleteConsultationRecordAsync
 } from "@/lib/storage"
-import { cn } from "@/lib/utils"
+import { cn, formatLocalDate } from "@/lib/utils"
 import type { Doctor, DoctorWeeklySchedule, DoctorDateSchedule, DayOfWeek, ScheduleTimeRange, DoctorLeave, Appointment, Slot, ConsultationRecord } from "@/lib/types"
 import {
     ArrowLeft,
@@ -141,13 +141,7 @@ export default function DoctorManagementPage() {
     const [selectedPatientIC, setSelectedPatientIC] = useState<string | null>(null)
     const [patientHistory, setPatientHistory] = useState<Appointment[]>([])
     const [isHistoryOpen, setIsHistoryOpen] = useState(false)
-    const [viewDate, setViewDate] = useState(() => {
-        const d = new Date();
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    })
+    const [viewDate, setViewDate] = useState(() => formatLocalDate(new Date()))
     const [isBlocking, setIsBlocking] = useState(false)
     const [slotSearch, setSlotSearch] = useState("")
     const [isCancelling, setIsCancelling] = useState(false)
@@ -170,7 +164,7 @@ export default function DoctorManagementPage() {
         cardNo: "",
         totalFee: 0,
         consultationFee: 0,
-        consultationDate: new Date().toISOString().split('T')[0],
+        consultationDate: formatLocalDate(new Date()),
         fixDate: "",
         remark: "",
         updates: ""
@@ -231,7 +225,7 @@ export default function DoctorManagementPage() {
         const month = scheduleMonth.getMonth()
         const daysInMonth = new Date(year, month + 1, 0).getDate()
         const firstDay = new Date(year, month, 1).getDay() // 0 = Sunday
-        const todayStr = new Date().toISOString().split('T')[0]
+        const todayStr = formatLocalDate(new Date())
 
         return Array.from({ length: daysInMonth }, (_, i) => {
             const day = i + 1
@@ -576,7 +570,7 @@ export default function DoctorManagementPage() {
         setNewRecord({
             patientName: "", patientIC: "", handphoneNo: "", cardNo: "",
             totalFee: 0, consultationFee: 0,
-            consultationDate: new Date().toISOString().split('T')[0],
+            consultationDate: formatLocalDate(new Date()),
             fixDate: "", remark: "", updates: ""
         })
         setHasChanges(true)
@@ -629,7 +623,7 @@ export default function DoctorManagementPage() {
                 row.handphoneNo = cols[3] || "";
                 row.totalFee = parseFloat(cols[4] || "0");
                 // Default to today if date is missing to pass Schema validation
-                row.consultationDate = cols[5] || new Date().toISOString().split('T')[0];
+                row.consultationDate = cols[5] || formatLocalDate(new Date());
                 row.consultationFee = parseFloat(cols[6] || "0");
                 row.fixDate = cols[7] || "";
                 row.remark = cols[8] || "";
@@ -1247,7 +1241,7 @@ export default function DoctorManagementPage() {
                                                     <div key={`offset-${i}`} className="h-32 bg-slate-50/30 rounded-3xl border border-transparent" />
                                                 ))}
                                                 {calendarDays.map((dayData) => {
-                                                    const isToday = dayData.dateStr === new Date().toISOString().split('T')[0];
+                                                    const isToday = dayData.dateStr === formatLocalDate(new Date());
                                                     const isSelected = selectedCalendarDay?.dateStr === dayData.dateStr;
 
                                                     return (

@@ -1,6 +1,7 @@
 import dbConnect from './db';
 import { SlotModel, DoctorModel, ScheduleModel, LeaveModel, DoctorDateSchedule } from './models';
 import type { DayOfWeek } from './types';
+import { formatLocalDate } from './utils';
 
 const formatTime = (time24: string) => {
     const [h, m] = time24.split(':').map(Number);
@@ -47,7 +48,7 @@ export async function regenerateDoctorSlotsCloud(doctorId: string) {
     for (let i = 0; i < 60; i++) {
         const date = new Date(today);
         date.setDate(today.getDate() + i);
-        const dateStr = date.toISOString().split('T')[0];
+        const dateStr = formatLocalDate(date);
         const dayName = date.toLocaleDateString('en-US', { weekday: 'long' }) as DayOfWeek;
 
         // Use date-specific override if it exists, otherwise use weekly schedule

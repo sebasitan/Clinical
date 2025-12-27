@@ -42,7 +42,7 @@ Welcome to the **Klinik Pergigian Setapak (Sri Rampai)** dental clinic managemen
 
 - **Frontend**: Next.js with React
 - **Database**: MongoDB with Mongoose
-- **Notifications**: Email (Resend), SMS/WhatsApp (MoceanAPI)
+- **Notifications**: Email (Resend), SMS (BudgetSMS)
 - **Deployment**: Vercel
 
 ---

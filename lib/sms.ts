@@ -1,4 +1,4 @@
-import { mocean } from './mocean';
+import { budgetsms } from './budgetsms';
 import { generateGoogleCalendarLink } from './calendar-utils';
 import { OTPModel } from './models';
 import dbConnect from './db';
@@ -12,36 +12,46 @@ function sanitizePhone(phone: string): string {
 }
 
 /**
- * Sends a verification code (OTP) via SMS using Mocean
- * @param to Phone number in E.164 format
+ * Generates a random 6-digit OTP
  */
+function generateOTP(): string {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
 /**
- * Sends a verification code (OTP) via SMS using Mocean Verify API
+ * Sends a verification code (OTP) via SMS using BudgetSMS
  * @param to Phone number in E.164 format
  */
 export async function sendSMSOTP(to: string) {
     try {
         await dbConnect();
         const formattedPhone = sanitizePhone(to);
+        const code = generateOTP();
 
-        console.log(`[Mocean] Requesting Verify OTP for ${formattedPhone}`);
+        console.log(`[BudgetSMS] Generating OTP ${code} for ${formattedPhone}`);
 
-        // Use Mocean Verify API
-        const result = await mocean.requestVerify(formattedPhone);
+        // Save OTP to DB
+        await OTPModel.findOneAndUpdate(
+            { phone: formattedPhone },
+            {
+                code: code,
+                reqid: null, // Clear any legacy Mocean reqid
+                createdAt: new Date()
+            },
+            { upsert: true, new: true }
+        );
 
-        if (result.success && result.reqid) {
-            // Store reqid in DB (we don't need the code itself as Mocean handles it)
-            await OTPModel.findOneAndUpdate(
-                { phone: formattedPhone },
-                { reqid: result.reqid, code: null, createdAt: new Date() },
-                { upsert: true, new: true }
-            );
-            return { success: true, reqid: result.reqid };
+        // Send OTP via SMS
+        const message = `Your verification code is: ${code}. Valid for 10 minutes.`;
+        const success = await budgetsms.sendSMS(formattedPhone, message);
+
+        if (success) {
+            return { success: true };
         } else {
-            return { success: false, error: result.error || 'Failed to request verification' };
+            return { success: false, error: 'Failed to send SMS via BudgetSMS' };
         }
     } catch (error: any) {
-        console.error('Mocean Verify API Error:', error);
+        console.error('BudgetSMS OTP Error:', error);
         return { success: false, error: error.message || 'Unknown error' };
     }
 }
@@ -63,27 +73,22 @@ export async function verifySMSOTP(to: string, code: string) {
             return { success: false, error: 'No verification request found' };
         }
 
-        // Check if we have a reqid (Mocean Verify) or legacy code
-        if (record.reqid) {
-            const result = await mocean.checkVerify(record.reqid, code);
+        // Verify local code
+        if (record.code && record.code === code) {
+            // Check expiry (10 mins)
+            const now = new Date();
+            const created = new Date(record.createdAt);
+            const diff = (now.getTime() - created.getTime()) / 1000;
 
-            if (result.success) {
-                // Delete after successful verification
-                await OTPModel.deleteOne({ _id: record._id });
-                return { success: true, status: 'approved' };
-            } else {
-                return { success: false, status: 'failed', error: result.error || 'Invalid code' };
+            if (diff > 600) {
+                return { success: false, status: 'failed', error: 'Code expired' };
             }
-        } else if (record.code) {
-            // Fallback to legacy local verification
-            if (record.code === code) {
-                await OTPModel.deleteOne({ _id: record._id });
-                return { success: true, status: 'approved' };
-            } else {
-                return { success: false, status: 'failed', error: 'Invalid or expired code' };
-            }
+
+            // Delete after successful verification
+            await OTPModel.deleteOne({ _id: record._id });
+            return { success: true, status: 'approved' };
         } else {
-            return { success: false, error: 'Invalid verification state' };
+            return { success: false, status: 'failed', error: 'Invalid code' };
         }
     } catch (error: any) {
         console.error('Verify OTP Error:', error);
@@ -107,9 +112,9 @@ export async function sendSMSConfirmation(
         const formattedPhone = sanitizePhone(to);
         const message = `✅ Confirmed: Dental appt with ${doctorName} on ${appointmentDate} @ ${timeSlot}. ID: ${appointmentId}. Manage: ${manageLink}`;
 
-        const result = await mocean.sendSMS(formattedPhone, message);
+        const success = await budgetsms.sendSMS(formattedPhone, message);
 
-        return { success: result.success, sid: result.msgid, error: result.error };
+        return { success: success, error: success ? undefined : 'Failed to send SMS' };
     } catch (error: any) {
         console.error('SMS Confirmation Error:', error);
         return { success: false, error: error.message };
@@ -130,9 +135,9 @@ export async function sendSMSReminder(
         const formattedPhone = sanitizePhone(to);
         const message = `⏰ Reminder: You have a dental appointment with ${doctorName} on ${appointmentDate} at ${timeSlot}. - Klinik Pergigian Setapak (Sri Rampai)`;
 
-        const result = await mocean.sendSMS(formattedPhone, message);
+        const success = await budgetsms.sendSMS(formattedPhone, message);
 
-        return { success: result.success, sid: result.msgid, error: result.error };
+        return { success: success, error: success ? undefined : 'Failed to send SMS' };
     } catch (error: any) {
         console.error('SMS Reminder Error:', error);
         return { success: false, error: error.message };
@@ -150,8 +155,8 @@ export async function sendSMSRescheduled(
         const formattedPhone = sanitizePhone(to);
         const message = `📅 Rescheduled: Your appt (ID: ${appointmentId}) with ${doctorName} is moved to ${newDate} @ ${newTime}. See you then!`;
 
-        const result = await mocean.sendSMS(formattedPhone, message);
-        return { success: result.success, error: result.error };
+        const success = await budgetsms.sendSMS(formattedPhone, message);
+        return { success: success, error: success ? undefined : 'Failed to send SMS' };
     } catch (error: any) {
         console.error('SMS Reschedule Error:', error);
         return { success: false, error: error.message };
@@ -167,8 +172,8 @@ export async function sendSMSCancelled(
         const formattedPhone = sanitizePhone(to);
         const message = `✕ Cancelled: Your dental appt on ${date} (ID: ${appointmentId}) has been cancelled. - Klinik Pergigian Setapak`;
 
-        const result = await mocean.sendSMS(formattedPhone, message);
-        return { success: result.success, error: result.error };
+        const success = await budgetsms.sendSMS(formattedPhone, message);
+        return { success: success, error: success ? undefined : 'Failed to send SMS' };
     } catch (error: any) {
         console.error('SMS Cancel Error:', error);
         return { success: false, error: error.message };

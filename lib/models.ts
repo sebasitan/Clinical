@@ -250,8 +250,8 @@ export const ReminderLogModel = models.ReminderLog || model('ReminderLog', Remin
 // --- OTP Schema (Temporary) ---
 const OTPSchema = new Schema({
     phone: { type: String, required: true },
-    code: { type: String }, // Optional when using Mocean Verify
-    reqid: { type: String }, // Mocean Verify Request ID
+    code: { type: String }, // Usage: Generated 6-digit OTP
+    reqid: { type: String }, // Legacy: Mocean Verify Request ID
     createdAt: { type: Date, default: Date.now, expires: 600 } // Expires in 10 minutes
 });
 

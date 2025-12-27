@@ -828,6 +828,29 @@ export const deleteReceptionistAsync = async (id: string) => {
 }
 
 // Facilities
+export const getFacilities = (): Facility[] => getFromStorage(STORAGE_KEYS.FACILITIES) || []
+
+export const addFacility = (facility: Omit<Facility, "id">) => {
+    const facilities = getFacilities()
+    const newFacility: Facility = { ...facility, id: generateId() }
+    facilities.push(newFacility)
+    saveToStorage(STORAGE_KEYS.FACILITIES, facilities)
+}
+
+export const updateFacility = (id: string, updates: Partial<Facility>) => {
+    const facilities = getFacilities()
+    const index = facilities.findIndex(f => f.id === id)
+    if (index !== -1) {
+        facilities[index] = { ...facilities[index], ...updates }
+        saveToStorage(STORAGE_KEYS.FACILITIES, facilities)
+    }
+}
+
+export const deleteFacility = (id: string) => {
+    const facilities = getFacilities()
+    const filtered = facilities.filter(f => f.id !== id)
+    saveToStorage(STORAGE_KEYS.FACILITIES, filtered)
+}
 export const getFacilitiesAsync = async (): Promise<Facility[]> => {
     try {
         const res = await fetch(`${API_BASE}/facilities`, { cache: 'no-store' });
@@ -850,6 +873,35 @@ export const updateFacilityAsync = async (id: string, updates: Partial<Facility>
 }
 
 // System Settings
+export const getSettings = (): SystemSettings => getFromStorage(STORAGE_KEYS.SETTINGS) || {
+    clinicName: "My Dental Clinic",
+    address: "123 Main St",
+    phone: "+60 12-345 6789",
+    email: "clinic@example.com",
+    website: "https://clinic.com",
+    logoConfig: {
+        url: "https://images.unsplash.com/photo-1588776814546-1ffcf4722e12?auto=format&fit=crop&q=80&w=200&h=200",
+        width: 150,
+        height: 150
+    },
+    colors: {
+        primary: "#0f172a",
+        secondary: "#334155",
+        accent: "#3b82f6"
+    },
+    socialLinks: {
+        facebook: "",
+        instagram: "",
+        twitter: ""
+    }
+}
+
+export const updateSettings = (updates: Partial<SystemSettings>) => {
+    const current = getSettings()
+    const updated = { ...current, ...updates }
+    saveToStorage(STORAGE_KEYS.SETTINGS, updated)
+}
+
 export const getSettingsAsync = async (): Promise<SystemSettings | null> => {
     try {
         const res = await fetch(`${API_BASE}/settings`, { cache: 'no-store' });
